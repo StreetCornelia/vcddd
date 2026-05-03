@@ -1,7 +1,7 @@
 # 模板：tech-stack.md
 
 ```
-模板位置：vcddd/reference/thinking/templates/tech/tech-stack.md
+模板位置：vcddd/reference/templates/tech/tech-stack.md
 目标路径：docs/vcddd/tech-stack.md
 ```
 

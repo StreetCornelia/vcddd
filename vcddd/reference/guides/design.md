@@ -234,13 +234,13 @@ docs/vcddd/design/ 目录下是否已有域文档？
 
 用户确认后，立即写入：
 
-1. `docs/vcddd/design/{domain}/boundary.md` — 按 `reference/thinking/templates/design/{domain}/boundary.md` 格式写入
-2. `docs/vcddd/design/{domain}/business.md` — 按 `reference/thinking/templates/design/{domain}/business.md` 格式写入
-3. `docs/vcddd/requirements/changelog.md` — 按 `reference/thinking/templates/requirements/changelog.md` 格式追加本次设计中值得记录的内容
+1. `docs/vcddd/design/{domain}/boundary.md` — 按 `reference/templates/design/{domain}/boundary.md` 格式写入
+2. `docs/vcddd/design/{domain}/business.md` — 按 `reference/templates/design/{domain}/business.md` 格式写入
+3. `docs/vcddd/requirements/changelog.md` — 按 `reference/templates/requirements/changelog.md` 格式追加本次设计中值得记录的内容
 
 **如果域设计过程中发现需要回跳需求线**（触发条件见 `requirements.md` 的"与域设计的关系"章节）：
 1. 停止写入，告知用户需要先澄清业务事实
-2. 加载 `reference/thinking/requirements.md`，以增量更新模式执行
+2. 加载 `reference/guides/requirements.md`，以增量更新模式执行
 3. `facts.md` 更新完成并经用户确认后，回到本文件，从受影响的域重新推导
 
 **文档写入完成后，等待用户决定是否推进实现。不主动进入实现，不提示"接下来写代码"。**

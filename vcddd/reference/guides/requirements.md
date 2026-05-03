@@ -210,11 +210,11 @@ docs/vcddd/requirements/facts.md 是否已存在？
 
 用户确认后，立即更新 `docs/vcddd/requirements/facts.md`。
 
-按 `reference/thinking/templates/requirements/facts.md` 的格式写入。
+按 `reference/templates/requirements/facts.md` 的格式写入。
 
 写入规则：
 - `facts.md` 始终反映当前已确认的全部业务事实，不保留历史
-- 历史变迁记录在 `docs/vcddd/requirements/changelog.md`，按 `reference/thinking/templates/requirements/changelog.md` 格式追加
+- 历史变迁记录在 `docs/vcddd/requirements/changelog.md`，按 `reference/templates/requirements/changelog.md` 格式追加
 - 每次更新在文件头注明日期和本次更新了什么
 
 写入完成后，才可以进入域设计。

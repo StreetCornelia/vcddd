@@ -10,25 +10,38 @@ This repository is published as a single-skill repository. The repository root i
 
 ## What Is Included
 
-- `SKILL.md`: the main skill definition and operating rules
-- `reference/methodology/`: whitepaper and methodology guides
-- `reference/thinking/`: requirement clarification and domain design workflow
-- `reference/coding/`: implementation-line guidance after design is confirmed
+- `SKILL.md`: main entry — theory foundation + controller agent + step navigation
+- `steps/{STEP}/SKILL.md`: modular step skills (10 steps), each self-contained for sub-agent dispatch
+- `reference/theory/`: whitepaper, methodology guides, and implementation mapping
+- `reference/guides/`: requirement clarification and domain design workflow
+- `reference/engine/`: implementation engine reference (orchestration, review, TDD bridge, etc.)
+- `reference/templates/`: document templates for input, facts, boundary, business, etc.
 
 ## Repository Structure
 
 ```text
-vcddd/                     ← repository root
-├── README.md
-├── README.zh-CN.md
-├── .gitignore
-├── LICENSE
-└── vcddd/                 ← skill root (SKILL.md lives here)
-    ├── SKILL.md
-    └── reference/
-        ├── methodology/
-        ├── thinking/
-        └── coding/
+vcddd/                     ← repository / skill root
+├── SKILL.md               ← Main entry (theory + controller + navigation)
+├── steps/
+│   ├── BROWNFIELD/        ← Analyze existing code into LLM-readable docs
+│   ├── VISION/            ← Capture user intent
+│   ├── CONTEXT/           ← Clarify into business facts
+│   ├── DOMAIN-DESIGN/     ← Derive boundaries and invariants
+│   ├── DEVSETUP/          ← Determine tech stack
+│   ├── TDD-BRIDGE/        ← Derive black-box test specs (+ prompt files)
+│   ├── IMPLEMENT-DOMAIN/  ← Code + white-box + black-box tests (+ prompt files)
+│   ├── REVIEW-DOMAIN/     ← Three-layer adversarial review (+ prompt files)
+│   ├── INTEGRATE/         ← Cross-domain integration verification
+│   ├── REPORT/            ← Final completion report
+│   └── EVENT-LOG/         ← Domain-level progress log specification
+└── reference/
+    ├── theory/            ← vcddd-methodology, whitepaper, design-guide, implementation
+    ├── guides/            ← requirements.md, design.md
+    ├── engine/            ← automated-execution, fallback-execution, tdd-bridge,
+    │   │                     review-loop, subagent-orchestration, integration-verification,
+    │   │                     tech-setup, implementation, brownfield-init
+    │   └── examples/      ← Full code examples (TS, Python, Java, Serverless)
+    └── templates/         ← Document templates for all VCDDD outputs
 ```
 
 ## Two Layers of VCDDD
@@ -38,6 +51,15 @@ vcddd/                     ← repository root
 │         Layer 2: Five-Step Working Methodology       │
 │   V → C → D¹ → D² → D³                             │
 │   Vision · Context · Domain · Dev Setup · Develop   │
+│                                                      │
+│   ┌─ Automated Execution Layer (D²→D³) ─────────┐   │
+│   │  SuperPower engine (preferred)               │   │
+│   │  └─ TDD bridge → writing plans → subagent    │   │
+│   │     dispatch → two-stage review → verify     │   │
+│   │                                               │   │
+│   │  Builtin engine (fallback)                    │   │
+│   │  └─ Manual subagent orchestration + review   │   │
+│   └───────────────────────────────────────────────┘   │
 ├─────────────────────────────────────────────────────┤
 │         Layer 1: Theoretical Foundation              │
 │   Vibe Coding × Domain-Driven Design                │
@@ -76,14 +98,31 @@ Each step has a hard prerequisite gate. No step may begin until its predecessor 
 
 ## Recommended Reading Order
 
-1. `SKILL.md` — operating rules and prohibited actions
+### Foundation
+
+1. `SKILL.md` — operating rules, theory base, and automation layer
 2. `reference/methodology/vcddd-methodology.md` — the five-step method in full
 3. `reference/thinking/requirements.md` — how to run V and C
 4. `reference/thinking/design.md` — how to run D¹
+
+### Brownfield (for existing projects without VCDDD docs)
+
+5. `reference/coding/brownfield-init.md` — analyze existing code into an LLM-readable architecture knowledge base (entry points, business logic, data flows)
+
+### Execution (choose a path after D¹)
+
+**Automated path (recommended):**
+5. `reference/coding/automated-execution.md` — master orchestration (auto-detects SuperPower, delegates or falls back)
+6. `reference/coding/tdd-bridge.md` — mechanical test derivation from business.md
+7. `reference/coding/subagent-orchestration.md` — domain→task decomposition
+8. `reference/coding/review-loop.md` — spec compliance + code quality checklists
+9. `reference/coding/integration-verification.md` — cross-domain contract testing
+
+**Manual path:**
 5. `reference/coding/tech-setup.md` — how to run D²
 6. `reference/coding/implementation.md` — how to run D³
 
-For deeper theory:
+### Theory (deeper dives)
 
 - `reference/methodology/vcddd-whitepaper.md`
 - `reference/methodology/vcddd-design-guide.md`
@@ -96,7 +135,7 @@ This repository follows the shared `SKILL.md` convention used by multiple coding
 For Codex-style local skills, place this repository directory under your local skills path so that the root `SKILL.md` remains intact, for example:
 
 ```text
-~/.codex/skills/vcddd/
+~/.claude/skills/vcddd/
 ```
 
 Then use the skill when the task is about:
@@ -106,13 +145,44 @@ Then use the skill when the task is about:
 - designing invariants, states, events, and contracts
 - keeping implementation aligned to a documented business model
 
+### Optional: SuperPower Engine
+
+VCDDD can delegate D²→D³ execution to SuperPower for automated subagent dispatch, TDD cycle, and code review. Install SuperPower separately:
+
+```bash
+npm install -g @superpowers/skills
+```
+
+When SuperPower is detected, VCDDD automatically uses it as the execution engine. When not available, VCDDD falls back to its built-in engine.
+
 ## Workflow Summary
+
+### Phase 1: Human-Confirmed Business Truth (V → C → D¹)
+
+These three steps always require user confirmation at each gate. They establish the business truth that all later work depends on.
 
 1. **V — Vision**: Capture the user's intent faithfully, without analysis or architecture.
 2. **C — Context**: Clarify intent into user-confirmed business facts, state machines, and a shared ubiquitous language.
 3. **D¹ — Domain Design**: From confirmed facts only, derive bounded contexts, decision boundaries, invariants, events, and collaboration contracts.
-4. **D² — Dev Setup**: Lock technology choices and architectural conventions into a written document before any code is generated.
-5. **D³ — Develop**: Write code that is fully governed by the domain design and the tech conventions — documentation leads, code follows.
+
+### Phase 2: Automated Execution (D² → D³)
+
+After D¹ is confirmed, the system can execute the remaining steps automatically:
+
+4. **D²-auto**: Scan project config files to detect tech stack (or research options for new projects). Only ask the user about items that can't be inferred from code.
+5. **TDD Bridge**: Mechanically derive test specifications from the domain's `business.md` — each invariant, state transition, command path, and failure branch maps to specific test cases.
+6. **Task Decomposition**: Split each domain into independent 2-5 minute subagent tasks with exact file paths and test IDs.
+7. **Subagent Execution**: Dispatch each task to a fresh subagent following TDD (RED-GREEN-REFACTOR). Two-stage review (spec compliance vs business.md, code quality vs tech-stack.md) gates each task.
+8. **Integration Verification**: After all domains complete, verify cross-domain contracts, E2E workflows, idempotency, and event ordering.
+9. **Final Report**: Present a summary of domain status, test counts, and verification results.
+
+### What the User Sees
+
+During automated execution, the user sees only progress updates and is interrupted only when:
+
+- Tech stack has unresolvable ambiguous items
+- A `business.md` rule is internally contradictory
+- A subagent reports BLOCKED requiring a business-level decision
 
 ## License
 

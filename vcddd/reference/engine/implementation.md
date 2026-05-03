@@ -13,6 +13,8 @@
 
 **触发条件**：由用户主动发起，不由模型主动进入。
 
+**自动化执行路径**：当 D1（所有域的 boundary.md + business.md）已确认时，优先加载 `reference/engine/automated-execution.md` 走自动化执行层（D2-auto → D3-auto）。本文档的手动路径作为后备方案。编排者在自动化路径中按需加载本文档的强制规范部分（命名、日志、幂等、事务边界、错误处理、状态机保护、文档同步），这些规范对 subagent 仍然生效。
+
 ---
 
 ## 方法论：从域文档到实现设计
@@ -31,7 +33,7 @@
     │
     └── 不存在
           → 停止实现线
-          → 加载 reference/coding/tech-setup.md
+          → 加载 reference/engine/tech-setup.md
           → 完整执行技术确立流程，直到 tech-stack.md 写入完成
           → 写入完成后回到本文件，从第零步重新进入（此时文件已存在，走上方分支）
 ```
@@ -67,7 +69,7 @@
 
 根据域文档里的职责，设计代码目录结构。每个文件对应一个明确的业务职责，不按技术层（controller/service/repository）组织，按业务职责组织。
 
-将模块结构设计结果写入 `docs/vcddd/design/{domain}/implementation.md`，按 `reference/thinking/templates/design/{domain}/implementation.md` 格式写入"模块结构"部分，说明每个文件承载的业务职责。
+将模块结构设计结果写入 `docs/vcddd/design/{domain}/implementation.md`，按 `reference/guides/templates/design/{domain}/implementation.md` 格式写入"模块结构"部分，说明每个文件承载的业务职责。
 
 ---
 
