@@ -46,37 +46,43 @@ VCDDD 使用总控 Agent 协调所有步骤的执行。总控 Agent 是运行本
 [总控] 逐步骤执行（或按用户确认的顺序）
     │
     ├── 读 steps/{STEP}/SKILL.md
-    ├── 派遣子 Agent 执行（将步骤文档作为指令传入）
-    ├── 记录执行状态和结果
-    └── 判断是否进入下一步或返回用户确认
+    ├── 用 Agent 工具派遣子 Agent（将步骤文档 + 上下文文件作为指令传入）
+    ├── 等待子 Agent 返回结果
+    ├── 记录执行状态到 docs/vcddd/progress.log（格式见 steps/EVENT-LOG/SKILL.md）
+    └── 根据步骤文档中的"完成后的控制器行为"判断下一步
 ```
 
 ### 总控的职能边界
 
 | 职责 | 非职责 |
 |------|--------|
-| 分析用户需求，匹配到对应步骤 | ❌ 不直接修改文件或代码 |
-| 为每个步骤派遣子 Agent 并编写 Prompt | ❌ 不参与项目内部文件的实质编写 |
-| 创建 Task 节点，维护进度日志 | |
-| 将步骤文档作为子 Agent 的执行指令 | |
-| 判断步骤间的依赖关系和执行顺序 | |
+| 分析用户需求，匹配到对应步骤 | ❌ 不直接修改项目文件或代码 |
+| 用 Agent 工具为每个步骤派遣子 Agent | ❌ 不参与项目内部文件的实质编写 |
+| 接收子 Agent 返回结果，记录到 progress.log | |
+| 将步骤文档 + 上下文文件组装为子 Agent 的 Prompt | |
+| 根据步骤文档的调度循环判断下一步 | |
+| 在 Review-DOMAIN 中协调 Implementer ↔ Reviewer 的修复循环 | |
 
 ### 子 Agent 的派遣模式
 
 每个步骤文档（`steps/{STEP}/SKILL.md`）设计为子 Agent 的完整指令。总控派遣时：
 
 ```
-总控读取 steps/IMPLEMENT-DOMAIN/SKILL.md
+总控读取 steps/{STEP}/SKILL.md
   ↓
-组成子 Agent 的 Prompt：
-  "你是实现 agent。请按以下步骤执行：{IMPLEMENT-DOMAIN.md 全文}
-   上下文：{当前域的 business.md / boundary.md / test-spec.md / tech-stack.md}"
+组装子 Agent 的 Prompt：
+  "你是 {STEP} agent。请按以下步骤执行：
+   {SKILL.md 全文}
+   上下文：{该步骤需要的文件全文}"
   ↓
-派遣子 Agent（不占用总控的上下文窗口）
+用 Agent 工具派遣子 Agent
   ↓
 子 Agent 完成任务，返回结果
   ↓
-总控记录：{步骤名} → {状态: DONE/FAILED} → {产出物路径}
+总控记录到 docs/vcddd/progress.log：
+  {步骤名} → {状态: DONE/DONE_WITH_CONCERNS/BLOCKED/FAILED}
+  → {产出物路径}
+  → {关键数据（文件数、测试数等）}
 ```
 
 ---

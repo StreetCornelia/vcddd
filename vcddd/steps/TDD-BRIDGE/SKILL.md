@@ -22,6 +22,10 @@ description: VCDDD — 从 business.md 推导黑盒测试规格
 
 `docs/vcddd/design/{domain}/test-spec.md`
 
+## 参与角色
+
+**Generator** 和 **Reviewer** 是两个独立的 Agent。Generator 负责推导测试规格，Reviewer 负责审查。对抗生成流程遵循 `../../reference/engine/review-loop.md` 的"通用对抗生成框架"。
+
 ## 覆盖要求
 
 | 维度 | 含义 | 检查标准 |
@@ -39,20 +43,22 @@ description: VCDDD — 从 business.md 推导黑盒测试规格
 ```
 ┌─ TDD Bridge 循环开始 ──────────────────────────────────┐
 │                                                         │
-│  1. 派遣 Generator                                       │
-│     → 传入：business.md + boundary.md                    │
-│     → Generator 按推导规则生成 test-spec.md              │
+│  1. 派遣 Generator Agent                                 │
+│     → 传入：business.md + boundary.md + 推导规则        │
+│            （规则见 ../../reference/engine/tdd-bridge.md）│
+│     → Generator 按规则机械推导 test-spec.md              │
 │     → 返回完整的 test-spec.md                            │
 │                                                         │
-│  2. Generator 返回后【立即】派遣 Test Spec Reviewer       │
+│  2. Generator 返回后【立即】派遣 Reviewer Agent          │
 │     → 传入：business.md + boundary.md + test-spec.md    │
-│     → Reviewer 按核对清单审查                            │
+│            + 审查清单（见 ../../reference/engine/tdd-bridge.md）│
+│     → Reviewer 独立审查                                  │
 │     → 一次性给出全部问题                                 │
 │     → 返回：PASS / ISSUES                               │
 │                                                         │
 │  3. Reviewer 返回 ISSUES 后【立即】：                    │
 │     → 重新派遣 Generator，传入问题列表                   │
-│     → Generator 修正后重新提交 test-spec.md              │
+│     → Generator 一次性修复全部问题，重新提交 test-spec.md │
 │     → 重新派遣 Reviewer 审查                             │
 │     → 循环直到 PASS 或达到 10 轮上限                     │
 │                                                         │
@@ -64,28 +70,10 @@ description: VCDDD — 从 business.md 推导黑盒测试规格
 ```
 
 **关键约束**：
-- **Generator 和 Reviewer 必须对抗**：不允许 Generator 生成后直接使用，必须经过 Reviewer 审查
-- **审查不可跳过**：不能因为"测试看起来完整"就跳过 Reviewer
-- **修复后必须重审**：Generator 修正后，必须重新派遣 Reviewer
-- **不需要用户提醒**：整个循环是自动的
-
-## Generator 推导规则
-
-1. **功能完整性**：扫描 boundary.md 中的每条命令、事件消费、读模型 → 至少 1 个正常路径测试
-2. **分支完整性**：扫描 business.md 中每条命令的正常+全部失败路径 → 逐条对应测试
-3. **数据边界性**：扫描每个参数 → 空字符串/负数/超长/非法枚举/不存在 ID → 每个边界 1 个测试
-
-完整 Generator Prompt 见 `generator-prompt.md`。
-
-## Reviewer 核对清单
-
-- 格式正确性：自然语言/伪代码，每条含目标+前置+操作+期望
-- 功能完整性：每条命令/事件/读模型有测试
-- 分支完整性：每条失败路径有测试，幂等有测试
-- 数据边界性：每个参数边界有测试
-- 一致性：错误测试写明原因和来源，未定义内容标记 `[待补充]`
-
-完整 Reviewer Prompt 见 `reviewer-prompt.md`。
+- Generator 和 Reviewer 必须是两个独立 Agent
+- Reviewer 返回意见后，Generator 一次性修复（不逐条修）
+- 修复后必须重新派遣 Reviewer（不自行判断是否通过）
+- 不需要用户提醒
 
 ## 如果卡住
 

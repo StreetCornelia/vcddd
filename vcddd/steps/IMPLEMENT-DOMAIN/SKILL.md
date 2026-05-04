@@ -1,13 +1,13 @@
 ---
 name: vcddd-implement-domain
-description: VCDDD — 一个 Agent 完成域代码 + 白盒测试 + 黑盒测试
+description: VCDDD — 一个 Agent 完成域代码 + 测试编写
 ---
 
 > 子 Agent 指令：本文件为子 Agent 的完整执行指令，由总控 Agent 传入并派遣执行。
 
 # Step: IMPLEMENT-DOMAIN — 域代码实现
 
-一个域的所有代码和测试由同一个 Agent 一次性完成。
+一个域的所有代码和测试由同一个 Agent 一次性完成。**Implementer 只负责写代码和测试，不负责运行测试。** 测试由 Reviewer 运行。
 
 ## 前置条件
 
@@ -36,17 +36,43 @@ server/{domain}/
 └── __tests__/blackbox/      ← 黑盒测试（命令级验证）
 ```
 
+## 执行流程
+
+### Phase 1：实现领域代码
+
+先写全部领域实现代码：
+1. 聚合根 + 不变式 + 状态机
+2. 命令定义 + 处理逻辑
+3. 事件定义
+4. 仓储接口 + 数据库仓储实现
+5. 读模型查询接口
+6. 事件消费逻辑
+
+### Phase 2：编写测试
+
+基于 test-spec.md 编写测试：
+1. **黑盒测试**：逐条核对 test-spec.md，为每个测试 ID 编写测试函数（函数名包含 ID）
+2. **白盒测试**：覆盖分支 + 数据边界 + 异常路径
+3. **覆盖率自检**：逐条核对 test-spec.md，确认每个 ID 都有对应测试。有遗漏 → 立即补充
+
+### Phase 3：自审
+
+对照 business.md 核对是否遗漏任何路径，检查命名是否与通用语言一致。
+
 ## 完成要求
 
-1. **Phase 1**：实现全部领域代码（聚合、命令、事件、仓储、读模型、事件消费）
-2. **Phase 2**：基于 test-spec.md 编写黑盒测试（每个 ID 对应一个测试函数）+ 白盒测试（分支覆盖 + 边界 + 异常）
-3. **Phase 3**：运行全部测试，确认全部通过；如有失败则修复后重跑
-4. **Phase 4**：覆盖率自检——逐条核对 test-spec.md，确认每个 ID 都有对应测试
-5. 命名与 business.md 通用语言词表一致
-6. 在 progress.log 中记录操作
-7. **报告状态**：DONE / DONE_WITH_CONCERNS / BLOCKED
+1. 全部领域代码已实现
+2. 全部测试已编写（基于 test-spec.md，每个 ID 有对应测试）
+3. 覆盖率自检通过
+4. 在 progress.log 中记录操作
+5. **报告状态**（必须包含以下信息）：
 
-**测试由 Reviewer 运行和验证**：Implementer 完成代码+测试后，Reviewer 会运行全部测试，发现失败后作为反馈要求 Implementer 修复。
+```
+状态：DONE / DONE_WITH_CONCERNS / BLOCKED
+文件数：N 个文件
+测试数：白盒 N 个 + 黑盒 N 个
+test-spec 覆盖率：N/M 个 ID 已覆盖
+```
 
 ## 完成后的控制器行为
 

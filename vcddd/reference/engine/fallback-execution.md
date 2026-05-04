@@ -31,18 +31,14 @@ Step 1: 构建域依赖图 + 拓扑排序（依赖域先实现）
 Step 2: 按拓扑顺序，逐域执行：
         │
         ├── 域 A（无依赖）
-        │    ├── a. TDD Bridge → test-spec.md（Generator ↔ Spec Reviewer 对抗）
-        │    ├── b. Implementer → 完整实现域 A 全部代码（TDD 循环）
-        │    ├── c. Spec Reviewer → 核对代码 vs business.md（最多 10 轮）
-        │    ├── d. Quality Reviewer → 核对代码 vs tech-stack.md（最多 10 轮）
-        │    └── e. VCDDD Reviewer → 核对 VCDDD 合规性（最多 10 轮）
+        │    ├── a. TDD Bridge（Generator ↔ Reviewer 对抗）→ test-spec.md
+        │    ├── b. Implementer → 完整实现域 A 全部代码 + 测试
+        │    ├── c. Spec Reviewer → 运行测试 + 核对代码 vs business.md（最多 10 轮）
+        │    ├── d. Quality Reviewer → 运行测试 + 核对代码 vs tech-stack.md（最多 10 轮）
+        │    └── e. VCDDD Reviewer → 确认前序测试已运行 + 核对合规性（最多 10 轮）
         │
         ├── 域 B（依赖 A）
-        │    ├── a. TDD Bridge → test-spec.md
-        │    ├── b. Implementer → 完整实现域 B 全部代码
-        │    ├── c. Spec Reviewer → 核对代码 vs business.md
-        │    ├── d. Quality Reviewer → 核对代码 vs tech-stack.md
-        │    └── e. VCDDD Reviewer → 核对 VCDDD 合规性
+        │    ├── ...（同上）
         │
         └── ...
         │
@@ -58,49 +54,58 @@ Step 4: 生成最终报告
 
 **对每个域，按以下顺序严格执行。不需要用户提醒，每个步骤完成后立即进入下一步。**
 
+**所有调度由编排者（主 session）执行。** Implementer 只写代码和测试，不运行测试。Reviewer 运行测试和审查，不自己派遣 Implementer。
+
 ```
 ┌─ 循环开始 ─────────────────────────────────────────────┐
 │                                                         │
 │  1. 派遣 TDD Bridge                                     │
-│     → 生成 test-spec.md                                 │
+│     → Generator 生成 test-spec.md                       │
+│     → Reviewer 审查（Generator ↔ Reviewer 对抗）        │
 │     → 返回 test-spec.md 后继续                           │
 │                                                         │
 │  2. 【立即】派遣 Implementer                             │
 │     → 传入：business.md + boundary.md + test-spec.md    │
 │            + tech-stack.md + 依赖域 boundary.md 摘录     │
-│     → Implementer 完成全部代码 + 测试                     │
-│     → 返回状态：DONE / DONE_WITH_CONCERNS / BLOCKED     │
+│     → Implementer 完成全部代码 + 测试（不运行测试）       │
+│     → 返回：状态 + 文件数 + 测试数 + 覆盖率             │
 │                                                         │
 │  3. Implementer 返回后【立即】派遣 Spec Reviewer          │
 │     → 不等待用户确认，不跳过，不省略                      │
-│     → 核对代码 vs business.md（Stage 1）                 │
-│     → 一次性给出全部问题                                 │
-│     → 返回：PASS / ISSUES（含问题列表）                  │
+│     → Spec Reviewer 运行全部测试                         │
+│     → 全部通过 → 核对代码 vs business.md（Stage 1）     │
+│     → 有失败 → 返回 ISSUES（含失败信息）                │
 │                                                         │
-│  4. Spec Reviewer 返回 ISSUES 后【立即】：               │
-│     → 重新派遣 Implementer，传入问题列表                 │
-│     → Implementer 修复后重新提交                         │
-│     → 重新派遣 Spec Reviewer 审查                        │
-│     → 循环直到 PASS 或达到 10 轮上限                     │
+│  4. Spec Reviewer 返回 ISSUES（测试失败）后【立即】：     │
+│     → 编排者派遣 Implementer，传入失败信息               │
+│     → Implementer 修复后返回                             │
+│     → 编排者重新派遣 Spec Reviewer                       │
+│     → 循环直到全部测试通过 + Spec Compliance 通过        │
 │                                                         │
 │  5. Spec Reviewer 返回 PASS 后【立即】派遣 Quality Reviewer│
+│     → Quality Reviewer 运行全部测试（确认仍然通过）       │
 │     → 核对代码 vs tech-stack.md（Stage 2）               │
 │     → 返回：PASS / ISSUES                               │
 │                                                         │
 │  6. Quality Reviewer 返回 ISSUES 后【立即】：             │
-│     → 重新派遣 Implementer 修复                          │
-│     → 重新派遣 Spec Reviewer（确认修复未引入新问题）       │
-│     → 重新派遣 Quality Reviewer                          │
+│     → 编排者派遣 Implementer，传入问题列表               │
+│     → Implementer 修复后返回                             │
+│     → 编排者重新派遣 Spec Reviewer（重跑测试+审查）       │
+│     → 编排者重新派遣 Quality Reviewer（重跑测试+审查）    │
 │     → 循环直到 PASS 或达到 10 轮上限                     │
 │                                                         │
 │  7. Quality Reviewer 返回 PASS 后【立即】派遣 VCDDD Reviewer│
-│     → 核对 VCDDD 合规性（Stage 3）                       │
+│     → VCDDD Reviewer 确认 Stage 1 已运行全部测试        │
+│     → 如果未运行 → 拒绝执行，返回编排者："必须先补跑测试"│
+│     → 编排者补跑后重新派遣 VCDDD Reviewer                │
+│     → 如果已运行 → 核对 VCDDD 合规性（Stage 3）         │
 │     → 返回：PASS / ISSUES / CONDITIONAL                 │
 │                                                         │
 │  8. VCDDD Reviewer 返回后：                              │
 │     → PASS → 标记该域完成，进入下一个域                   │
-│     → ISSUES → 重新派遣 Implementer 修复，从 Step 3 重审  │
+│     → ISSUES → 编排者派遣 Implementer 修复，从 Step 3 重审│
 │     → CONDITIONAL → 标记 DONE_WITH_CONCERNS，进入下一域   │
+│     → 拒绝执行 → 编排者补跑前序测试                      │
 │                                                         │
 │  9. 该域三道审查全部通过后【立即】进入下一个域             │
 │     → 不等待用户确认，不暂停，直接取拓扑排序中的下一域     │
@@ -109,11 +114,13 @@ Step 4: 生成最终报告
 ```
 
 **关键约束**：
-- **审查不可跳过**：Implementer 返回 DONE 不等于域完成，必须通过三道审查才算完成
-- **审查不可省略**：不能因为"代码看起来没问题"就跳过 Reviewer
-- **审查不可并行**：Spec → Quality → VCDDD 必须串行，后一道审查依赖前一道的结果
-- **修复后必须重审**：Implementer 修复问题后，必须从 Spec Reviewer 重新开始审查
-- **不需要用户提醒**：整个循环是自动的，只在升级条件触发时才打断用户
+- **测试由 Reviewer 运行**：Implementer 不运行测试，Reviewer 运行
+- **所有调度由编排者执行**：Reviewer 不自己派遣 Implementer
+- **审查不可跳过**：Implementer 返回 DONE 不等于域完成，必须通过三道审查
+- **审查不可并行**：Spec → Quality → VCDDD 必须串行
+- **修复后必须重审**：Implementer 修复后，必须从 Spec Reviewer 重新开始
+- **VCDDD Reviewer 有权拒绝**：前序未跑测试时拒绝执行
+- **不需要用户提醒**：整个循环是自动的
 
 ### 编排者呈现给用户的进度
 

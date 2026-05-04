@@ -1,6 +1,6 @@
 ---
 name: vcddd-review-domain
-description: VCDDD — 三层对抗审查 + 测试验证
+description: VCDDD — 三层对抗审查 + 测试运行
 ---
 
 > 子 Agent 指令：本文件为子 Agent 的完整执行指令，由总控 Agent 传入并派遣执行。
@@ -8,11 +8,13 @@ description: VCDDD — 三层对抗审查 + 测试验证
 
 # Step: REVIEW-DOMAIN — 域审查
 
-对已实现的域代码进行测试验证 + 三层对抗审查。
+对已实现的域代码进行测试运行 + 三层对抗审查。
+
+**所有调度由控制器（主 session）执行。** Reviewer 只负责运行测试和审查，不负责派遣 Implementer。Implementer 只负责写代码和测试，不负责运行测试。
 
 ## 前置条件
 
-- IMPLEMENT-DOMAIN 已完成（代码 + 白盒测试 + 黑盒测试已就绪）
+- IMPLEMENT-DOMAIN 已完成（代码 + 测试已就绪）
 
 ## 输入
 
@@ -32,56 +34,62 @@ description: VCDDD — 三层对抗审查 + 测试验证
 ┌─ 审查循环开始 ──────────────────────────────────────────┐
 │                                                         │
 │  1. 【立即】派遣 Spec Reviewer                           │
-│     → 使用 SuperPower spec compliance reviewer          │
 │     → 传入：business.md + boundary.md + 全部代码 + 测试  │
-│     → Reviewer 运行全部测试（白盒 + 黑盒）               │
-│     → 核对代码 vs business.md（Stage 1）                 │
-│     → 一次性给出全部问题（含测试失败信息）                │
-│     → 返回：PASS / ISSUES                               │
+│            + tech-stack.md 中的测试运行命令              │
+│     → Spec Reviewer 运行全部测试（白盒 + 黑盒）          │
+│     → 全部通过 → 进入 Spec Compliance 核对              │
+│     → 有失败 → 返回 ISSUES（含失败测试信息）            │
 │                                                         │
-│  2. Spec Reviewer 返回 ISSUES 后【立即】：               │
-│     → 重新派遣 Implementer，传入问题列表 + 失败测试信息  │
-│     → Implementer 修复后重新提交代码 + 测试              │
-│     → 重新派遣 Spec Reviewer（Reviewer 重新运行测试）     │
-│     → 循环直到 PASS 或达到 10 轮上限                     │
+│  2. Spec Reviewer 返回 ISSUES（测试失败）后【立即】：    │
+│     → 控制器派遣 Implementer，传入失败信息               │
+│     → Implementer 修复代码或测试                         │
+│     → Implementer 返回后，控制器重新派遣 Spec Reviewer   │
+│     → 循环直到全部测试通过 + Spec Compliance 通过        │
 │                                                         │
 │  3. Spec Reviewer 返回 PASS 后【立即】派遣 Quality Reviewer│
-│     → 使用 SuperPower code quality reviewer             │
-│     → 传入：tech-stack.md + 全部代码 + 测试              │
-│     → Reviewer 运行全部测试（确认测试仍然通过）           │
+│     → 传入：tech-stack.md + 全部代码 + 测试             │
+│            + tech-stack.md 中的测试运行命令              │
+│     → Quality Reviewer 运行全部测试（确认仍然通过）       │
 │     → 核对代码 vs tech-stack.md（Stage 2）               │
-│     → 一次性给出全部问题                                 │
 │     → 返回：PASS / ISSUES                               │
 │                                                         │
 │  4. Quality Reviewer 返回 ISSUES 后【立即】：             │
-│     → 重新派遣 Implementer，传入问题列表                  │
-│     → Implementer 修复后重新提交代码 + 测试               │
-│     → 重新派遣 Spec Reviewer（Reviewer 重跑测试+审查）    │
-│     → 重新派遣 Quality Reviewer（Reviewer 重跑测试+审查） │
+│     → 控制器派遣 Implementer，传入问题列表               │
+│     → Implementer 修复后返回                             │
+│     → 控制器重新派遣 Spec Reviewer（重跑测试+审查）       │
+│     → 控制器重新派遣 Quality Reviewer（重跑测试+审查）    │
 │     → 循环直到 PASS 或达到 10 轮上限                     │
 │                                                         │
-│  6. Quality Reviewer 返回 PASS 后【立即】派遣 VCDDD Reviewer│
+│  5. Quality Reviewer 返回 PASS 后【立即】派遣 VCDDD Reviewer│
 │     → 传入：business.md + boundary.md + tech-stack.md   │
 │            + 全部代码 + Spec Reviewer 结果               │
 │            + Quality Reviewer 结果                       │
-│     → 核对 VCDDD 合规性（Stage 3）                       │
+│     → VCDDD Reviewer 确认 Stage 1 和 Stage 2 已运行全部测试│
+│     → 如果发现前序 Reviewer 未运行测试：                 │
+│       拒绝执行，返回给控制器："前序 Reviewer 未运行测试，  │
+│       必须先让 Stage 1 Reviewer 补跑测试"               │
+│     → 如果确认已运行 → 核对 VCDDD 合规性（Stage 3）     │
 │     → 返回：PASS / ISSUES / CONDITIONAL                 │
 │                                                         │
-│  7. VCDDD Reviewer 返回后：                              │
+│  6. VCDDD Reviewer 返回后：                              │
 │     → PASS → 标记该域审查完成                            │
-│     → ISSUES → 重新派遣 Implementer 修复，从 Step 2 重审  │
+│     → ISSUES → 控制器派遣 Implementer 修复，从 Step 1 重审│
 │     → CONDITIONAL → 标记 DONE_WITH_CONCERNS，审查完成    │
+│     → 拒绝执行（前序未跑测试）→ 控制器补跑前序测试       │
+│                                                         │
+│  7. 该域三道审查全部通过后【立即】进入下一个域             │
+│     → 不等待用户确认，不暂停，直接取拓扑排序中的下一域     │
 │                                                         │
 └─ 审查循环结束 ──────────────────────────────────────────┘
 ```
 
 **关键约束**：
-- **审查不可跳过**：Implementer 返回 DONE 不等于域完成，必须通过三道审查才算完成
-- **审查不可省略**：不能因为"代码看起来没问题"就跳过任何一道 Reviewer
+- **测试由 Reviewer 运行**：Implementer 不运行测试，Reviewer 运行
+- **所有调度由控制器执行**：Reviewer 不自己派遣 Implementer，控制器负责派遣和信息传递
+- **审查不可跳过**：Implementer 返回 DONE 不等于域完成，必须通过三道审查
 - **审查不可并行**：Spec → Quality → VCDDD 必须串行
-- **测试由 Reviewer 运行**：Reviewer 是运行测试的一方，不是 Implementer
-- **使用 SuperPower reviewer**：Spec Reviewer 使用 SuperPower spec compliance reviewer，Quality Reviewer 使用 SuperPower code quality reviewer
 - **修复后必须重审**：Implementer 修复后，必须从 Spec Reviewer 重新开始
+- **VCDDD Reviewer 有权拒绝**：如果前序 Reviewer 未运行测试，VCDDD Reviewer 拒绝执行并抛回控制器
 - **不需要用户提醒**：整个循环是自动的
 
 ## 三份 Reviewer Prompt
@@ -104,7 +112,7 @@ description: VCDDD — 三层对抗审查 + 测试验证
 
 ## 验证
 
-- [ ] 全部测试（白盒+黑盒）通过
+- [ ] 全部测试由 Reviewer 运行并通过
 - [ ] Stage 1: 所有不变式/状态迁移/命令路径在代码中实现
 - [ ] Stage 2: 命名/目录/依赖/日志/错误处理符合 tech-stack.md
 - [ ] Stage 3: 域边界正确、通用语言一致、事务对齐、事件事务后发布

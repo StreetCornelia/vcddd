@@ -363,78 +363,63 @@ tech-stack.md 就绪 + 骨架代码已生成（D2.5-auto）
 
 #### 编排者传递给各 Agent 的上下文
 
-**Implementer 上下文：**
+**Implementer 上下文：**（完整内容见 `steps/IMPLEMENT-DOMAIN/implementer-prompt.md`）
 
 ```
 ## 任务
 你是 {domain} 域的开发者。请完整实现该域的全部代码及测试。
 
-## 强制执行顺序（不可跳过）
+**你只负责写代码和测试，不负责运行测试。** 测试由 Reviewer 运行。
 
-### Phase 1: 实现领域代码
-1. 实现聚合根 + 不变式 + 状态机
-2. 实现命令处理逻辑
-3. 实现事件、仓储、读模型、事件消费
-4. 每个组件命名与 business.md 通用语言一致
+## Phase 1: 实现领域代码
+1. 聚合根 + 不变式 + 状态机
+2. 命令定义 + 处理逻辑
+3. 事件、仓储、读模型、事件消费
 
-### Phase 2: 编写测试
+## Phase 2: 编写测试
 1. 基于 test-spec.md，为每个测试 ID 编写黑盒测试函数
-   - 测试函数名包含 ID（如 test_CMD_001）
-   - 只调用公开命令入口，不假设内部实现
 2. 编写白盒测试：分支覆盖 + 数据边界 + 异常路径
 3. 覆盖率自检：逐条核对 test-spec.md，确认每个 ID 都有对应测试
 
-### Phase 3: 运行测试 + 自审
-1. 运行全部测试，确认全部通过
-2. 有失败 → 修复代码或测试，重跑直到全部通过
-3. 自审：命名、错误处理、日志符合 tech-stack.md
+## Phase 3: 自审
+对照 business.md 核对是否遗漏任何路径
 
-## 域业务设计
-{domain}/business.md（全文）
-
-## 域边界设计
-{domain}/boundary.md（全文）
-
-## 测试规格
-{domain}/test-spec.md（全文）— 每个测试 ID 必须有对应测试函数
-
-## 技术约定
-tech-stack.md（全文）
-
-## 依赖引用
-{被依赖域的 boundary.md 摘录（仅事件/命令结构定义）}
-
-## 要求
-- 先写领域代码，再写测试
-- 黑盒测试函数名必须包含 test-spec 中的 ID（如 test_CMD_001）
-- 覆盖 test-spec.md 中的全部测试 ID
-- 实现完成后自审
+## 完成报告格式
+状态：DONE / DONE_WITH_CONCERNS / BLOCKED
+文件数：N 个文件
+测试数：白盒 N 个 + 黑盒 N 个
+test-spec 覆盖率：N/M 个 ID 已覆盖
 ```
 
-**Spec Reviewer 上下文：**
+**Spec Reviewer 上下文：**（完整内容见 `steps/REVIEW-DOMAIN/spec-reviewer-prompt.md`）
 
 ```
 ## 审查任务
 审查 {domain} 域的 Spec Compliance。
 
+## 第一步：运行测试
+{tech-stack.md 中定义的测试命令}
+全部通过 → 进入第二步。有失败 → 返回给控制器。
+
 ## 域业务设计
 {domain}/business.md（全文）
 
 ## 实现代码
 {Implementer 产出的全部代码文件}
 
-## 审查要求
-- 逐条核对 business.md：全部不变式、状态迁移、命令路径、失败分支
-- 核对企业 boundary.md：命令/事件结构定义
-- 详见 reference/engine/review-loop.md Stage 1 核对清单
-- 一次性给出全部问题，不允许分批抛出
+## 核对清单
+详见 steps/REVIEW-DOMAIN/spec-reviewer-prompt.md
 ```
 
-**Quality Reviewer 上下文：**
+**Quality Reviewer 上下文：**（完整内容见 `steps/REVIEW-DOMAIN/quality-reviewer-prompt.md`）
 
 ```
 ## 审查任务
 审查 {domain} 域的 Code Quality。
+
+## 第一步：运行测试
+{tech-stack.md 中定义的测试命令}
+全部通过 → 进入核对清单。有失败 → 返回给控制器。
 
 ## 技术约定
 tech-stack.md（全文）
@@ -442,17 +427,19 @@ tech-stack.md（全文）
 ## 实现代码
 {Implementer 产出的全部代码文件}
 
-## 审查要求
-- 逐条核对 tech-stack.md：命名、目录、依赖、日志、错误处理、事务边界、测试约定
-- 详见 reference/engine/review-loop.md Stage 2 核对清单
-- 一次性给出全部问题，不允许分批抛出
+## 核对清单
+详见 steps/REVIEW-DOMAIN/quality-reviewer-prompt.md
 ```
 
-**VCDDD Reviewer 上下文：**
+**VCDDD Reviewer 上下文：**（完整内容见 `steps/REVIEW-DOMAIN/vcddd-reviewer-prompt.md`）
 
 ```
 ## 审查任务
 审查 {domain} 域的 VCDDD 合规性。
+
+## 第一步：确认前序测试已运行
+确认 Stage 1 Spec Reviewer 已运行全部测试。
+如果未运行 → 拒绝执行，返回控制器："前序 Reviewer 未运行测试，必须先补跑"。
 
 ## 域业务设计
 {domain}/business.md（全文）
@@ -466,30 +453,11 @@ tech-stack.md（全文）
 {Spec Reviewer 的审查结果}
 {Quality Reviewer 的审查结果}
 
-## 审查要求
-1. VCDDD 定义准确性
-   - 域边界是否被正确遵守（代码没有越过 boundary.md 定义的边界）
-   - 通用语言是否一致（代码命名与 business.md 的词汇表一致）
-   - 决策主权是否未被侵犯（没有其他域的代码做了本域的决策）
-   - 修复：Spec Reviewer 发现但未解决的问题是否合理
+## 核对清单
+详见 steps/REVIEW-DOMAIN/vcddd-reviewer-prompt.md
 
-2. 技术栈规则遵守
-   - tech-stack.md 中关于域层与框架层分离的规定是否被遵守
-   - 每个域是否保持了模块完整性（含数据访问实现）
-   - 框架适配层是否没有混入业务逻辑
-   - **基础设施边界：infrastructure/ 目录是否只包含连接器，不含任何域的表定义、仓储实现或业务逻辑**
-
-3. VCDDD 专项要求
-   - 事务边界是否与聚合边界对齐（一个事务不修改多个聚合）
-   - 状态迁移是否通过聚合方法执行（无直接字段赋值）
-   - 事件是否在事务提交后发布（不在事务内）
-   - 跨域协作是否通过事件机制（非直接耦合）
-   - 文档与代码的偏差：新发现与 business.md 的矛盾（如有，标记为 [待确认]）
-
-## 三项判定
-✅ VCDDD 合规 — 该域实现通过 VCDDD 审查
-❌ 不合规 — 列出具体问题，交由编排者判断是否返回 Implementer 修复
-⚠️ 有条件合规 — 存在非关键问题，标记为 DONE_WITH_CONCERNS 并在最终报告中列出
+## 判定
+✅ 合规 / ❌ 不合规 / ⚠️ 有条件合规 / 🚫 拒绝执行（前序未跑测试）
 ```
 
 ---
