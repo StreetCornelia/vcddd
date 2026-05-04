@@ -297,6 +297,70 @@ tech-stack.md 就绪 + 骨架代码已生成（D2.5-auto）
 [VCDDD] Step 5: 生成最终报告
 ```
 
+#### 编排者调度循环（强制执行）
+
+**流程图只是概览。以下调度循环是编排者的强制执行指令——每个域完成后必须按此循环推进，不需要用户提醒。**
+
+```
+对每个域，按以下顺序严格执行：
+
+┌─ 循环开始 ─────────────────────────────────────────────┐
+│                                                         │
+│  1. 派遣 TDD Bridge                                     │
+│     → 生成 test-spec.md                                 │
+│     → Generator ↔ Spec Reviewer 对抗（最多 10 轮）       │
+│     → 返回 test-spec.md 后继续                           │
+│                                                         │
+│  2. 【立即】派遣 Implementer                             │
+│     → 传入：business.md + boundary.md + test-spec.md    │
+│            + tech-stack.md + 依赖域 boundary.md 摘录     │
+│     → Implementer 完成全部代码 + 测试                     │
+│     → 返回状态：DONE / DONE_WITH_CONCERNS / BLOCKED     │
+│                                                         │
+│  3. Implementer 返回后【立即】派遣 Spec Reviewer          │
+│     → 不等待用户确认，不跳过，不省略                      │
+│     → 核对代码 vs business.md（Stage 1）                 │
+│     → 一次性给出全部问题                                 │
+│     → 返回：PASS / ISSUES（含问题列表）                  │
+│                                                         │
+│  4. Spec Reviewer 返回 ISSUES 后【立即】：               │
+│     → 重新派遣 Implementer，传入问题列表                 │
+│     → Implementer 修复后重新提交                         │
+│     → 重新派遣 Spec Reviewer 审查                        │
+│     → 循环直到 PASS 或达到 10 轮上限                     │
+│                                                         │
+│  5. Spec Reviewer 返回 PASS 后【立即】派遣 Quality Reviewer│
+│     → 核对代码 vs tech-stack.md（Stage 2）               │
+│     → 返回：PASS / ISSUES                               │
+│                                                         │
+│  6. Quality Reviewer 返回 ISSUES 后【立即】：             │
+│     → 重新派遣 Implementer 修复                          │
+│     → 重新派遣 Spec Reviewer（确认修复未引入新问题）       │
+│     → 重新派遣 Quality Reviewer                          │
+│     → 循环直到 PASS 或达到 10 轮上限                     │
+│                                                         │
+│  7. Quality Reviewer 返回 PASS 后【立即】派遣 VCDDD Reviewer│
+│     → 核对 VCDDD 合规性（Stage 3）                       │
+│     → 返回：PASS / ISSUES / CONDITIONAL                 │
+│                                                         │
+│  8. VCDDD Reviewer 返回后：                              │
+│     → PASS → 标记该域完成，进入下一个域                   │
+│     → ISSUES → 重新派遣 Implementer 修复，从 Step 3 重审  │
+│     → CONDITIONAL → 标记 DONE_WITH_CONCERNS，进入下一域   │
+│                                                         │
+│  9. 该域三道审查全部通过后【立即】进入下一个域             │
+│     → 不等待用户确认，不暂停，直接取拓扑排序中的下一域     │
+│                                                         │
+└─ 循环结束（直到所有域完成）──────────────────────────────┘
+```
+
+**关键约束**：
+- **审查不可跳过**：Implementer 返回 DONE 不等于域完成，必须通过三道审查才算完成
+- **审查不可省略**：不能因为"代码看起来没问题"就跳过 Reviewer
+- **审查不可并行**：Spec → Quality → VCDDD 必须串行，后一道审查依赖前一道的结果
+- **修复后必须重审**：Implementer 修复问题后，必须从 Spec Reviewer 重新开始审查
+- **不需要用户提醒**：整个循环是自动的，只在升级条件触发时才打断用户
+
 #### 编排者传递给各 Agent 的上下文
 
 **Implementer 上下文：**
