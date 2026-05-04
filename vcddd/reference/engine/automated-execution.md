@@ -367,7 +367,26 @@ tech-stack.md 就绪 + 骨架代码已生成（D2.5-auto）
 
 ```
 ## 任务
-你是 {domain} 域的开发者。请完整实现该域的全部代码。
+你是 {domain} 域的开发者。请**严格按 TDD 流程**完整实现该域的全部代码及测试。
+
+## 强制执行顺序（不可跳过）
+
+### Phase 1: RED — 先写全部测试
+1. 读取 test-spec.md，为每个测试 ID 编写黑盒测试函数
+2. 为每个聚合的每个分支编写白盒测试函数
+3. 运行全部测试，确认全部失败（RED 状态）
+
+### Phase 2: GREEN — 写最小代码使测试通过
+1. 逐个组件实现，每实现一个运行相关测试直到通过
+2. 全部测试通过后进入 Phase 3
+
+### Phase 3: REFACTOR — 重构优化
+1. 消除重复、优化命名
+2. 运行全部测试，确认仍然通过
+
+### Phase 4: 覆盖率验证
+1. 逐条核对 test-spec.md，确认每个测试 ID 都有对应测试
+2. 有遗漏 → 立即补充，不允许完成
 
 ## 域业务设计
 {domain}/business.md（全文）
@@ -376,7 +395,7 @@ tech-stack.md 就绪 + 骨架代码已生成（D2.5-auto）
 {domain}/boundary.md（全文）
 
 ## 测试规格
-{domain}/test-spec.md（全文）
+{domain}/test-spec.md（全文）— 每个测试 ID 必须有对应测试函数
 
 ## 技术约定
 tech-stack.md（全文）
@@ -385,8 +404,9 @@ tech-stack.md（全文）
 {被依赖域的 boundary.md 摘录（仅事件/命令结构定义）}
 
 ## 要求
-- 加载 test-driven-development/SKILL.md，遵循 TDD 流程
-- 实现全部代码，覆盖 test-spec.md 中的全部测试 ID
+- **先写测试，确认失败，再写代码**（不允许先写代码后补测试）
+- 黑盒测试函数名必须包含 test-spec 中的 ID（如 test_CMD_001）
+- 覆盖 test-spec.md 中的全部测试 ID
 - 实现完成后自审
 ```
 
