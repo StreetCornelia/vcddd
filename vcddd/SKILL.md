@@ -89,21 +89,27 @@ VCDDD 使用总控 Agent 协调所有步骤的执行。总控 Agent 是运行本
 
 ## 步骤总览
 
-| 调用方式 | 步骤 | 做什么 | 步骤位置 |
-|---------|------|-------|---------|
-| `brownfield` | BROWNFIELD — 棕地初始化 | 分析已有代码生成认知文档 | `steps/BROWNFIELD/` |
-| `vision` | V — 意图视野 | 捕捉用户意图写入 input.md | `steps/VISION/` |
-| `context` | C — 事实上下文 | 澄清为 facts.md（逐条确认） | `steps/CONTEXT/` |
-| `domain-design` | D¹ — 域设计 | 推导边界/不变式/事件/契约 | `steps/DOMAIN-DESIGN/` |
-| `dev-setup` | D² — 技术栈确立 | 确定技术栈写入 tech-stack.md | `steps/DEVSETUP/` |
-| `scaffold` | D²·⁵ — 骨架生成 | 生成项目骨架代码（基础设施连接器 + 共享基设 + 框架层） | `steps/SCAFFOLD/` |
-| `tdd-bridge` | TDD 桥梁 | 从 business.md 推导黑盒测试 | `steps/TDD-BRIDGE/` |
-| `implement-domain` | 域实现 | 一个 agent 完整实现一个域 | `steps/IMPLEMENT-DOMAIN/` |
-| `review-domain` | 域审查 | 三层审查 | `steps/REVIEW-DOMAIN/` |
-| `integrate` | 跨域集成 | 验证跨域协作一致性 | `steps/INTEGRATE/` |
-| `report` | 最终报告 | 汇总完成情况 | `steps/REPORT/` |
+每个步骤有一个唯一的斜杠命令名。控制器在调度时**必须使用这些命令名**，不使用自然语言描述。
 
-用户可直接调用任一步骤（例如"执行棕地初始化"或"帮我做域设计"），不需要从 V 开始。
+| 斜杠命令 | 步骤 | 做什么 | 步骤位置 |
+|---------|------|-------|---------|
+| `/vcddd-brownfield` | BROWNFIELD — 棕地初始化 | 分析已有代码生成认知文档 | `steps/BROWNFIELD/` |
+| `/vcddd-vision` | V — 意图视野 | 捕捉用户意图写入 input.md | `steps/VISION/` |
+| `/vcddd-context` | C — 事实上下文 | 澄清为 facts.md（逐条确认） | `steps/CONTEXT/` |
+| `/vcddd-domain-design` | D¹ — 域设计 | 推导边界/不变式/事件/契约 | `steps/DOMAIN-DESIGN/` |
+| `/vcddd-dev-setup` | D² — 技术栈确立 | 确定技术栈写入 tech-stack.md | `steps/DEVSETUP/` |
+| `/vcddd-scaffold` | D²·⁵ — 骨架生成 | 生成项目骨架代码 | `steps/SCAFFOLD/` |
+| `/vcddd-tdd-bridge` | TDD 桥梁 | 从 business.md 推导黑盒测试 | `steps/TDD-BRIDGE/` |
+| `/vcddd-implement-domain` | 域实现 | 一个 agent 完整实现一个域 | `steps/IMPLEMENT-DOMAIN/` |
+| `/vcddd-review-domain` | 域审查 | 三层审查 + 测试运行 | `steps/REVIEW-DOMAIN/` |
+| `/vcddd-integrate` | 跨域集成 | 验证跨域协作一致性 | `steps/INTEGRATE/` |
+| `/vcddd-report` | 最终报告 | 汇总完成情况 | `steps/REPORT/` |
+
+用户可直接调用任一步骤（例如"执行 /vcddd-brownfield"或"帮我做 /vcddd-domain-design"），不需要从 V 开始。
+
+**控制器调度规则**：在自动化流程中，控制器必须使用斜杠命令名派遣子 Agent。例如：
+- ✅ "invoke /vcddd-implement-domain，传入 business.md + boundary.md + test-spec.md"
+- ❌ "派遣 Implementer 实现该域"
 
 ---
 

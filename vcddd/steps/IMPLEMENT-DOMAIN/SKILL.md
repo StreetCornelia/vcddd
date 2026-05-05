@@ -93,8 +93,8 @@ Implementer 返回状态后，控制器必须按以下规则继续：
 
 | Implementer 返回 | 控制器下一步 |
 |-----------------|-------------|
-| DONE | **立即**进入 REVIEW-DOMAIN（三道审查循环） |
-| DONE_WITH_CONCERNS | **立即**进入 REVIEW-DOMAIN（审查中会处理 CONCERNS） |
+| DONE | **立即** invoke /vcddd-review-domain（三道审查循环） |
+| DONE_WITH_CONCERNS | **立即** invoke /vcddd-review-domain（审查中会处理 CONCERNS） |
 | BLOCKED | 暂停自动化，向用户呈现场景和阻塞原因 |
 
 **控制器不得在 Implementer 返回 DONE 后暂停或等待用户确认——必须自动进入审查流程。**

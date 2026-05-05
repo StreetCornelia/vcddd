@@ -41,9 +41,9 @@ description: VCDDD — 三层对抗审查 + 测试运行
 │     → 有失败 → 返回 ISSUES（含失败测试信息）            │
 │                                                         │
 │  2. Spec Reviewer 返回 ISSUES（测试失败）后【立即】：    │
-│     → 控制器派遣 Implementer，传入失败信息               │
+│     → 控制器 invoke /vcddd-implement-domain，传入失败信息│
 │     → Implementer 修复代码或测试                         │
-│     → Implementer 返回后，控制器重新派遣 Spec Reviewer   │
+│     → 返回后控制器重新派遣 Spec Reviewer                 │
 │     → 循环直到全部测试通过 + Spec Compliance 通过        │
 │                                                         │
 │  3. Spec Reviewer 返回 PASS 后【立即】派遣 Quality Reviewer│
@@ -54,9 +54,8 @@ description: VCDDD — 三层对抗审查 + 测试运行
 │     → 返回：PASS / ISSUES                               │
 │                                                         │
 │  4. Quality Reviewer 返回 ISSUES 后【立即】：             │
-│     → 控制器派遣 Implementer，传入问题列表               │
-│     → Implementer 修复后返回                             │
-│     → 控制器重新派遣 Spec Reviewer（重跑测试+审查）       │
+│     → 控制器 invoke /vcddd-implement-domain，传入问题列表│
+│     → 返回后控制器重新派遣 Spec Reviewer（重跑测试+审查） │
 │     → 控制器重新派遣 Quality Reviewer（重跑测试+审查）    │
 │     → 循环直到 PASS 或达到 10 轮上限                     │
 │                                                         │
@@ -73,7 +72,8 @@ description: VCDDD — 三层对抗审查 + 测试运行
 │                                                         │
 │  6. VCDDD Reviewer 返回后：                              │
 │     → PASS → 标记该域审查完成                            │
-│     → ISSUES → 控制器派遣 Implementer 修复，从 Step 1 重审│
+│     → ISSUES → 控制器 invoke /vcddd-implement-domain 修复│
+│       → 返回后从 Step 1 重新审查                         │
 │     → CONDITIONAL → 标记 DONE_WITH_CONCERNS，审查完成    │
 │     → 拒绝执行（前序未跑测试）→ 控制器补跑前序测试       │
 │                                                         │

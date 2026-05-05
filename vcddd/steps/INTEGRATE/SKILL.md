@@ -74,7 +74,7 @@ description: VCDDD — 跨域集成验证（系统级对抗方）
 │     → 不打断用户                                         │
 │     → 控制器对每个技术问题：                              │
 │       · 判断属于哪个域                                    │
-│       · 派遣该域的 Implementer，传入：                    │
+│       · invoke /vcddd-implement-domain，传入：             │
 │         - 足够多的背景信息（涉及的事件/命令定义）          │
 │         - 问题列表 + 建议修复方式                         │
 │       · Implementer 修复后返回                            │
@@ -89,7 +89,7 @@ description: VCDDD — 跨域集成验证（系统级对抗方）
 │       · 影响范围                                          │
 │     → 等待用户决策                                        │
 │     → 用户确认后更新 business.md                          │
-│     → 受影响域重新过 REVIEW-DOMAIN                        │
+│     → 受影响域重新 invoke /vcddd-review-domain             │
 │     → 重新派遣集成验证 Agent（回到 Step 1）               │
 │                                                         │
 │  5. 返回 MIXED 后【立即】：                               │

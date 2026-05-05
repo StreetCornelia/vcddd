@@ -263,93 +263,65 @@ VCDDD 负责**准备上下文**，SuperPower 负责**执行**。分工如下：
 tech-stack.md 就绪 + 骨架代码已生成（D2.5-auto）
         │
         ▼
-[VCDDD] Step 1: 构建域依赖图 + 拓扑排序
+[控制器] 构建域依赖图 + 拓扑排序
         决定各域的实现顺序（被依赖的域先实现）
         │
         ▼
-[VCDDD] Step 2: 按拓扑顺序，逐域执行
+[控制器] 按拓扑顺序，逐域执行（使用斜杠命令派遣）：
         │
         ├── 域 A（无依赖）
-        │    ├── TDD Bridge → test-spec.md（Generator ↔ Spec Reviewer 对抗）
-        │    ├── Implementer → 完整实现域 A 全部代码（TDD 循环）
-        │    ├── Spec Reviewer → 核对代码 vs business.md（最多 10 轮）
-        │    ├── Quality Reviewer → 核对代码 vs tech-stack.md（最多 10 轮）
-        │    └── VCDDD Reviewer → 核对 VCDDD 合规性（最多 10 轮）
+        │    ├── invoke /vcddd-tdd-bridge → test-spec.md
+        │    ├── invoke /vcddd-implement-domain → 全部代码 + 测试
+        │    └── invoke /vcddd-review-domain → 三层审查
         │
         ├── 域 B（依赖 A）
-        │    ├── TDD Bridge → test-spec.md
-        │    ├── Implementer → 完整实现域 B 全部代码
-        │    ├── Spec Reviewer → 核对代码 vs business.md
-        │    ├── Quality Reviewer → 核对代码 vs tech-stack.md
-        │    └── VCDDD Reviewer → 核对 VCDDD 合规性
+        │    ├── invoke /vcddd-tdd-bridge → test-spec.md
+        │    ├── invoke /vcddd-implement-domain → 全部代码 + 测试
+        │    └── invoke /vcddd-review-domain → 三层审查
         │
         └── ...
         │
         ▼
-[VCDDD] Step 3: 全部域完成，执行跨域集成验证
-        加载 reference/engine/integration-verification.md
+[控制器] invoke /vcddd-integrate → 跨域集成验证
         │
         ▼
-[VCDDD + SuperPower] Step 4: 加载 finishing-a-development-branch/SKILL.md
-        遵循其指令完成分支
-        │
-        ▼
-[VCDDD] Step 5: 生成最终报告
+[控制器] invoke /vcddd-report → 最终报告
 ```
 
 #### 编排者调度循环（强制执行）
 
-**流程图只是概览。以下调度循环是编排者的强制执行指令——每个域完成后必须按此循环推进，不需要用户提醒。**
+**以下调度循环是编排者的强制执行指令。每个步骤必须使用斜杠命令派遣，不使用自然语言描述。**
 
 ```
 对每个域，按以下顺序严格执行：
 
 ┌─ 循环开始 ─────────────────────────────────────────────┐
 │                                                         │
-│  1. 派遣 TDD Bridge                                     │
-│     → 生成 test-spec.md                                 │
-│     → Generator ↔ Spec Reviewer 对抗（最多 10 轮）       │
+│  1. invoke /vcddd-tdd-bridge                            │
+│     → 传入：business.md + boundary.md                   │
 │     → 返回 test-spec.md 后继续                           │
 │                                                         │
-│  2. 【立即】派遣 Implementer                             │
+│  2. 【立即】invoke /vcddd-implement-domain               │
 │     → 传入：business.md + boundary.md + test-spec.md    │
 │            + tech-stack.md + 依赖域 boundary.md 摘录     │
-│     → Implementer 完成全部代码 + 测试                     │
-│     → 返回状态：DONE / DONE_WITH_CONCERNS / BLOCKED     │
+│     → 返回：状态 + 文件数 + 测试数 + Mock/Real 明细     │
 │                                                         │
-│  3. Implementer 返回后【立即】派遣 Spec Reviewer          │
-│     → 不等待用户确认，不跳过，不省略                      │
-│     → 核对代码 vs business.md（Stage 1）                 │
-│     → 一次性给出全部问题                                 │
-│     → 返回：PASS / ISSUES（含问题列表）                  │
+│  3. 返回后【立即】invoke /vcddd-review-domain            │
+│     → 传入：business.md + boundary.md + tech-stack.md   │
+│            + 全部代码 + 测试 + 测试运行命令              │
+│     → Reviewer 运行测试 + 三层审查（Spec→Quality→VCDDD） │
+│     → 返回：PASS / ISSUES / CONDITIONAL / 拒绝执行       │
 │                                                         │
-│  4. Spec Reviewer 返回 ISSUES 后【立即】：               │
-│     → 重新派遣 Implementer，传入问题列表                 │
-│     → Implementer 修复后重新提交                         │
-│     → 重新派遣 Spec Reviewer 审查                        │
+│  4. 返回 ISSUES 后【立即】：                              │
+│     → invoke /vcddd-implement-domain，传入问题列表       │
+│     → 返回后 invoke /vcddd-review-domain 重新审查        │
 │     → 循环直到 PASS 或达到 10 轮上限                     │
 │                                                         │
-│  5. Spec Reviewer 返回 PASS 后【立即】派遣 Quality Reviewer│
-│     → 核对代码 vs tech-stack.md（Stage 2）               │
-│     → 返回：PASS / ISSUES                               │
+│  5. 返回 PASS 后：                                       │
+│     → 标记该域完成，进入下一个域                          │
 │                                                         │
-│  6. Quality Reviewer 返回 ISSUES 后【立即】：             │
-│     → 重新派遣 Implementer 修复                          │
-│     → 重新派遣 Spec Reviewer（确认修复未引入新问题）       │
-│     → 重新派遣 Quality Reviewer                          │
-│     → 循环直到 PASS 或达到 10 轮上限                     │
-│                                                         │
-│  7. Quality Reviewer 返回 PASS 后【立即】派遣 VCDDD Reviewer│
-│     → 核对 VCDDD 合规性（Stage 3）                       │
-│     → 返回：PASS / ISSUES / CONDITIONAL                 │
-│                                                         │
-│  8. VCDDD Reviewer 返回后：                              │
-│     → PASS → 标记该域完成，进入下一个域                   │
-│     → ISSUES → 重新派遣 Implementer 修复，从 Step 3 重审  │
-│     → CONDITIONAL → 标记 DONE_WITH_CONCERNS，进入下一域   │
-│                                                         │
-│  9. 该域三道审查全部通过后【立即】进入下一个域             │
-│     → 不等待用户确认，不暂停，直接取拓扑排序中的下一域     │
+│  6. 返回 拒绝执行 后：                                   │
+│     → 控制器补跑前序测试，重新 invoke /vcddd-review-domain│
 │                                                         │
 └─ 循环结束（直到所有域完成）──────────────────────────────┘
 ```
@@ -360,6 +332,7 @@ tech-stack.md 就绪 + 骨架代码已生成（D2.5-auto）
 - **审查不可并行**：Spec → Quality → VCDDD 必须串行，后一道审查依赖前一道的结果
 - **修复后必须重审**：Implementer 修复问题后，必须从 Spec Reviewer 重新开始审查
 - **不需要用户提醒**：整个循环是自动的，只在升级条件触发时才打断用户
+- **必须使用斜杠命令**：每个步骤用 invoke /vcddd-xxx 派遣，不用自然语言
 
 #### 编排者传递给各 Agent 的上下文
 

@@ -17,26 +17,22 @@ D1 已确认的全部域文档
   Step 1: 构建域依赖图 + 拓扑排序（先排顺序，再逐域执行）
         │
         ▼
-  Step 2: 按拓扑顺序，逐域执行：
+  Step 2: 按拓扑顺序，逐域执行（使用斜杠命令派遣）：
         │
         ├── 域 A（无依赖）
-        │    ├── a. TDD Bridge（Generator ↔ Test Spec Reviewer）→ test-spec.md
-        │    ├── b. Implementer → 完整实现域 A 全部代码（TDD 循环）
-        │    ├── c. Spec Reviewer → 核对代码 vs business.md
-        │    ├── d. Quality Reviewer → 核对代码 vs tech-stack.md
-        │    └── e. VCDDD Reviewer → 核对 VCDDD 合规性
+        │    ├── invoke /vcddd-tdd-bridge → test-spec.md
+        │    ├── invoke /vcddd-implement-domain → 全部代码 + 测试
+        │    └── invoke /vcddd-review-domain → 三层审查
         │
         ├── 域 B（依赖 A）
-        │    ├── a. TDD Bridge → test-spec.md
-        │    ├── b. Implementer → 完整实现域 B 全部代码
-        │    ├── c. Spec Reviewer → 核对代码 vs business.md
-        │    ├── d. Quality Reviewer → 核对代码 vs tech-stack.md
-        │    └── e. VCDDD Reviewer → 核对 VCDDD 合规性
+        │    ├── invoke /vcddd-tdd-bridge → test-spec.md
+        │    ├── invoke /vcddd-implement-domain → 全部代码 + 测试
+        │    └── invoke /vcddd-review-domain → 三层审查
         │
         └── ...
         │
         ▼
-  Step 3: 跨域集成验证
+  Step 3: invoke /vcddd-integrate → 跨域集成验证
 ```
 
 ---
@@ -79,31 +75,28 @@ D1 已确认的全部域文档
 按拓扑顺序选择下一个域 D
         │
         ▼
-  [TDD Bridge] Generator → test-spec.md → Test Spec Reviewer（10 轮上限）
+  invoke /vcddd-tdd-bridge → test-spec.md
         │
         ▼
-  [Implementer] 完整实现域 D 全部代码（TDD 循环）
+  invoke /vcddd-implement-domain → 全部代码 + 测试
         │
         ▼
-  [Spec Reviewer] 核对代码 vs business.md（10 轮上限）
-        │
-        ▼
-  [Quality Reviewer] 核对代码 vs tech-stack.md（10 轮上限）
-        │
-        ▼
-  [VCDDD Reviewer] 核对 VCDDD 合规性（10 轮上限）
+  invoke /vcddd-review-domain → 三层审查（Spec→Quality→VCDDD）
         │
     ┌───┴───┐
     │ 通过？  │
     └───┬───┘
    否   │  是
     ▼   │   ▼
-  回到     域 D 完成
-  Implementer  进入下一域
+  invoke    域 D 完成
+  /vcddd-   进入下一域
+  implement-domain
   修复问题
-  （VCDDD Reviewer
-   指出不合规项后
-   逐级重新审查）
+  → 重新
+  invoke
+  /vcddd-
+  review-
+  domain
 ```
 
 ### Implementer 的完整上下文
