@@ -90,6 +90,8 @@ description: VCDDD — 三层对抗审查 + 测试运行
 - **审查不可并行**：Spec → Quality → VCDDD 必须串行
 - **修复后必须重审**：Implementer 修复后，必须从 Spec Reviewer 重新开始
 - **VCDDD Reviewer 有权拒绝**：如果前序 Reviewer 未运行测试，VCDDD Reviewer 拒绝执行并抛回控制器
+- **Mock 审计**：每道审查必须检查 Mock 使用合理性——核心功能不能只有 Mock 测试就报告"通过"
+- **"通过"的定义**：只有 [REAL] 真实测试通过才叫"通过"。[MOCK] 通过标注为"Mock 通过"，不代表功能可用
 - **不需要用户提醒**：整个循环是自动的
 
 ## 三份 Reviewer Prompt
