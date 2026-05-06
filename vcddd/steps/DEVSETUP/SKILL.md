@@ -4,6 +4,7 @@ description: VCDDD Step D² — 确定技术栈，产出 tech-stack.md
 ---
 
 > 子 Agent 指令：本文件为子 Agent 的完整执行指令，由总控 Agent 传入并派遣执行。
+> ⚠️ **控制器**：用 Agent 工具派遣子 Agent 执行本步骤。你不直接修改文件，不跳过步骤。
 
 # Step: D² — Dev Setup（技术栈确立）
 

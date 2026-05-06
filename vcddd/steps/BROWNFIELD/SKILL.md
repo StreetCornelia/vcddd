@@ -4,6 +4,7 @@ description: VCDDD — 棕地初始化：分析已有代码生成认知文档
 ---
 
 > 子 Agent 指令：本文件为子 Agent 的完整执行指令，由总控 Agent 传入并派遣执行。
+> ⚠️ **控制器**：用 Agent 工具派遣子 Agent 执行本步骤。你不直接修改文件，不跳过步骤。
 
 # Step: BROWNFIELD — 棕地项目初始化
 

@@ -5,6 +5,7 @@ description: VCDDD — 跨域集成验证（系统级对抗方）
 
 > 子 Agent 指令：本文件为子 Agent 的完整执行指令，由总控 Agent 传入并派遣执行。
 > 本文件同时是控制器的调度参考——控制器必须按以下调度循环执行，不需要用户提醒。
+> ⚠️ **控制器**：用 Agent 工具派遣集成验证 Agent。技术问题用 invoke /vcddd-implement-domain 修复。你不直接修改代码。
 
 # Step: INTEGRATE — 跨域集成验证
 

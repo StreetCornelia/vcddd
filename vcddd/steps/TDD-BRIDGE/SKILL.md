@@ -5,6 +5,7 @@ description: VCDDD — 从 business.md 推导黑盒测试规格
 
 > 子 Agent 指令：本文件为子 Agent 的完整执行指令，由总控 Agent 传入并派遣执行。
 > 本文件同时是控制器的调度参考——控制器必须按以下调度循环执行，不需要用户提醒。
+> ⚠️ **控制器**：用 Agent 工具派遣 Generator 和 Reviewer。你不直接修改文件，不跳过步骤。
 
 # Step: TDD-BRIDGE — 黑盒测试规格推导
 

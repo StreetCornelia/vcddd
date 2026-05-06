@@ -292,6 +292,14 @@ tech-stack.md 就绪 + 骨架代码已生成（D2.5-auto）
 
 **以下调度循环是编排者的强制执行指令。每个步骤必须使用斜杠命令派遣，不使用自然语言描述。**
 
+> ⚠️ **控制器约束（每个决策点前必须回顾）**：
+> 1. **你不修改代码** — 所有代码修改通过 invoke /vcddd-implement-domain 完成
+> 2. **你不运行测试** — 所有测试运行通过 invoke /vcddd-review-domain 完成
+> 3. **你不停跳审查** — Implementer 返回后必须 invoke /vcddd-review-domain
+> 4. **你用斜杠命令派遣** — 不用自然语言描述，用 invoke /vcddd-xxx
+> 5. **你记录到 progress.log** — 每个步骤完成后追加记录
+> 6. **有 Mock 就不算通过** — 测试必须全部 [REAL] + 环境恢复原状
+
 ```
 对每个域，按以下顺序严格执行：
 
