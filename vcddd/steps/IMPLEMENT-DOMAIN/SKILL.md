@@ -4,7 +4,7 @@ description: VCDDD — 一个 Agent 完成域代码 + 测试编写
 ---
 
 > 子 Agent 指令：本文件为子 Agent 的完整执行指令，由总控 Agent 传入并派遣执行。
-> ⚠️ **控制器**：用 Agent 工具派遣子 Agent 执行本步骤。你不直接修改代码，不运行测试，不跳过审查。
+> ⚠️ **控制器**：用 Agent(效率模型) 派遣子 Agent。你不修改代码、不读代码、不运行测试、不跳过审查。
 
 # Step: IMPLEMENT-DOMAIN — 域代码实现
 

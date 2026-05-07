@@ -56,12 +56,28 @@ VCDDD 使用总控 Agent 协调所有步骤的执行。总控 Agent 是运行本
 
 | 职责 | 非职责 |
 |------|--------|
-| 分析用户需求，匹配到对应步骤 | ❌ 不直接修改项目文件或代码 |
-| 用 Agent 工具为每个步骤派遣子 Agent | ❌ 不参与项目内部文件的实质编写 |
-| 接收子 Agent 返回结果，记录到 progress.log | |
+| 分析用户需求，匹配到对应步骤 | ❌ 不读项目代码（代码占 Token，浪费昂贵模型上下文） |
+| 用 Agent 工具为每个步骤派遣子 Agent | ❌ 不写项目代码 |
+| 接收子 Agent 返回结果，记录到 progress.log | ❌ 不运行测试 |
+| **读取文档**（business.md、boundary.md、tech-stack.md 等） | ❌ 不写实现文档（implementation.md、test-spec.md 由子 Agent 写） |
+| **编写设计文档**（business.md、boundary.md、facts.md 等非实现部分） | |
 | 将步骤文档 + 上下文文件组装为子 Agent 的 Prompt | |
 | 根据步骤文档的调度循环判断下一步 | |
 | 在 Review-DOMAIN 中协调 Implementer ↔ Reviewer 的修复循环 | |
+
+**主控读写的范围**：
+- ✅ **可读**：所有文档（.md 文件）、子 Agent 返回结果、日志
+- ❌ **不可读**：项目源代码（.dart、.py、.ts 等实现文件）
+- ✅ **可写**：设计阶段文档（facts.md、business.md、boundary.md、tech-stack.md、progress.log）
+- ❌ **不可写**：代码、实现文档（implementation.md、test-spec.md 由子 Agent 写）
+
+### 模型选择策略
+
+子 Agent 的模型分配遵循 `reference/engine/model-selection.md` 的分层策略：
+- 常规任务（Implementer、Reviewer、TDD Bridge）→ **效率模型**
+- 升级排查（同一域超过 3 轮对抗仍未通过）→ **深度思考模型**
+
+具体模型名称由环境识别决定（Claude 环境自动映射，其他环境询问用户），不猜测。
 
 ### 子 Agent 的派遣模式
 

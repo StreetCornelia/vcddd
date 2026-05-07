@@ -5,7 +5,7 @@ description: VCDDD — 三层对抗审查 + 测试运行
 
 > 子 Agent 指令：本文件为子 Agent 的完整执行指令，由总控 Agent 传入并派遣执行。
 > 本文件同时是控制器的调度参考——控制器必须按以下调度循环执行，不需要用户提醒。
-> ⚠️ **控制器**：你不修改代码，不运行测试。Review 失败时用 invoke /vcddd-implement-domain 派遣修复。你用斜杠命令派遣，记录到 progress.log。
+> ⚠️ **控制器**：用 Agent(效率模型) 派遣 Reviewer。你不修改代码、不读代码、不运行测试。Review 失败时用 invoke /vcddd-implement-domain(效率模型) 派遣修复。
 
 # Step: REVIEW-DOMAIN — 域审查
 

@@ -50,44 +50,72 @@ invoke /vcddd-report → 最终报告
 
 > ⚠️ **控制器约束（每个决策点前必须回顾）**：
 > 1. **你不修改代码** — 所有代码修改通过 invoke /vcddd-implement-domain 完成
-> 2. **你不运行测试** — 所有测试运行通过 invoke /vcddd-review-domain 完成
-> 3. **你不停跳审查** — Implementer 返回后必须 invoke /vcddd-review-domain
-> 4. **你用斜杠命令派遣** — 不用自然语言描述，用 invoke /vcddd-xxx
-> 5. **你记录到 progress.log** — 每个步骤完成后追加记录
-> 6. **有 Mock 就不算通过** — 测试必须全部 [REAL] + 环境恢复原状
+> 2. **你不读代码** — 代码占 Token，主控用昂贵模型，只读文档和子 Agent 返回结果
+> 3. **你不运行测试** — 所有测试运行通过 invoke /vcddd-review-domain 完成
+> 4. **你不停跳审查** — Implementer 返回后必须 invoke /vcddd-review-domain
+> 5. **你用斜杠命令派遣** — 不用自然语言描述，用 invoke /vcddd-xxx
+> 6. **你记录到 progress.log** — 每个步骤完成后追加记录
+> 7. **有 Mock 就不算通过** — 测试必须全部 [REAL] + 环境恢复原状
+> 8. **你用效率模型派遣子 Agent** — 模型策略见 reference/engine/model-selection.md
 
 **所有调度由编排者（主 session）执行。** Implementer 只写代码和测试，不运行测试。Reviewer 运行测试和审查，不自己派遣 Implementer。
 
 ```
 ┌─ 循环开始 ─────────────────────────────────────────────┐
 │                                                         │
-│  1. invoke /vcddd-tdd-bridge                            │
+│  1. invoke /vcddd-tdd-bridge (效率模型)           │
 │     → 传入：business.md + boundary.md                   │
 │     → 返回 test-spec.md 后继续                           │
 │                                                         │
-│  2. 【立即】invoke /vcddd-implement-domain               │
+│  2. 【立即】invoke /vcddd-implement-domain (效率模型)│
 │     → 传入：business.md + boundary.md + test-spec.md    │
 │            + tech-stack.md + 依赖域 boundary.md 摘录     │
 │     → 返回：状态 + 文件数 + 测试数 + Mock/Real 明细     │
 │                                                         │
-│  3. 返回后【立即】invoke /vcddd-review-domain            │
+│  3. 返回后【立即】invoke /vcddd-review-domain (效率模型)│
 │     → 传入：business.md + boundary.md + tech-stack.md   │
 │            + 全部代码 + 测试 + 测试运行命令              │
 │     → Reviewer 运行测试 + 三层审查（Spec→Quality→VCDDD） │
 │     → 返回：PASS / ISSUES / CONDITIONAL / 拒绝执行       │
 │                                                         │
 │  4. 返回 ISSUES 后【立即】：                              │
-│     → invoke /vcddd-implement-domain，传入问题列表       │
-│     → 返回后 invoke /vcddd-review-domain 重新审查        │
+│     → invoke /vcddd-implement-domain (效率模型)   │
+│       传入问题列表                                       │
+│     → 返回后 invoke /vcddd-review-domain (效率模型)│
+│       重新审查                                           │
 │     → 循环直到 PASS 或达到 10 轮上限                     │
+│     → ⚠️ 同一问题连续 2 轮未修复 → 见升级机制            │
 │                                                         │
 │  5. 返回 PASS 后：                                       │
 │     → 标记该域完成，进入下一个域                          │
 │                                                         │
 │  6. 返回 拒绝执行 后：                                   │
-│     → 控制器补跑前序测试，重新 invoke /vcddd-review-domain│
+│     → 控制器补跑前序测试                                 │
+│     → 重新 invoke /vcddd-review-domain (效率模型) │
 │                                                         │
 └─ 循环结束（直到所有域完成）──────────────────────────────┘
+```
+
+#### 升级机制
+
+**触发条件**：同一类型的问题连续 2 轮未被修复。每轮都是新问题属于正常迭代，不触发升级。
+
+```
+Reviewer 第 N 轮返回 ISSUES，控制器发现：
+  → 本轮问题 X 与第 N-1 轮的问题 X 相同（未被修复）
+    │
+    ▼
+  派遣升级排查 Agent (深度思考模型)
+    传入：该域全部文档 + 代码 + 全部审查记录（标注重复问题）+ 全部修复记录
+    任务：分析问题 X 为什么反复出现，给出具体修复方案
+    │
+    ▼
+  invoke /vcddd-implement-domain (效率模型)
+    传入升级排查的修复方案
+    │
+    ▼
+  invoke /vcddd-review-domain (效率模型)
+    重新审查
 ```
 
 **关键约束**：
