@@ -106,6 +106,7 @@ VCDDD 使用总控 Agent 协调所有步骤的执行。总控 Agent 是运行本
 | `/vcddd-domain-design` | D¹ — 域设计 | 推导边界/不变式/事件/契约 | `steps/DOMAIN-DESIGN/` |
 | `/vcddd-dev-setup` | D² — 技术栈确立 | 确定技术栈写入 tech-stack.md | `steps/DEVSETUP/` |
 | `/vcddd-scaffold` | D²·⁵ — 骨架生成 | 生成项目骨架代码 | `steps/SCAFFOLD/` |
+| `/vcddd-frontend-design` | D²·⁶ — 前端设计指导 | 生成前端指导文件并调用 google-design-md | `steps/FRONTEND-DESIGN/` |
 | `/vcddd-tdd-bridge` | TDD 桥梁 | 从 business.md 推导黑盒测试 | `steps/TDD-BRIDGE/` |
 | `/vcddd-implement-domain` | 域实现 | 一个 agent 完整实现一个域 | `steps/IMPLEMENT-DOMAIN/` |
 | `/vcddd-review-domain` | 域审查 | 三层审查 + 测试运行 | `steps/REVIEW-DOMAIN/` |
@@ -136,7 +137,9 @@ VCDDD 使用总控 Agent 协调所有步骤的执行。总控 Agent 是运行本
 - `facts.md` 未经用户确认 → 不进入域设计
 - 域设计未经用户确认 → 不进入实现
 - `tech-stack.md` 不存在 → 不写代码
+- 项目包含用户界面且未完成 `/vcddd-frontend-design` → 不实现页面
 - **infrastructure/ 目录禁止包含任何域的表定义、仓储实现或业务逻辑**（表定义属于 `server/{domain}/`）
+- 前端页面实现必须引用 `docs/vcddd/frontend/` 与 `google-design-md` 输出，不允许脱离指导文件自由发挥
 - 每域一个 agent 完整实现，不允许域内拆分
 - 每个域必须通过三层审查（Spec → Quality → VCDDD）
 - 对抗循环最多 10 轮，超 10 轮升级给用户
@@ -189,9 +192,10 @@ VCDDD 使用总控 Agent 协调所有步骤的执行。总控 Agent 是运行本
 
 1. **D²-auto**：确定技术栈，写入 tech-stack.md
 2. **D²·⁵-auto（SCAFFOLD）**：生成项目骨架代码
-3. **域依赖排序**：拓扑排序确定实现顺序
-4. **逐域执行**：每域依次 TDD Bridge → Implementer → 三层审查
-5. **跨域集成验证**：验证跨域契约一致
+3. **D²·⁶-auto（FRONTEND-DESIGN）**：如项目包含用户界面，生成前端指导文件并调用 google-design-md
+4. **域依赖排序**：拓扑排序确定实现顺序
+5. **逐域执行**：每域依次 TDD Bridge → Implementer → 三层审查
+6. **跨域集成验证**：验证跨域契约一致
 
 ---
 

@@ -14,12 +14,18 @@ SuperPower 未安装时的回退路径。本文件仅在 `automated-execution.md
 
 ## D3-auto 手动编排流程
 
-D2-auto 完成后（即 `tech-stack.md` 就绪），执行以下手动编排流程。
+D2-auto、D2.5-auto 完成后（即 `tech-stack.md` 就绪且骨架生成完成），如果项目包含用户界面，先 invoke `/vcddd-frontend-design`。前端指导完成后，执行以下手动编排流程。
 
 ### 流程
 
 ```
-tech-stack.md 就绪
+tech-stack.md 就绪 + 骨架代码已生成
+        │
+        ▼
+项目包含用户界面？
+        │
+        ├── 是 → invoke /vcddd-frontend-design
+        └── 否 → 继续
         │
         ▼
 构建域依赖图 + 拓扑排序（依赖域先实现）
@@ -57,6 +63,7 @@ invoke /vcddd-report → 最终报告
 > 6. **你记录到 progress.log** — 每个步骤完成后追加记录
 > 7. **有 Mock 就不算通过** — 测试必须全部 [REAL] + 环境恢复原状
 > 8. **你用效率模型派遣子 Agent** — 模型策略见 reference/engine/model-selection.md
+> 9. **有用户界面就先做前端设计** — 页面实现前必须 invoke /vcddd-frontend-design，并引用 google-design-md 输出
 
 **所有调度由编排者（主 session）执行。** Implementer 只写代码和测试，不运行测试。Reviewer 运行测试和审查，不自己派遣 Implementer。
 

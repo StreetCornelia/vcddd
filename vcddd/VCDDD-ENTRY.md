@@ -47,6 +47,7 @@ VCDDD（Vibe Coding Domain-Driven Design）是一套面向 AI 辅助开发的业
 | `/vcddd-domain-design` | 推导域边界与业务设计 | facts.md 已确认 | `steps/DOMAIN-DESIGN/SKILL.md` |
 | `/vcddd-dev-setup` | 确定技术栈 | 域设计已确认 | `steps/DEVSETUP/SKILL.md` |
 | `/vcddd-scaffold` | 生成项目骨架 | tech-stack.md 已确认 | `steps/SCAFFOLD/SKILL.md` |
+| `/vcddd-frontend-design` | 生成前端指导文件并调用 google-design-md | 项目包含用户界面，且 tech-stack.md 已确认 | `steps/FRONTEND-DESIGN/SKILL.md` |
 | `/vcddd-tdd-bridge` | 推导黑盒测试规格 | 域设计已确认 | `steps/TDD-BRIDGE/SKILL.md` |
 | `/vcddd-implement-domain` | 实现一个域 | test-spec.md 就绪 | `steps/IMPLEMENT-DOMAIN/SKILL.md` |
 | `/vcddd-review-domain` | 三层审查 + 测试运行 | Implementer 完成 | `steps/REVIEW-DOMAIN/SKILL.md` |

@@ -230,7 +230,7 @@ tech-stack.md 写入完成
         └── 编译/构建通过 ✓
         │
         ▼
-继续 D3-auto
+继续 D2.6-auto（如项目包含用户界面）
 ```
 
 ### 禁止性规则
@@ -238,6 +238,56 @@ tech-stack.md 写入完成
 - **infrastructure/ 目录禁止包含任何域的表定义或仓储实现**
 - server/shared/ 禁止 import 框架包
 - 骨架验证不通过 → 不进入 D3-auto
+
+---
+
+## D2.6-auto：前端设计指导（FRONTEND-DESIGN）
+
+如果项目包含用户界面，tech-stack.md 写入且骨架生成完成后、页面实现前，必须执行前端设计指导。
+
+本阶段不吸收 `google-design-md` 的方法论，只直接引用本地 `google-design-md` skill，把 VCDDD 的业务域文档和前端指导文件交给它生成页面设计/spec。
+
+### 流程
+
+```text
+tech-stack.md 就绪 + 骨架代码已生成（D2.5-auto）
+        │
+        ▼
+项目是否包含用户界面？
+        │
+        ├── 否 → 继续 D3-auto
+        │
+        └── 是
+              │
+              ▼
+      [VCDDD] 加载 steps/FRONTEND-DESIGN/SKILL.md
+              │
+              ▼
+      [VCDDD] 读取相关域 boundary.md + business.md
+              │
+              ▼
+      [VCDDD] 生成/更新 docs/vcddd/frontend/
+              ├── app-architecture.md
+              ├── visual-system.md
+              ├── interaction-model.md
+              └── pages/{page}.md
+              │
+              ▼
+      [VCDDD] 调用本地 google-design-md skill
+              │
+              ▼
+      [VCDDD] 将 google-design-md 输出位置记录回 pages/{page}.md
+              │
+              ▼
+      继续 D3-auto
+```
+
+### 禁止性规则
+
+- 不把 `google-design-md` 的子 skill 内容复制进 VCDDD
+- 不跳过 `google-design-md` 直接实现页面
+- 前端指导文件必须说明数据如何低成本产生，不能只列 UI 字段
+- `google-design-md` 输出与 VCDDD 域文档冲突时，以 VCDDD 域文档为准，重新生成
 
 ---
 
@@ -260,7 +310,7 @@ VCDDD 负责**准备上下文**，SuperPower 负责**执行**。分工如下：
 #### 流程
 
 ```
-tech-stack.md 就绪 + 骨架代码已生成（D2.5-auto）
+tech-stack.md 就绪 + 骨架代码已生成（D2.5-auto）+ 前端指导完成（如适用）
         │
         ▼
 [控制器] 构建域依赖图 + 拓扑排序
