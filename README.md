@@ -28,7 +28,7 @@ vcddd/                     ← repository / skill root
 │   ├── CONTEXT/           ← Clarify into business facts
 │   ├── DOMAIN-DESIGN/     ← Derive boundaries and invariants
 │   ├── DEVSETUP/          ← Determine tech stack
-│   ├── FRONTEND-DESIGN/   ← Generate frontend guidance and invoke google-design-md
+│   ├── FRONTEND-DESIGN/   ← Complete frontend design standards with google-design-md
 │   ├── TDD-BRIDGE/        ← Derive black-box test specs (+ prompt files)
 │   ├── IMPLEMENT-DOMAIN/  ← Code + white-box + black-box tests (+ prompt files)
 │   ├── REVIEW-DOMAIN/     ← Three-layer adversarial review (+ prompt files)
@@ -93,7 +93,7 @@ In the AI era, code is no longer the scarcest asset — it can be regenerated fr
 | **C** | Context | Clarify intent into user-confirmed business facts | `facts.md` + ubiquitous language |
 | **D¹** | Domain Design | Derive boundaries, decision ownership, invariants, events, and contracts from facts alone | `boundary.md` + `business.md` per domain |
 | **D²** | Dev Setup | Formalize tech choices as written architectural conventions | `tech-stack.md` |
-| **D²·⁶** | Frontend Design | For user-interface projects, turn domain docs into frontend guidance and directly invoke `google-design-md` | `docs/vcddd/frontend/*` + google-design-md output |
+| **D²·⁶** | Frontend Design | For user-interface projects, use `google-design-md` to complete unified frontend design standards | `docs/vcddd/frontend/*` |
 | **D³** | Develop | Generate code governed by D¹ design and D² conventions | Working codebase + `implementation.md` |
 
 Each step has a hard prerequisite gate. No step may begin until its predecessor output has been confirmed. This sequencing is not ceremony — it prevents building correct-looking code on top of unconfirmed business assumptions.
@@ -172,7 +172,7 @@ These three steps always require user confirmation at each gate. They establish 
 After D¹ is confirmed, the system can execute the remaining steps automatically:
 
 4. **D²-auto**: Scan project config files to detect tech stack (or research options for new projects). Only ask the user about items that can't be inferred from code.
-5. **Frontend Design (if applicable)**: For user-interface projects, generate `docs/vcddd/frontend/` and directly invoke the local `google-design-md` skill to produce page design/spec output.
+5. **Frontend Design (if applicable)**: For user-interface projects, use the local `google-design-md` skill to complete unified design standards and write them into `docs/vcddd/frontend/`.
 6. **TDD Bridge**: Mechanically derive test specifications from the domain's `business.md` — each invariant, state transition, command path, and failure branch maps to specific test cases.
 7. **Task Decomposition**: Split each domain into independent 2-5 minute subagent tasks with exact file paths and test IDs.
 8. **Subagent Execution**: Dispatch each task to a fresh subagent following TDD (RED-GREEN-REFACTOR). Two-stage review (spec compliance vs business.md, code quality vs tech-stack.md) gates each task.

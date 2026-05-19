@@ -245,7 +245,7 @@ tech-stack.md 写入完成
 
 如果项目包含用户界面，tech-stack.md 写入且骨架生成完成后、页面实现前，必须执行前端设计指导。
 
-本阶段不吸收 `google-design-md` 的方法论，只直接引用本地 `google-design-md` skill，把 VCDDD 的业务域文档和前端指导文件交给它生成页面设计/spec。
+本阶段不吸收 `google-design-md` 的方法论，只直接使用本地 `google-design-md` skill 完成或校准项目级前端设计规范，用于保持后续页面风格统一。
 
 ### 流程
 
@@ -266,6 +266,9 @@ tech-stack.md 就绪 + 骨架代码已生成（D2.5-auto）
       [VCDDD] 读取相关域 boundary.md + business.md
               │
               ▼
+      [VCDDD] 使用 google-design-md 完成/校准设计规范
+              │
+              ▼
       [VCDDD] 生成/更新 docs/vcddd/frontend/
               ├── app-architecture.md
               ├── visual-system.md
@@ -273,10 +276,7 @@ tech-stack.md 就绪 + 骨架代码已生成（D2.5-auto）
               └── pages/{page}.md
               │
               ▼
-      [VCDDD] 调用本地 google-design-md skill
-              │
-              ▼
-      [VCDDD] 将 google-design-md 输出位置记录回 pages/{page}.md
+      [VCDDD] 在 pages/{page}.md 中记录引用的项目级设计规范
               │
               ▼
       继续 D3-auto
@@ -285,9 +285,9 @@ tech-stack.md 就绪 + 骨架代码已生成（D2.5-auto）
 ### 禁止性规则
 
 - 不把 `google-design-md` 的子 skill 内容复制进 VCDDD
-- 不跳过 `google-design-md` 直接实现页面
+- 不跳过 `google-design-md` 直接制定页面风格或实现页面
 - 前端指导文件必须说明数据如何低成本产生，不能只列 UI 字段
-- `google-design-md` 输出与 VCDDD 域文档冲突时，以 VCDDD 域文档为准，重新生成
+- `google-design-md` 设计原则与 VCDDD 域文档冲突时，以 VCDDD 域文档为准，重新校准设计规范
 
 ---
 

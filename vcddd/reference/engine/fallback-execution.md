@@ -63,7 +63,7 @@ invoke /vcddd-report → 最终报告
 > 6. **你记录到 progress.log** — 每个步骤完成后追加记录
 > 7. **有 Mock 就不算通过** — 测试必须全部 [REAL] + 环境恢复原状
 > 8. **你用效率模型派遣子 Agent** — 模型策略见 reference/engine/model-selection.md
-> 9. **有用户界面就先做前端设计** — 页面实现前必须 invoke /vcddd-frontend-design，并引用 google-design-md 输出
+> 9. **有用户界面就先做前端设计** — 页面实现前必须 invoke /vcddd-frontend-design，并使用 google-design-md 完成/校准项目级设计规范
 
 **所有调度由编排者（主 session）执行。** Implementer 只写代码和测试，不运行测试。Reviewer 运行测试和审查，不自己派遣 Implementer。
 

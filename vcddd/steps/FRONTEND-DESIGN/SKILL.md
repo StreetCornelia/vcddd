@@ -1,6 +1,6 @@
 ---
 name: vcddd-frontend-design
-description: VCDDD — 前端设计指导文件生成，并直接引用本地 google-design-md skill 产出页面设计/spec
+description: VCDDD — 前端设计规范生成，必须使用本地 google-design-md skill 完成统一页面风格规范
 ---
 
 > 子 Agent 指令：本文件为子 Agent 的完整执行指令，由总控 Agent 传入并派遣执行。
@@ -8,13 +8,13 @@ description: VCDDD — 前端设计指导文件生成，并直接引用本地 go
 
 # Step: FRONTEND-DESIGN — 前端设计指导
 
-本步骤把 VCDDD 的业务域文档转换成前端页面设计指导文件，并直接引用本地 `google-design-md` skill 生成后续页面实现需要参考的设计页面/spec。
+本步骤把 VCDDD 的业务域文档转换成项目级前端设计规范，并必须使用本地 `google-design-md` skill 完成或校准统一页面风格规范。后续所有页面设计与实现都必须引用这些规范。
 
 ## 核心定位
 
-VCDDD 不吸收 `google-design-md` 的方法论，不复制它的规则。
+VCDDD 不吸收 `google-design-md` 的方法论，不复制它的规则；但前端设计规范必须通过 `google-design-md` 完成或校准。
 
-VCDDD 只负责说明：
+VCDDD 负责提供业务与交互输入：
 
 - 页面为什么存在
 - 用户要在页面上产生什么业务数据
@@ -22,7 +22,7 @@ VCDDD 只负责说明：
 - 哪些业务判断不能进入前端
 - 页面实现必须遵守哪些业务边界、交互目标和视觉约束
 
-`google-design-md` 负责把这些指导文件转成可执行的 UI/spec/contract，并指导具体框架实现。
+`google-design-md` 负责基于这些输入完成项目级设计规范，保证页面风格、视觉分隔、组件使用和交互表达有统一依据。
 
 ## 前置条件
 
@@ -51,7 +51,7 @@ docs/vcddd/frontend/
     └── {page}.md
 ```
 
-并通过 `google-design-md` 生成或更新该页面后续实现所需的设计页面/spec。其输出路径由 `google-design-md` 的执行结果决定，但必须在 `{page}.md` 中记录引用位置。
+其中 `visual-system.md` 必须通过 `google-design-md` 完成或校准。页面文件必须引用项目级设计规范，不允许每个页面自行发明风格。
 
 ## 执行流程
 
@@ -69,7 +69,7 @@ docs/vcddd/frontend/
 BLOCKED: google-design-md skill 未安装，无法进入前端设计转实现阶段。
 ```
 
-不要把 `google-design-md` 的子 skill 内容复制进 VCDDD。
+不要把 `google-design-md` 的子 skill 内容复制进 VCDDD，但必须按它的设计原则完成本项目的设计规范。
 
 ### 第二步：建立前端输入全景
 
@@ -82,7 +82,28 @@ BLOCKED: google-design-md skill 未安装，无法进入前端设计转实现阶
 - 哪些入参可以来自上下文、默认值、历史记录、推荐、模板、扫描或批量选择
 - 哪些业务判断必须留在 `server/{domain}/`
 
-### 第三步：生成或更新全局前端指导文件
+### 第三步：使用 google-design-md 完成项目级设计规范
+
+读取本地 `google-design-md` skill，并把以下上下文交给它作为设计规范输入：
+
+- `docs/vcddd/tech-stack.md`
+- 相关域的 `boundary.md` / `business.md`
+- 当前产品类型与页面类型
+- 用户输入降本目标
+- 已有品牌、组件库或视觉约束（如有）
+
+目标不是让 `google-design-md` 替代业务设计，也不是让它直接实现页面，而是让它帮助完成：
+
+- 页面整体风格原则
+- 视觉分隔与信息层级
+- 组件使用规则
+- 页面密度与操作层级
+- 状态表达规则
+- 交互反馈原则
+
+这些结果必须写入或更新 `docs/vcddd/frontend/visual-system.md`。
+
+### 第四步：生成或更新全局前端指导文件
 
 如果文件不存在，按模板创建：
 
@@ -92,7 +113,9 @@ BLOCKED: google-design-md skill 未安装，无法进入前端设计转实现阶
 
 如果文件已存在，只做增量更新，不覆盖无关页面或既有约定。
 
-### 第四步：生成页面指导文件
+`visual-system.md` 是所有页面风格的统一来源，必须明确标注它已由 `google-design-md` 完成或校准。
+
+### 第五步：生成页面指导文件
 
 对每个页面写入：
 
@@ -111,30 +134,23 @@ docs/vcddd/frontend/pages/{page}.md
 - 业务边界：哪些判断不能在前端完成
 - 视觉要求：页面密度、分区、主次操作、反馈形式
 
-### 第五步：调用 google-design-md
+### 第六步：记录 google-design-md 规范来源
 
-页面指导文件经用户确认后，调用本地 `google-design-md` skill。
+每个页面文件必须记录它引用的项目级设计规范：
 
-传入上下文必须包含：
-
-- `docs/vcddd/tech-stack.md`
-- `docs/vcddd/frontend/app-architecture.md`
 - `docs/vcddd/frontend/visual-system.md`
 - `docs/vcddd/frontend/interaction-model.md`
-- `docs/vcddd/frontend/pages/{page}.md`
-- 相关域的 `boundary.md` / `business.md`
+- `docs/vcddd/frontend/app-architecture.md`
 
-调用目标不是“重新解释业务”，而是生成该页面后续实现需要参考的设计页面/spec/contract。
+页面实现阶段引用的是这些设计规范，而不是重新调用 `google-design-md` 自由生成另一套页面风格。
 
-完成后，把 `google-design-md` 的输出位置记录回 `{page}.md` 的“Google Design.md 输出”小节。
-
-### 第六步：记录操作
+### 第七步：记录操作
 
 在 `docs/vcddd/progress.log` 中记录：
 
 - 生成/更新了哪些前端指导文件
-- 哪些页面调用了 `google-design-md`
-- `google-design-md` 输出位置
+- `google-design-md` 如何参与了项目级设计规范
+- 哪些页面引用了该设计规范
 - 是否仍有需要用户确认的交互或视觉问题
 
 ## 强制边界
@@ -143,15 +159,15 @@ docs/vcddd/frontend/pages/{page}.md
 - 前端不能替代后端做最终业务判断
 - 前端可以做展示状态、草稿状态、交互状态
 - 前端不能维护业务状态机或保护业务不变式
-- 前端页面实现必须引用本步骤产物和 `google-design-md` 输出，不允许脱离指导文件自由发挥
+- 前端页面实现必须引用本步骤产物和经 `google-design-md` 完成/校准的设计规范，不允许脱离指导文件自由发挥
 
 ## 完成要求
 
 - [ ] `app-architecture.md` 已存在并覆盖当前技术栈
-- [ ] `visual-system.md` 已存在并覆盖页面风格约束
+- [ ] `visual-system.md` 已存在，并明确由 `google-design-md` 完成或校准
 - [ ] `interaction-model.md` 已存在并说明数据产生方式
 - [ ] 每个目标页面都有 `pages/{page}.md`
-- [ ] 每个页面都记录了 `google-design-md` 输出位置
+- [ ] 每个页面都记录了引用的项目级设计规范
 - [ ] `progress.log` 已更新
 
 ## 如果卡住
@@ -159,4 +175,4 @@ docs/vcddd/frontend/pages/{page}.md
 - 如果页面目标不清楚 → 回到用户意图，澄清该页面让用户产生什么业务数据
 - 如果命令入参不清楚 → 回到对应域的 `boundary.md`
 - 如果前端想做业务判断 → 回到对应域的 `business.md`，确认该判断的主权归属
-- 如果 `google-design-md` 输出与 VCDDD 业务边界冲突 → 以 VCDDD 域文档为准，重新调用 `google-design-md`
+- 如果 `google-design-md` 给出的设计原则与 VCDDD 业务边界冲突 → 以 VCDDD 域文档为准，重新校准设计规范

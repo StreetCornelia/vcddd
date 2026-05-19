@@ -59,10 +59,10 @@
 
 - 
 
-## Google Design.md 输出
+## 设计规范引用
 
-<!-- 调用 google-design-md 后填写。 -->
+<!-- 记录本页面引用的项目级设计规范，不在页面内重新发明风格。 -->
 
-- 输出位置：
-- 生成时间：
-- 使用的输入文件：
+- `docs/vcddd/frontend/visual-system.md`
+- `docs/vcddd/frontend/interaction-model.md`
+- `docs/vcddd/frontend/app-architecture.md`

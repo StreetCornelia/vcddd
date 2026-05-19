@@ -32,4 +32,4 @@
 
 ## Google Design.md 依赖
 
-前端页面进入设计转实现阶段时，必须调用本地 `google-design-md` skill。VCDDD 不复制其方法论，只把本文件、页面文件、域文档作为输入传给它。
+前端页面进入设计转实现阶段前，必须使用本地 `google-design-md` skill 完成或校准项目级设计规范。VCDDD 不复制其方法论；页面实现只引用已写入 `docs/vcddd/frontend/` 的规范。
