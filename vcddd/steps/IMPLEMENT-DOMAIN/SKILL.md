@@ -14,6 +14,7 @@ description: VCDDD — 一个 Agent 完成域代码 + 测试编写
 
 - 该域 `business.md`、`boundary.md`、`test-spec.md` 就绪
 - `tech-stack.md` 已存在
+- 实现上下文已加载（见 `../../reference/engine/automated-execution.md` 的 D2.4-auto）
 - 被依赖域已实现完成
 
 ## 输入
@@ -21,6 +22,11 @@ description: VCDDD — 一个 Agent 完成域代码 + 测试编写
 - 该域 `business.md`、`boundary.md`、`test-spec.md`（全文）
 - `tech-stack.md`（全文）
 - 被依赖域 `boundary.md` 摘录
+- 项目实现上下文：
+  - `facts.md` 中与该域相关的业务事实和通用语言
+  - `docs/vcddd/guardrails.md`（如存在）
+  - 该域 `progress.log`（如存在）
+  - `docs/vcddd/frontend/*` 中与该域相关的页面/交互约定（如项目包含用户界面）
 
 ## 输出
 
@@ -61,6 +67,7 @@ server/{domain}/
 ### Phase 3：自审
 
 对照 business.md 核对是否遗漏任何路径，检查命名是否与通用语言一致。检查 Mock 残留：有 Mock → 不允许完成。
+同时对照项目实现上下文确认没有改写已确认业务事实、跨域契约、guardrails 或前端设计约定。
 
 ## 完成要求
 

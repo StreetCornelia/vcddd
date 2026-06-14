@@ -66,3 +66,4 @@ VCDDD（Vibe Coding Domain-Driven Design）是一套面向 AI 辅助开发的业
 6. **记录到 progress.log** — 每个步骤完成后追加记录
 7. **有 Mock 就不算通过** — 测试必须全部 [REAL] + 环境恢复原状
 8. **用效率模型派遣子 Agent** — 模型策略见 `reference/engine/model-selection.md`
+9. **实现前加载项目上下文** — 进入 `/vcddd-scaffold`、`/vcddd-tdd-bridge`、`/vcddd-implement-domain`、`/vcddd-review-domain`、`/vcddd-integrate` 前，必须读取实现线所需的项目上下文文档。

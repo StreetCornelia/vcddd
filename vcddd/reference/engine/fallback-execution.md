@@ -14,12 +14,12 @@ SuperPower 未安装时的回退路径。本文件仅在 `automated-execution.md
 
 ## D3-auto 手动编排流程
 
-D2-auto、D2.5-auto 完成后（即 `tech-stack.md` 就绪且骨架生成完成），如果项目包含用户界面，先 invoke `/vcddd-frontend-design`。前端指导完成后，执行以下手动编排流程。
+D2-auto、D2.4-auto、D2.5-auto 完成后（即 `tech-stack.md` 就绪、实现上下文已加载且骨架生成完成），如果项目包含用户界面，先 invoke `/vcddd-frontend-design`。前端指导完成后，执行以下手动编排流程。
 
 ### 流程
 
 ```
-tech-stack.md 就绪 + 骨架代码已生成
+tech-stack.md 就绪 + 实现上下文已加载 + 骨架代码已生成
         │
         ▼
 项目包含用户界面？
@@ -64,6 +64,7 @@ invoke /vcddd-report → 最终报告
 > 7. **有 Mock 就不算通过** — 测试必须全部 [REAL] + 环境恢复原状
 > 8. **你用效率模型派遣子 Agent** — 模型策略见 reference/engine/model-selection.md
 > 9. **有用户界面就先做前端设计** — 页面实现前必须 invoke /vcddd-frontend-design，并使用 google-design-md 完成/校准项目级设计规范
+> 10. **你已加载实现上下文** — 每次派遣前确认该步骤需要的 facts、boundary、business、tech-stack、frontend、progress 或 guardrails 已按需读取
 
 **所有调度由编排者（主 session）执行。** Implementer 只写代码和测试，不运行测试。Reviewer 运行测试和审查，不自己派遣 Implementer。
 
@@ -71,12 +72,13 @@ invoke /vcddd-report → 最终报告
 ┌─ 循环开始 ─────────────────────────────────────────────┐
 │                                                         │
 │  1. invoke /vcddd-tdd-bridge (效率模型)           │
-│     → 传入：business.md + boundary.md                   │
+│     → 传入：business.md + boundary.md + 必要项目上下文  │
 │     → 返回 test-spec.md 后继续                           │
 │                                                         │
 │  2. 【立即】invoke /vcddd-implement-domain (效率模型)│
 │     → 传入：business.md + boundary.md + test-spec.md    │
 │            + tech-stack.md + 依赖域 boundary.md 摘录     │
+│            + 必要项目实现上下文                         │
 │     → 返回：状态 + 文件数 + 测试数 + Mock/Real 明细     │
 │                                                         │
 │  3. 返回后【立即】invoke /vcddd-review-domain (效率模型)│

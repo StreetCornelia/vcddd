@@ -191,11 +191,12 @@ VCDDD 使用总控 Agent 协调所有步骤的执行。总控 Agent 是运行本
 详细流程见 `reference/engine/automated-execution.md`。以下为核心要点：
 
 1. **D²-auto**：确定技术栈，写入 tech-stack.md
-2. **D²·⁵-auto（SCAFFOLD）**：生成项目骨架代码
-3. **D²·⁶-auto（FRONTEND-DESIGN）**：如项目包含用户界面，使用 google-design-md 完成前端设计规范
-4. **域依赖排序**：拓扑排序确定实现顺序
-5. **逐域执行**：每域依次 TDD Bridge → Implementer → 三层审查
-6. **跨域集成验证**：验证跨域契约一致
+2. **D²·⁴-auto（实现上下文加载）**：在任何代码生成前读取项目世界模型（事实、边界、业务设计、技术约定、日志与 guardrails）
+3. **D²·⁵-auto（SCAFFOLD）**：生成项目骨架代码
+4. **D²·⁶-auto（FRONTEND-DESIGN）**：如项目包含用户界面，使用 google-design-md 完成前端设计规范
+5. **域依赖排序**：拓扑排序确定实现顺序
+6. **逐域执行**：每域依次 TDD Bridge → Implementer → 三层审查
+7. **跨域集成验证**：验证跨域契约一致
 
 ---
 
