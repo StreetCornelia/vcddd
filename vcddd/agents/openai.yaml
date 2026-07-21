@@ -1,0 +1,4 @@
+interface:
+  display_name: "VCDDD"
+  short_description: "与人协同理解、验证、实现并持续演化复杂真实业务系统"
+  default_prompt: "使用 $vcddd 从项目共同业务上下文恢复当前目标并继续完成实际工作。"
