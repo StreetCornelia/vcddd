@@ -1,4 +1,4 @@
 interface:
   display_name: "VCDDD"
-  short_description: "与人协同发现需求、梳理业务、建模实现并持续演化真实系统"
-  default_prompt: "使用 $vcddd 恢复项目上下文，并沿需求发现、业务梳理、模块落地和宏观验证继续我选择的中文任务。"
+  short_description: "从阶段性业务目标到系统设计、领域建模、开发与持续演化"
+  default_prompt: "使用 $vcddd 恢复项目上下文，先确认我选择的中文任务及其关联的阶段性业务目标，再沿找到业务、业务拆分设计、领域及其他指导开发的设计和开发继续。"
