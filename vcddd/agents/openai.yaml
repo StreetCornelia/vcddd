@@ -1,4 +1,4 @@
 interface:
   display_name: "VCDDD"
-  short_description: "用专业子 Agent 从业务设计推进到可追溯开发基线与实现"
-  default_prompt: "使用 $vcddd 恢复项目，由主控编排专业 Agent 完成业务设计、系统设计、开发基线与实现。"
+  short_description: "用认知特化的子 Agent 推进业务、设计、实现与独立审核"
+  default_prompt: "使用 $vcddd 恢复项目，由主控按认知协议编排专业 Agent 完成业务设计、开发设计、实现记录和多角度代码审核。"

@@ -20,6 +20,19 @@ BASELINE_STATUS_RE = re.compile(
 BASELINE_HEADINGS = ["Domain", "业务线与 API", "数据库设计"]
 BUSINESS_DESIGN_HEADINGS = ["业务目标与范围", "系统设计", "业务线逻辑"]
 SYSTEM_FACT_FILES = ["系统拆分.md", "模块拆分.md", "API设计.md", "数据库设计.md"]
+IMPLEMENTATION_HEADINGS = [
+    "业务结果",
+    "设计与代码对应",
+    "关键实现",
+    "验证证据",
+    "与设计的偏离",
+    "剩余风险",
+]
+CORE_REVIEW_FILES = [
+    "业务与设计符合性.md",
+    "Domain与数据.md",
+    "工程质量.md",
+]
 SCOPE_RE = re.compile(r"^适用范围[ \t]*[：:][ \t]*(\S.*)$", re.MULTILINE)
 EXCLUDED_SCOPE_RE = re.compile(
     r"^未覆盖范围[ \t]*[：:][ \t]*(\S.*)$", re.MULTILINE
@@ -27,6 +40,20 @@ EXCLUDED_SCOPE_RE = re.compile(
 SOURCES_RE = re.compile(
     r"^来源[ \t]*[：:][ \t]*$\n(.*?)(?=^##[ \t]+Domain[ \t]*$)",
     re.MULTILINE | re.DOTALL,
+)
+CODE_SNAPSHOT_RE = re.compile(
+    r"^代码快照[ \t]*[：:][ \t]*(\S.*)$", re.MULTILINE
+)
+REVIEW_OBJECT_RE = re.compile(
+    r"^审核对象[ \t]*[：:][ \t]*(\S.*)$", re.MULTILINE
+)
+REVIEW_RESULT_RE = re.compile(
+    r"^审核结论[ \t]*[：:][ \t]*(通过|有条件通过|不通过)[ \t]*$",
+    re.MULTILINE,
+)
+SUMMARY_RESULT_RE = re.compile(
+    r"^当前结论[ \t]*[：:][ \t]*(通过|需修改|需重写|等待上游修订)[ \t]*$",
+    re.MULTILINE,
 )
 
 
@@ -43,7 +70,9 @@ def local_link_path(source: Path, raw_target: str) -> Path | None:
 
 
 def validate(
-    repo_root: Path, coding_system: str | None = None
+    repo_root: Path,
+    coding_system: str | None = None,
+    review_slice: str | None = None,
 ) -> tuple[list[str], list[str]]:
     vcddd_root = repo_root / "docs" / "vcddd"
     errors: list[str] = []
@@ -109,6 +138,10 @@ def validate(
         for legacy in sorted(systems_root.glob("*/**/*最终*.md")):
             if legacy.name != "开发基线.md":
                 warnings.append(f"检查可能与开发基线竞争的“最终”文件：{legacy}")
+
+    if review_slice and not coding_system:
+        errors.append("--review-slice 必须同时指定 --coding-system")
+        return errors, warnings
 
     if coding_system:
         if Path(coding_system).name != coding_system:
@@ -210,6 +243,174 @@ def validate(
                         f"准备 Coding 的固定设计文档尚未纳入版本管理：{design_file}"
                     )
 
+        if review_slice:
+            if Path(review_slice).name != review_slice:
+                errors.append(f"开发切片名必须是单个目录名：{review_slice}")
+                return errors, warnings
+
+            development_root = system_root / "开发记录"
+            development_index = development_root / "index.md"
+            slice_root = development_root / review_slice
+            implementation_record = slice_root / "实现记录.md"
+            review_root = slice_root / "审核"
+            review_files = [
+                review_root / name for name in CORE_REVIEW_FILES
+            ]
+            review_summary = slice_root / "审核结论.md"
+            required_review_files = [
+                development_index,
+                implementation_record,
+                *review_files,
+                review_summary,
+            ]
+
+            missing_review_files = [
+                path for path in required_review_files if not path.exists()
+            ]
+            for path in missing_review_files:
+                errors.append(f"开发切片缺少实现或审核记录：{path}")
+
+            if missing_review_files:
+                return errors, warnings
+
+            if development_index.resolve() not in index_targets:
+                errors.append(
+                    f"系统入口未直接链接开发记录入口：{development_index}"
+                )
+
+            development_index_text = development_index.read_text(
+                encoding="utf-8"
+            )
+            development_targets = {
+                local_link_path(development_index, raw_target)
+                for raw_target in LINK_RE.findall(development_index_text)
+            }
+            for path in (implementation_record, review_summary):
+                if path.resolve() not in development_targets:
+                    errors.append(f"开发记录入口未直接链接切片文档：{path}")
+
+            implementation_text = implementation_record.read_text(
+                encoding="utf-8"
+            )
+            implementation_targets = {
+                local_link_path(implementation_record, raw_target)
+                for raw_target in LINK_RE.findall(implementation_text)
+            }
+            if baseline.resolve() not in implementation_targets:
+                errors.append(
+                    f"实现记录未直接链接当前开发基线：{implementation_record}"
+                )
+            implementation_headings = re.findall(
+                r"^##\s+(.+?)\s*$", implementation_text, re.MULTILINE
+            )
+            if implementation_headings != IMPLEMENTATION_HEADINGS:
+                errors.append(
+                    "实现记录必须且只能按顺序包含六个二级标题"
+                    f"（{' / '.join(IMPLEMENTATION_HEADINGS)}）："
+                    f"{implementation_record}"
+                )
+
+            for field in (
+                "开发基线",
+                "代码快照",
+                "实现范围",
+                "未覆盖范围",
+            ):
+                matches = re.findall(
+                    rf"^{field}[ \t]*[：:][ \t]*(\S.*)$",
+                    implementation_text,
+                    re.MULTILINE,
+                )
+                if len(matches) != 1:
+                    errors.append(
+                        f"实现记录必须且只能声明一个非空“{field}”："
+                        f"{implementation_record}"
+                    )
+
+            snapshots = CODE_SNAPSHOT_RE.findall(implementation_text)
+            implementation_snapshot = (
+                snapshots[0] if len(snapshots) == 1 else None
+            )
+
+            for review_file in review_files:
+                review_text = review_file.read_text(encoding="utf-8")
+                for field in (
+                    "审核对象",
+                    "依据的开发基线",
+                    "审核范围",
+                    "未覆盖范围",
+                ):
+                    matches = re.findall(
+                        rf"^{field}[ \t]*[：:][ \t]*(\S.*)$",
+                        review_text,
+                        re.MULTILINE,
+                    )
+                    if len(matches) != 1:
+                        errors.append(
+                            f"审核记录必须且只能声明一个非空“{field}”："
+                            f"{review_file}"
+                        )
+                review_objects = REVIEW_OBJECT_RE.findall(review_text)
+                if (
+                    implementation_snapshot is not None
+                    and review_objects != [implementation_snapshot]
+                ):
+                    errors.append(
+                        "审核对象必须与实现记录代码快照一致："
+                        f"{review_file}"
+                    )
+                if len(REVIEW_RESULT_RE.findall(review_text)) != 1:
+                    errors.append(
+                        "审核记录必须且只能声明一个审核结论"
+                        f"（通过/有条件通过/不通过）：{review_file}"
+                    )
+
+            summary_text = review_summary.read_text(encoding="utf-8")
+            summary_snapshots = CODE_SNAPSHOT_RE.findall(summary_text)
+            if (
+                implementation_snapshot is not None
+                and summary_snapshots != [implementation_snapshot]
+            ):
+                errors.append(
+                    f"审核结论代码快照必须与实现记录一致：{review_summary}"
+                )
+            if len(SUMMARY_RESULT_RE.findall(summary_text)) != 1:
+                errors.append(
+                    "审核结论必须且只能声明一个当前结论"
+                    f"（通过/需修改/需重写/等待上游修订）：{review_summary}"
+                )
+
+            summary_targets = {
+                local_link_path(review_summary, raw_target)
+                for raw_target in LINK_RE.findall(summary_text)
+            }
+            for review_file in review_files:
+                if review_file.resolve() not in summary_targets:
+                    errors.append(
+                        f"审核结论未直接链接核心审核记录：{review_file}"
+                    )
+
+            if git_probe.returncode == 0:
+                for path in required_review_files:
+                    relative_file = path.relative_to(repo_root)
+                    tracked = subprocess.run(
+                        [
+                            "git",
+                            "-C",
+                            str(repo_root),
+                            "ls-files",
+                            "--error-unmatch",
+                            str(relative_file),
+                        ],
+                        capture_output=True,
+                        text=True,
+                        check=False,
+                    )
+                    if tracked.returncode != 0:
+                        errors.append(
+                            f"实现或审核记录尚未纳入版本管理：{path}"
+                        )
+
     return errors, warnings
 
 
@@ -250,7 +451,8 @@ def self_test() -> int:
             "[模块拆分](模块拆分.md)\n"
             "[API设计](API设计.md)\n"
             "[数据库设计](数据库设计.md)\n"
-            "[开发基线](开发基线.md)\n",
+            "[开发基线](开发基线.md)\n"
+            "[开发记录](开发记录/index.md)\n",
             encoding="utf-8",
         )
         for name in SYSTEM_FACT_FILES:
@@ -275,6 +477,49 @@ def self_test() -> int:
         (system_root / "开发基线.md").write_text(
             baseline_text, encoding="utf-8"
         )
+        development_root = system_root / "开发记录"
+        slice_root = development_root / "示例切片"
+        review_root = slice_root / "审核"
+        review_root.mkdir(parents=True)
+        (development_root / "index.md").write_text(
+            "[实现记录](示例切片/实现记录.md)\n"
+            "[审核结论](示例切片/审核结论.md)\n",
+            encoding="utf-8",
+        )
+        implementation_text = (
+            "# 实现记录\n\n"
+            "开发基线：[当前基线](../../开发基线.md)\n"
+            "代码快照：abc123\n"
+            "实现范围：示例切片\n"
+            "未覆盖范围：无\n\n"
+            "## 业务结果\n\n"
+            "## 设计与代码对应\n\n"
+            "## 关键实现\n\n"
+            "## 验证证据\n\n"
+            "## 与设计的偏离\n\n"
+            "## 剩余风险\n"
+        )
+        (slice_root / "实现记录.md").write_text(
+            implementation_text, encoding="utf-8"
+        )
+        review_text = (
+            "审核对象：abc123\n"
+            "依据的开发基线：当前基线\n"
+            "审核范围：示例切片\n"
+            "未覆盖范围：无\n"
+            "审核结论：通过\n"
+        )
+        for name in CORE_REVIEW_FILES:
+            (review_root / name).write_text(review_text, encoding="utf-8")
+        (slice_root / "审核结论.md").write_text(
+            "# 审核结论\n\n"
+            "代码快照：abc123\n"
+            "当前结论：通过\n\n"
+            "- [业务与设计符合性](审核/业务与设计符合性.md)\n"
+            "- [Domain与数据](审核/Domain与数据.md)\n"
+            "- [工程质量](审核/工程质量.md)\n",
+            encoding="utf-8",
+        )
 
         errors, _ = validate(repo_root, coding_system="示例系统")
         if not any("不是 Git 版本管理仓库" in error for error in errors):
@@ -298,6 +543,33 @@ def self_test() -> int:
             for error in errors:
                 print(f"ERROR: {error}")
             return 1
+
+        errors, _ = validate(
+            repo_root,
+            coding_system="示例系统",
+            review_slice="示例切片",
+        )
+        if errors:
+            print("自检失败：有效实现与审核样例未通过。")
+            for error in errors:
+                print(f"ERROR: {error}")
+            return 1
+
+        missing_review = review_root / "工程质量.md"
+        missing_review.unlink()
+        errors, _ = validate(
+            repo_root,
+            coding_system="示例系统",
+            review_slice="示例切片",
+        )
+        if not any(
+            "缺少实现或审核记录" in error
+            and "工程质量.md" in error
+            for error in errors
+        ):
+            print("自检失败：未识别缺失核心审核记录。")
+            return 1
+        missing_review.write_text(review_text, encoding="utf-8")
 
         (system_root / "开发基线.md").write_text(
             "# 开发基线\n\n"
@@ -355,7 +627,8 @@ def self_test() -> int:
             "[模块拆分](模块拆分.md)\n"
             "[API设计](API设计.md)\n"
             "[数据库设计](数据库设计.md)\n"
-            "[开发基线](开发基线.md)\n",
+            "[开发基线](开发基线.md)\n"
+            "[开发记录](开发记录/index.md)\n",
             encoding="utf-8",
         )
         (system_root / "开发基线.md").unlink()
@@ -388,13 +661,22 @@ def main() -> int:
         metavar="中文系统名",
         help="准备进入 Coding 的系统；额外要求当前、三段式且已纳入版本管理的开发基线。",
     )
+    parser.add_argument(
+        "--review-slice",
+        metavar="中文开发切片",
+        help="检查指定系统开发切片的实现记录、三个核心审核和审核结论；必须同时指定 --coding-system。",
+    )
     args = parser.parse_args()
 
     if args.self_test:
         return self_test()
 
     repo_root = Path(args.repo).expanduser().resolve()
-    errors, warnings = validate(repo_root, coding_system=args.coding_system)
+    errors, warnings = validate(
+        repo_root,
+        coding_system=args.coding_system,
+        review_slice=args.review_slice,
+    )
 
     for warning in warnings:
         print(f"WARNING: {warning}")
