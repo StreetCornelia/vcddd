@@ -1,4 +1,4 @@
 interface:
   display_name: "VCDDD"
   short_description: "用可恢复文档推进用户确认、设计、实现与代码审核"
-  default_prompt: "使用 $vcddd 从标准项目文档恢复当前任务，由主控编排专业 Agent 分析业务、接收用户确认、形成开发设计并在代码完成后进行多角度审核。"
+  default_prompt: "使用 $vcddd 从标准项目文档恢复当前任务，由主控编排专业 Agent 分析业务、盲测名称与文案、接收用户确认、形成开发设计并在代码完成后进行多角度审核。"

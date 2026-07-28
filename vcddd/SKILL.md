@@ -15,6 +15,12 @@ description: "以业务设计为源头、通过具备明确认知协议的专职
 
 AI 在前置阶段只负责调查证据、结构化业务认识、给出推荐方案并暴露遗漏、冲突和不确定项；它不能证明业务是正确的。业务目标、场景行为、责任、所有权和关系是否符合真实需要，由用户确认。前置文档“可以继续使用”只表示来源、当前结论和未决问题已经记录到足以支持下一步，不表示 AI 已经审核通过业务或设计。
 
+## 语言与建模边界
+
+业务发现只使用用户词汇、具体事实和固定元关键词；行业黑话不能成为结论或思考起点。Domain 阶段可以使用 DDD 术语，但只能分类已确认业务，不能据此创造名称、对象或表。Domain 和数据库名称必须仅凭名称就足以理解其承载的业务以及能做的具体事情。不是所有业务所需信息都属于 Domain；日志、外部引用与快照、查询数据、流程进度和技术运行信息可以按真实用途保存。
+
+各阶段允许的语言、名称推导、非 Domain 信息和数据库承载规则见 [references/language-and-modeling.md](references/language-and-modeling.md)，业务设计与系统设计都必须使用。
+
 ## 恢复
 
 1. 读取目标仓库的 `docs/vcddd/index.md`、`work/index.md` 和当前任务。
@@ -56,9 +62,9 @@ docs/vcddd/business/<阶段性业务目标>/业务设计.md
 业务线逻辑
 ```
 
-它在业务层说明需要哪些系统能力以及业务如何被实现和呈现，不进入系统内部 Domain、模块、API 和数据库。用户没有决定正式目标时只形成候选并通过主控讨论，不写入正式业务目标。
+它在业务层具体说明每个系统帮助谁做什么以及业务如何被实现和呈现，不进入系统内部 Domain、模块、API 和数据库。用户没有决定正式目标时只形成候选并通过主控讨论，不写入正式业务目标。
 
-调用时只给业务目标入口、当前任务、直接来源、共同认知协议和 [references/business-agent.md](references/business-agent.md)。
+调用时只给业务目标入口、当前任务、直接来源、共同认知协议、[references/language-and-modeling.md](references/language-and-modeling.md) 和 [references/business-agent.md](references/business-agent.md)。
 
 ## 调用系统与开发设计 Agent
 
@@ -80,9 +86,15 @@ docs/vcddd/systems/<中文系统名>/
 - `数据库设计.md`：领域状态的数据投影、事务、约束和迁移；
 - `开发基线.md`：只从前四份事实和业务设计汇总，不在此文件临场补设计。
 
-设计过程中发现业务设计不足时，返回精确上游请求；不得直接修改 `business/`。调用时给当前系统入口、相关 `业务设计.md`、当前任务、代码或验证入口、共同认知协议和 [references/system-design-agent.md](references/system-design-agent.md)。
+设计过程中发现业务设计不足时，返回精确上游请求；不得直接修改 `business/`。调用时给当前系统入口、相关 `业务设计.md`、当前任务、代码或验证入口、共同认知协议、[references/language-and-modeling.md](references/language-and-modeling.md) 和 [references/system-design-agent.md](references/system-design-agent.md)。
 
-Domain 命名前先分析当前业务决定、事实与决定所有权、各主体自有能力、事物关系及关系新增或约束的能力，并由用户明确确认这组业务基础；确认前不能继续对象分类、聚合、Domain、API 和数据库。确认后再分析当前身份与生命周期、不变量和跨系统流程。只为当前已确认目标建立最小充分模型；未来可能性不能作为新增实体、版本、聚合、Domain 或基础设施的依据。
+Domain 命名前先分析当前业务决定、事实与决定所有权、各主体自有能力、事物关系及关系新增或约束的能力，并由用户明确确认这组业务基础；确认前不能继续对象分类、聚合、Domain、API 和数据库。确认后再分析当前身份与生命周期、不变量和跨系统流程；核心业务名称的含义再由用户确认，之后才扩散到 API、表和代码。只为当前已确认目标建立最小充分模型；未来可能性不能作为新增实体、版本、聚合、Domain 或基础设施的依据。
+
+## 调用语言验证 Agent
+
+语言验证是表达效果盲测，不是业务或设计审核。Agent 只读取目标读者实际看到的名称、页面文案、截图或报告片段，禁止读取业务与设计答案；它复述自己理解的业务、行为、数据和歧义，不修改任何事实。
+
+Agent 新引入的核心业务名称，Domain、核心对象、关系和业务表名称，以及用于发现或确认业务的页面文案，在交给用户确认或扩散到下游前调用新的语言验证 Agent。完整输入隔离、输出和复测规则见 [references/language-validation-agent.md](references/language-validation-agent.md)。
 
 ## 调用开发 Agent
 

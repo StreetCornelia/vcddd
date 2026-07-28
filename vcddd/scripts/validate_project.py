@@ -28,6 +28,14 @@ OWNERSHIP_EVIDENCE_RE = re.compile(
     r"^确认依据[ \t]*[：:][ \t]*(\S.*)$",
     re.MULTILINE,
 )
+NAMING_CONFIRMATION_RE = re.compile(
+    r"^核心命名确认[ \t]*[：:][ \t]*(待确认|已确认)[ \t]*$",
+    re.MULTILINE,
+)
+NAMING_EVIDENCE_RE = re.compile(
+    r"^核心命名确认依据[ \t]*[：:][ \t]*(\S.*)$",
+    re.MULTILINE,
+)
 TASK_RECOVERY_HEADINGS = [
     "任务定义",
     "当前角色",
@@ -341,6 +349,16 @@ def validate(
                 "准备 Coding 的系统拆分必须且只能声明一个非空确认依据："
                 f"{system_split}"
             )
+        if NAMING_CONFIRMATION_RE.findall(system_split_text) != ["已确认"]:
+            errors.append(
+                "准备 Coding 的系统拆分必须且只能声明"
+                f"“核心命名确认：已确认”：{system_split}"
+            )
+        if len(NAMING_EVIDENCE_RE.findall(system_split_text)) != 1:
+            errors.append(
+                "准备 Coding 的系统拆分必须且只能声明一个"
+                f"非空核心命名确认依据：{system_split}"
+            )
 
         baseline_text = baseline.read_text(encoding="utf-8")
         statuses = BASELINE_STATUS_RE.findall(baseline_text)
@@ -632,6 +650,8 @@ def self_test() -> int:
             metadata = (
                 "所有权确认：已确认\n"
                 "确认依据：示例任务中的用户确认\n"
+                "核心命名确认：已确认\n"
+                "核心命名确认依据：示例任务中的用户确认\n"
                 if name == "系统拆分.md"
                 else ""
             )
@@ -770,6 +790,19 @@ def self_test() -> int:
         errors, _ = validate(repo_root, coding_system="示例系统")
         if not any("所有权确认：已确认" in error for error in errors):
             print("自检失败：Coding 检查未拒绝待确认的所有权。")
+            return 1
+        system_split.write_text(valid_system_split_text, encoding="utf-8")
+
+        system_split.write_text(
+            valid_system_split_text.replace(
+                "核心命名确认：已确认",
+                "核心命名确认：待确认",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(repo_root, coding_system="示例系统")
+        if not any("核心命名确认：已确认" in error for error in errors):
+            print("自检失败：Coding 检查未拒绝待确认的核心命名。")
             return 1
         system_split.write_text(valid_system_split_text, encoding="utf-8")
 
@@ -919,7 +952,7 @@ def main() -> int:
     parser.add_argument(
         "--coding-system",
         metavar="中文系统名",
-        help="准备进入 Coding 的系统；额外要求当前、三段式且已纳入版本管理的开发基线。",
+        help="准备进入 Coding 的系统；额外要求所有权和核心命名已经用户确认，以及当前、三段式且已纳入版本管理的开发基线。",
     )
     parser.add_argument(
         "--review-slice",
