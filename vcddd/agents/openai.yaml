@@ -1,4 +1,4 @@
 interface:
   display_name: "VCDDD"
-  short_description: "从阶段性业务目标到系统设计、领域建模、开发与持续演化"
-  default_prompt: "使用 $vcddd 恢复项目上下文，先确认我选择的中文任务及其关联的阶段性业务目标，再沿找到业务、业务拆分设计、领域及其他指导开发的设计和开发继续。"
+  short_description: "用专业子 Agent 从业务设计推进到可追溯开发基线与实现"
+  default_prompt: "使用 $vcddd 恢复项目，由主控编排专业 Agent 完成业务设计、系统设计、开发基线与实现。"
