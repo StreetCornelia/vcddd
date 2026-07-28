@@ -20,6 +20,59 @@ BASELINE_STATUS_RE = re.compile(
 BASELINE_HEADINGS = ["Domain", "业务线与 API", "数据库设计"]
 BUSINESS_DESIGN_HEADINGS = ["业务目标与范围", "系统设计", "业务线逻辑"]
 SYSTEM_FACT_FILES = ["系统拆分.md", "模块拆分.md", "API设计.md", "数据库设计.md"]
+OWNERSHIP_CONFIRMATION_RE = re.compile(
+    r"^所有权确认[ \t]*[：:][ \t]*(待确认|已确认)[ \t]*$",
+    re.MULTILINE,
+)
+OWNERSHIP_EVIDENCE_RE = re.compile(
+    r"^确认依据[ \t]*[：:][ \t]*(\S.*)$",
+    re.MULTILINE,
+)
+TASK_RECOVERY_HEADINGS = [
+    "任务定义",
+    "当前角色",
+    "读取与写入合同",
+    "当前判断",
+    "用户交互",
+    "已有产物",
+    "恢复",
+]
+TASK_RECOVERY_FIELDS = [
+    "任务状态",
+    "任务目标",
+    "完成条件",
+    "服务的业务目标与系统",
+    "当前负责角色",
+    "角色 reference",
+    "交互状态",
+    "当前讨论对象",
+    "当前权威文档",
+    "必须读取的权威文档",
+    "直接证据或代码入口",
+    "允许写入路径",
+    "禁止修改内容",
+    "已经形成的认识或实现",
+    "当前核心判断及答案",
+    "已触发的条件判断",
+    "补充判断",
+    "尚未确定或存在冲突的判断",
+    "全部重要未决决定及所有者",
+    "决定之间的依赖关系",
+    "当前决策前沿",
+    "正在比较的候选或冲突",
+    "本次准备补充或替换的信息",
+    "可能受影响的其他文档",
+    "最新用户交互包",
+    "尚未处理的用户反馈",
+    "反馈处理结果",
+    "本轮维护的文档或代码",
+    "当前工作位置",
+    "当前开发基线与代码快照",
+    "实现记录与审核状态",
+    "恢复动作",
+    "下一步",
+    "恢复完成的判断标准",
+]
 IMPLEMENTATION_HEADINGS = [
     "业务结果",
     "设计与代码对应",
@@ -29,8 +82,7 @@ IMPLEMENTATION_HEADINGS = [
     "剩余风险",
 ]
 CORE_REVIEW_FILES = [
-    "业务与设计符合性.md",
-    "Domain与数据.md",
+    "实现符合性.md",
     "工程质量.md",
 ]
 SCOPE_RE = re.compile(r"^适用范围[ \t]*[：:][ \t]*(\S.*)$", re.MULTILINE)
@@ -73,6 +125,7 @@ def validate(
     repo_root: Path,
     coding_system: str | None = None,
     review_slice: str | None = None,
+    recovery_task: str | None = None,
 ) -> tuple[list[str], list[str]]:
     vcddd_root = repo_root / "docs" / "vcddd"
     errors: list[str] = []
@@ -85,10 +138,30 @@ def validate(
     for required in (
         vcddd_root / "index.md",
         vcddd_root / "business" / "index.md",
+        vcddd_root / "systems" / "index.md",
         vcddd_root / "work" / "index.md",
     ):
         if not required.exists():
             errors.append(f"缺少必要入口：{required}")
+
+    root_index = vcddd_root / "index.md"
+    if root_index.exists():
+        root_targets = {
+            local_link_path(root_index, raw_target)
+            for raw_target in LINK_RE.findall(
+                root_index.read_text(encoding="utf-8")
+            )
+        }
+        for required_target in (
+            vcddd_root / "business" / "index.md",
+            vcddd_root / "systems" / "index.md",
+            vcddd_root / "work" / "index.md",
+        ):
+            if (
+                required_target.exists()
+                and required_target.resolve() not in root_targets
+            ):
+                errors.append(f"项目入口未直接链接必要入口：{required_target}")
 
     markdown_files = sorted(vcddd_root.rglob("*.md"))
     for source in markdown_files:
@@ -100,7 +173,20 @@ def validate(
 
     business_root = vcddd_root / "business"
     if business_root.exists():
+        business_index = business_root / "index.md"
+        business_targets = (
+            {
+                local_link_path(business_index, raw_target)
+                for raw_target in LINK_RE.findall(
+                    business_index.read_text(encoding="utf-8")
+                )
+            }
+            if business_index.exists()
+            else set()
+        )
         for business_design in sorted(business_root.glob("*/业务设计.md")):
+            if business_design.resolve() not in business_targets:
+                errors.append(f"业务入口未直接链接业务设计：{business_design}")
             text = business_design.read_text(encoding="utf-8")
             headings = re.findall(
                 r"^##\s+(.+?)\s*$", text, re.MULTILINE
@@ -113,6 +199,21 @@ def validate(
 
     systems_root = vcddd_root / "systems"
     if systems_root.exists():
+        systems_index = systems_root / "index.md"
+        system_targets = (
+            {
+                local_link_path(systems_index, raw_target)
+                for raw_target in LINK_RE.findall(
+                    systems_index.read_text(encoding="utf-8")
+                )
+            }
+            if systems_index.exists()
+            else set()
+        )
+        for system_index in sorted(systems_root.glob("*/index.md")):
+            if system_index.resolve() not in system_targets:
+                errors.append(f"系统入口未直接链接系统：{system_index}")
+
         for baseline in sorted(systems_root.glob("*/开发基线.md")):
             text = baseline.read_text(encoding="utf-8")
             statuses = BASELINE_STATUS_RE.findall(text)
@@ -138,6 +239,61 @@ def validate(
         for legacy in sorted(systems_root.glob("*/**/*最终*.md")):
             if legacy.name != "开发基线.md":
                 warnings.append(f"检查可能与开发基线竞争的“最终”文件：{legacy}")
+
+    work_root = vcddd_root / "work"
+    if work_root.exists():
+        work_index = work_root / "index.md"
+        work_targets = (
+            {
+                local_link_path(work_index, raw_target)
+                for raw_target in LINK_RE.findall(
+                    work_index.read_text(encoding="utf-8")
+                )
+            }
+            if work_index.exists()
+            else set()
+        )
+        for task_index in sorted(work_root.glob("*/index.md")):
+            if task_index.resolve() not in work_targets:
+                errors.append(f"工作入口未直接链接任务恢复文档：{task_index}")
+
+    if recovery_task:
+        if Path(recovery_task).name != recovery_task:
+            errors.append(f"恢复任务名必须是单个目录名：{recovery_task}")
+            return errors, warnings
+
+        task_index = work_root / recovery_task / "index.md"
+        if not task_index.exists():
+            errors.append(f"缺少任务恢复文档：{task_index}")
+            return errors, warnings
+
+        task_text = task_index.read_text(encoding="utf-8")
+        task_headings = re.findall(
+            r"^##\s+(.+?)\s*$", task_text, re.MULTILINE
+        )
+        if task_headings != TASK_RECOVERY_HEADINGS:
+            errors.append(
+                "任务恢复文档必须且只能按顺序包含七个二级标题"
+                f"（{' / '.join(TASK_RECOVERY_HEADINGS)}）：{task_index}"
+            )
+        else:
+            invalid_fields = []
+            for field in TASK_RECOVERY_FIELDS:
+                matches = re.findall(
+                    rf"^{re.escape(field)}[ \t]*[：:][ \t]*(\S.*)$",
+                    task_text,
+                    re.MULTILINE,
+                )
+                if len(matches) != 1:
+                    invalid_fields.append(field)
+            if invalid_fields:
+                errors.append(
+                    "任务恢复文档缺少、重复或留空的合同字段"
+                    f"（{' / '.join(invalid_fields)}）：{task_index}"
+                )
+
+        if task_index.resolve() not in work_targets:
+            errors.append(f"当前任务未由工作入口直接链接：{task_index}")
 
     if review_slice and not coding_system:
         errors.append("--review-slice 必须同时指定 --coding-system")
@@ -172,6 +328,19 @@ def validate(
         for design_file in required_design_files[1:]:
             if design_file.resolve() not in index_targets:
                 errors.append(f"系统入口未直接链接固定设计文档：{design_file}")
+
+        system_split = system_root / "系统拆分.md"
+        system_split_text = system_split.read_text(encoding="utf-8")
+        if OWNERSHIP_CONFIRMATION_RE.findall(system_split_text) != ["已确认"]:
+            errors.append(
+                "准备 Coding 的系统拆分必须且只能声明"
+                f"“所有权确认：已确认”：{system_split}"
+            )
+        if len(OWNERSHIP_EVIDENCE_RE.findall(system_split_text)) != 1:
+            errors.append(
+                "准备 Coding 的系统拆分必须且只能声明一个非空确认依据："
+                f"{system_split}"
+            )
 
         baseline_text = baseline.read_text(encoding="utf-8")
         statuses = BASELINE_STATUS_RE.findall(baseline_text)
@@ -423,6 +592,8 @@ def self_test() -> int:
         business_root.mkdir(parents=True)
         (vcddd_root / "work").mkdir()
         system_root.mkdir(parents=True)
+        task_root = vcddd_root / "work" / "示例任务"
+        task_root.mkdir()
 
         (vcddd_root / "index.md").write_text(
             "[业务](business/index.md) [工作](work/index.md) "
@@ -441,7 +612,9 @@ def self_test() -> int:
             encoding="utf-8",
         )
         (vcddd_root / "work" / "index.md").write_text(
-            "# 工作\n", encoding="utf-8"
+            "# 工作\n\n"
+            "[示例任务](示例任务/index.md)\n",
+            encoding="utf-8",
         )
         (vcddd_root / "systems" / "index.md").write_text(
             "[示例系统](示例系统/index.md)\n", encoding="utf-8"
@@ -456,8 +629,15 @@ def self_test() -> int:
             encoding="utf-8",
         )
         for name in SYSTEM_FACT_FILES:
+            metadata = (
+                "所有权确认：已确认\n"
+                "确认依据：示例任务中的用户确认\n"
+                if name == "系统拆分.md"
+                else ""
+            )
             (system_root / name).write_text(
-                f"# {Path(name).stem}\n", encoding="utf-8"
+                f"# {Path(name).stem}\n\n{metadata}",
+                encoding="utf-8",
             )
         baseline_text = (
             "# 开发基线\n\n"
@@ -477,6 +657,52 @@ def self_test() -> int:
         (system_root / "开发基线.md").write_text(
             baseline_text, encoding="utf-8"
         )
+        task_text = (
+            "# 任务：示例任务\n\n"
+            "## 任务定义\n\n"
+            "任务状态：进行中\n"
+            "任务目标：形成示例系统设计\n"
+            "完成条件：示例设计可恢复\n"
+            "服务的业务目标与系统：示例业务 / 示例系统\n\n"
+            "## 当前角色\n\n"
+            "当前负责角色：系统与开发设计 Agent\n"
+            "角色 reference：system-design-agent.md\n"
+            "交互状态：无等待\n"
+            "当前讨论对象：示例系统\n\n"
+            "## 读取与写入合同\n\n"
+            "当前权威文档：[业务设计](../../business/示例业务/业务设计.md)\n"
+            "必须读取的权威文档：[业务设计](../../business/示例业务/业务设计.md)\n"
+            "直接证据或代码入口：无\n"
+            "允许写入路径：../../systems/示例系统/\n"
+            "禁止修改内容：业务设计\n\n"
+            "## 当前判断\n\n"
+            "已经形成的认识或实现：示例系统负责示例能力\n"
+            "当前核心判断及答案：责任边界已明确\n"
+            "已触发的条件判断：无\n"
+            "补充判断：无\n"
+            "尚未确定或存在冲突的判断：无\n"
+            "全部重要未决决定及所有者：无\n"
+            "决定之间的依赖关系：无\n"
+            "当前决策前沿：无\n"
+            "正在比较的候选或冲突：无\n"
+            "本次准备补充或替换的信息：无\n"
+            "可能受影响的其他文档：无\n\n"
+            "## 用户交互\n\n"
+            "最新用户交互包：无\n"
+            "尚未处理的用户反馈：无\n"
+            "反馈处理结果：无\n\n"
+            "## 已有产物\n\n"
+            "本轮维护的文档或代码：[系统入口](../../systems/示例系统/index.md)\n"
+            "当前工作位置：系统设计\n"
+            "当前开发基线与代码快照：无\n"
+            "实现记录与审核状态：无\n\n"
+            "## 恢复\n\n"
+            "恢复动作：读取业务设计并继续系统设计\n"
+            "下一步：维护系统拆分\n"
+            "恢复完成的判断标准：能够说明当前角色、来源和下一步\n"
+        )
+        task_index = task_root / "index.md"
+        task_index.write_text(task_text, encoding="utf-8")
         development_root = system_root / "开发记录"
         slice_root = development_root / "示例切片"
         review_root = slice_root / "审核"
@@ -515,8 +741,7 @@ def self_test() -> int:
             "# 审核结论\n\n"
             "代码快照：abc123\n"
             "当前结论：通过\n\n"
-            "- [业务与设计符合性](审核/业务与设计符合性.md)\n"
-            "- [Domain与数据](审核/Domain与数据.md)\n"
+            "- [实现符合性](审核/实现符合性.md)\n"
             "- [工程质量](审核/工程质量.md)\n",
             encoding="utf-8",
         )
@@ -525,6 +750,41 @@ def self_test() -> int:
         if not any("不是 Git 版本管理仓库" in error for error in errors):
             print("自检失败：Coding 检查未拒绝非 Git 目录。")
             return 1
+
+        errors, _ = validate(repo_root, recovery_task="示例任务")
+        if errors:
+            print("自检失败：有效任务恢复样例未通过。")
+            for error in errors:
+                print(f"ERROR: {error}")
+            return 1
+
+        system_split = system_root / "系统拆分.md"
+        valid_system_split_text = system_split.read_text(encoding="utf-8")
+        system_split.write_text(
+            valid_system_split_text.replace(
+                "所有权确认：已确认",
+                "所有权确认：待确认",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(repo_root, coding_system="示例系统")
+        if not any("所有权确认：已确认" in error for error in errors):
+            print("自检失败：Coding 检查未拒绝待确认的所有权。")
+            return 1
+        system_split.write_text(valid_system_split_text, encoding="utf-8")
+
+        task_index.write_text(
+            task_text.replace(
+                "角色 reference：system-design-agent.md\n",
+                "角色 reference：\n",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(repo_root, recovery_task="示例任务")
+        if not any("角色 reference" in error for error in errors):
+            print("自检失败：未识别缺失的角色 reference。")
+            return 1
+        task_index.write_text(task_text, encoding="utf-8")
 
         subprocess.run(
             ["git", "-C", str(repo_root), "init", "--quiet"],
@@ -664,7 +924,12 @@ def main() -> int:
     parser.add_argument(
         "--review-slice",
         metavar="中文开发切片",
-        help="检查指定系统开发切片的实现记录、三个核心审核和审核结论；必须同时指定 --coding-system。",
+        help="检查指定系统开发切片的实现记录、两个核心审核和审核结论；必须同时指定 --coding-system。",
+    )
+    parser.add_argument(
+        "--recovery-task",
+        metavar="中文任务名",
+        help="检查指定任务的七段式恢复合同、必填字段和工作入口链接。",
     )
     args = parser.parse_args()
 
@@ -676,6 +941,7 @@ def main() -> int:
         repo_root,
         coding_system=args.coding_system,
         review_slice=args.review_slice,
+        recovery_task=args.recovery_task,
     )
 
     for warning in warnings:
