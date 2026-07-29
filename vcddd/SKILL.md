@@ -27,6 +27,8 @@ DDD 术语用来继续理解和表达已确认业务，不能据此创造业务�
 
 各阶段允许的语言、名称推导、非 Domain 信息和数据库承载规则见 [references/language-and-modeling.md](references/language-and-modeling.md)，业务设计与系统设计都必须使用。
 
+Domain 分析开始以后，把结构、关系、生命周期、调用顺序、分支和数据承载优先交给合适的 UML 语义图或 ER 图表达，再用文字固定图无法精确承载的业务含义、不变量、合同、异常和证据。图是设计事实，不是装饰；每种图只由相应事实文档拥有，图文冲突时不能确认或进入下游。选择类图、状态图、组件图、时序图、活动图和 ER 图时使用 [references/diagramming.md](references/diagramming.md)。
+
 ## 恢复
 
 1. 读取目标仓库的 `docs/vcddd/index.md`、`work/index.md` 和当前任务。
@@ -97,7 +99,7 @@ docs/vcddd/systems/<中文系统名>/
 - `数据库设计.md`：领域状态的数据投影、事务、约束和迁移；
 - `开发基线.md`：只从前五份事实和业务设计汇总，不在此文件临场补设计。
 
-设计过程中发现业务设计不足时，返回精确上游请求；不得直接修改 `business/`。调用时给当前系统入口、相关 `业务设计.md`、当前任务、代码或验证入口、共同认知协议、[references/language-and-modeling.md](references/language-and-modeling.md) 和 [references/system-design-agent.md](references/system-design-agent.md)。
+设计过程中发现业务设计不足时，返回精确上游请求；不得直接修改 `business/`。调用时给当前系统入口、相关 `业务设计.md`、当前任务、代码或验证入口、共同认知协议、[references/language-and-modeling.md](references/language-and-modeling.md)、[references/diagramming.md](references/diagramming.md) 和 [references/system-design-agent.md](references/system-design-agent.md)。
 
 一个业务目标涉及多个系统时，为每个系统建立独立任务并启动独立系统设计 Agent。每个 Agent 只站在本系统的限界上下文中理解业务；另一个系统只是通过合同协作的外部世界。同一个现实事物可以在不同系统各自形成 Domain，并拥有不同的本地名称、属性、关系、行为和历史解释。一个具体事实或决定只能有一个权威拥有者，不等于整个业务概念只能在一个系统存在；不同系统不能共享 Domain 对象、聚合或内部模型。
 
@@ -128,7 +130,7 @@ Agent 新引入的核心业务名称，Domain、核心对象、关系和业务�
 
 每个开发切片维护 `systems/<系统>/开发记录/<切片>/实现记录.md`，记录开发基线、固定代码快照、设计到代码与测试的对应、偏差和剩余风险；不保存命令流水。
 
-代码现实与开发基线冲突时，开发 Agent 报告事实和影响，由主控路由到相应设计 Agent；代码不能静默成为新的业务或设计权威。调用时给当前任务、开发基线、本切片直接来源、仓库规范、共同认知协议和 [references/development-agent.md](references/development-agent.md)。
+代码现实与开发基线冲突时，开发 Agent 报告事实和影响，由主控路由到相应设计 Agent；代码不能静默成为新的业务或设计权威。调用时给当前任务、开发基线、本切片直接来源、仓库规范、共同认知协议、[references/diagramming.md](references/diagramming.md) 和 [references/development-agent.md](references/development-agent.md)。
 
 ## 调用代码审核 Agent
 
@@ -141,7 +143,7 @@ Agent 新引入的核心业务名称，Domain、核心对象、关系和业务�
 
 所有审核读取同一代码快照、开发基线和实现记录，不读取其他审核结论，也不直接修改代码；并行审核分别使用独立任务和 `主控状态.md`。已经由用户确认的业务、Domain、API、核心业务流程和数据库设计不再交给审核 Agent 重新判定；实现符合性审核只检查代码是否忠实执行它们。代码证据若表明上游事实可能有问题，审核 Agent 只报告证据和影响。独立审核完成后再启动新的审核结论 Agent，读取各审核记录并写 `审核结论.md`；主控只依据状态文件把实现问题交回开发 Agent，把可能的上游问题交回事实拥有者。修改或重写后按影响范围复审。
 
-审核任务使用共同认知协议和 [references/code-review-agent.md](references/code-review-agent.md)。安全、性能、前端体验或平台专项只在风险触发时增加。
+审核任务使用共同认知协议、[references/diagramming.md](references/diagramming.md) 和 [references/code-review-agent.md](references/code-review-agent.md)。安全、性能、前端体验或平台专项只在风险触发时增加。
 
 ## 按需调用原型 Agent
 
