@@ -19,7 +19,13 @@ BASELINE_STATUS_RE = re.compile(
 )
 BASELINE_HEADINGS = ["Domain", "业务线与 API", "数据库设计"]
 BUSINESS_DESIGN_HEADINGS = ["业务目标与范围", "系统设计", "业务线逻辑"]
-SYSTEM_FACT_FILES = ["系统拆分.md", "模块拆分.md", "API设计.md", "数据库设计.md"]
+SYSTEM_FACT_FILES = [
+    "系统拆分.md",
+    "模块拆分.md",
+    "API设计.md",
+    "核心业务流程.md",
+    "数据库设计.md",
+]
 BUSINESS_SUBJECT_CONFIRMATION_RE = re.compile(
     r"^业务主体确认[ \t]*[：:][ \t]*(待确认|已确认)[ \t]*$",
     re.MULTILINE,
@@ -50,6 +56,14 @@ API_DESIGN_CONFIRMATION_RE = re.compile(
 )
 API_DESIGN_EVIDENCE_RE = re.compile(
     r"^API 设计确认依据[ \t]*[：:][ \t]*(\S.*)$",
+    re.MULTILINE,
+)
+CORE_FLOW_CONFIRMATION_RE = re.compile(
+    r"^核心业务流程确认[ \t]*[：:][ \t]*(待确认|已确认)[ \t]*$",
+    re.MULTILINE,
+)
+CORE_FLOW_EVIDENCE_RE = re.compile(
+    r"^核心业务流程确认依据[ \t]*[：:][ \t]*(\S.*)$",
     re.MULTILINE,
 )
 DATABASE_DESIGN_CONFIRMATION_RE = re.compile(
@@ -484,6 +498,19 @@ def validate(
                 f"非空 API 设计确认依据：{api_design}"
             )
 
+        core_flow = system_root / "核心业务流程.md"
+        core_flow_text = core_flow.read_text(encoding="utf-8")
+        if CORE_FLOW_CONFIRMATION_RE.findall(core_flow_text) != ["已确认"]:
+            errors.append(
+                "准备 Coding 的核心业务流程必须且只能声明"
+                f"“核心业务流程确认：已确认”：{core_flow}"
+            )
+        if len(CORE_FLOW_EVIDENCE_RE.findall(core_flow_text)) != 1:
+            errors.append(
+                "准备 Coding 的核心业务流程必须且只能声明一个"
+                f"非空核心业务流程确认依据：{core_flow}"
+            )
+
         database_design = system_root / "数据库设计.md"
         database_design_text = database_design.read_text(encoding="utf-8")
         if (
@@ -784,6 +811,7 @@ def self_test() -> int:
             "[系统拆分](系统拆分.md)\n"
             "[模块拆分](模块拆分.md)\n"
             "[API设计](API设计.md)\n"
+            "[核心业务流程](核心业务流程.md)\n"
             "[数据库设计](数据库设计.md)\n"
             "[开发基线](开发基线.md)\n"
             "[开发记录](开发记录/index.md)\n",
@@ -803,6 +831,11 @@ def self_test() -> int:
                 metadata = (
                     "API 设计确认：已确认\n"
                     "API 设计确认依据：示例任务中的用户确认\n"
+                )
+            elif name == "核心业务流程.md":
+                metadata = (
+                    "核心业务流程确认：已确认\n"
+                    "核心业务流程确认依据：示例任务中的用户确认\n"
                 )
             elif name == "数据库设计.md":
                 metadata = (
@@ -825,6 +858,7 @@ def self_test() -> int:
             "- [系统拆分](系统拆分.md)\n"
             "- [模块拆分](模块拆分.md)\n"
             "- [API设计](API设计.md)\n"
+            "- [核心业务流程](核心业务流程.md)\n"
             "- [数据库设计](数据库设计.md)\n\n"
             "## Domain\n\n"
             "## 业务线与 API\n\n"
@@ -1013,6 +1047,21 @@ def self_test() -> int:
             return 1
         api_design.write_text(valid_api_design_text, encoding="utf-8")
 
+        core_flow = system_root / "核心业务流程.md"
+        valid_core_flow_text = core_flow.read_text(encoding="utf-8")
+        core_flow.write_text(
+            valid_core_flow_text.replace(
+                "核心业务流程确认：已确认",
+                "核心业务流程确认：待确认",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(repo_root, coding_system="示例系统")
+        if not any("核心业务流程确认：已确认" in error for error in errors):
+            print("自检失败：Coding 检查未拒绝待确认的核心业务流程。")
+            return 1
+        core_flow.write_text(valid_core_flow_text, encoding="utf-8")
+
         database_design = system_root / "数据库设计.md"
         valid_database_design_text = database_design.read_text(encoding="utf-8")
         database_design.write_text(
@@ -1145,6 +1194,7 @@ def self_test() -> int:
             "[系统拆分](系统拆分.md)\n"
             "[模块拆分](模块拆分.md)\n"
             "[API设计](API设计.md)\n"
+            "[核心业务流程](核心业务流程.md)\n"
             "[数据库设计](数据库设计.md)\n",
             encoding="utf-8",
         )
@@ -1157,6 +1207,7 @@ def self_test() -> int:
             "[系统拆分](系统拆分.md)\n"
             "[模块拆分](模块拆分.md)\n"
             "[API设计](API设计.md)\n"
+            "[核心业务流程](核心业务流程.md)\n"
             "[数据库设计](数据库设计.md)\n"
             "[开发基线](开发基线.md)\n"
             "[开发记录](开发记录/index.md)\n",
