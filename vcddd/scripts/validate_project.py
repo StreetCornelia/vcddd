@@ -44,6 +44,22 @@ NAMING_EVIDENCE_RE = re.compile(
     r"^核心命名确认依据[ \t]*[：:][ \t]*(\S.*)$",
     re.MULTILINE,
 )
+API_DESIGN_CONFIRMATION_RE = re.compile(
+    r"^API 设计确认[ \t]*[：:][ \t]*(待确认|已确认)[ \t]*$",
+    re.MULTILINE,
+)
+API_DESIGN_EVIDENCE_RE = re.compile(
+    r"^API 设计确认依据[ \t]*[：:][ \t]*(\S.*)$",
+    re.MULTILINE,
+)
+DATABASE_DESIGN_CONFIRMATION_RE = re.compile(
+    r"^数据库设计确认[ \t]*[：:][ \t]*(待确认|已确认)[ \t]*$",
+    re.MULTILINE,
+)
+DATABASE_DESIGN_EVIDENCE_RE = re.compile(
+    r"^数据库设计确认依据[ \t]*[：:][ \t]*(\S.*)$",
+    re.MULTILINE,
+)
 TASK_RECOVERY_HEADINGS = [
     "任务定义",
     "当前角色",
@@ -455,6 +471,38 @@ def validate(
                 f"非空核心命名确认依据：{system_split}"
             )
 
+        api_design = system_root / "API设计.md"
+        api_design_text = api_design.read_text(encoding="utf-8")
+        if API_DESIGN_CONFIRMATION_RE.findall(api_design_text) != ["已确认"]:
+            errors.append(
+                "准备 Coding 的 API 设计必须且只能声明"
+                f"“API 设计确认：已确认”：{api_design}"
+            )
+        if len(API_DESIGN_EVIDENCE_RE.findall(api_design_text)) != 1:
+            errors.append(
+                "准备 Coding 的 API 设计必须且只能声明一个"
+                f"非空 API 设计确认依据：{api_design}"
+            )
+
+        database_design = system_root / "数据库设计.md"
+        database_design_text = database_design.read_text(encoding="utf-8")
+        if (
+            DATABASE_DESIGN_CONFIRMATION_RE.findall(database_design_text)
+            != ["已确认"]
+        ):
+            errors.append(
+                "准备 Coding 的数据库设计必须且只能声明"
+                f"“数据库设计确认：已确认”：{database_design}"
+            )
+        if (
+            len(DATABASE_DESIGN_EVIDENCE_RE.findall(database_design_text))
+            != 1
+        ):
+            errors.append(
+                "准备 Coding 的数据库设计必须且只能声明一个"
+                f"非空数据库设计确认依据：{database_design}"
+            )
+
         baseline_text = baseline.read_text(encoding="utf-8")
         statuses = BASELINE_STATUS_RE.findall(baseline_text)
         if statuses != ["当前"]:
@@ -742,16 +790,27 @@ def self_test() -> int:
             encoding="utf-8",
         )
         for name in SYSTEM_FACT_FILES:
-            metadata = (
-                "业务主体确认：已确认\n"
-                "业务主体确认依据：示例任务中的用户确认\n"
-                "Domain 设计确认：已确认\n"
-                "Domain 设计确认依据：示例任务中的用户确认\n"
-                "核心命名确认：已确认\n"
-                "核心命名确认依据：示例任务中的用户确认\n"
-                if name == "系统拆分.md"
-                else ""
-            )
+            if name == "系统拆分.md":
+                metadata = (
+                    "业务主体确认：已确认\n"
+                    "业务主体确认依据：示例任务中的用户确认\n"
+                    "Domain 设计确认：已确认\n"
+                    "Domain 设计确认依据：示例任务中的用户确认\n"
+                    "核心命名确认：已确认\n"
+                    "核心命名确认依据：示例任务中的用户确认\n"
+                )
+            elif name == "API设计.md":
+                metadata = (
+                    "API 设计确认：已确认\n"
+                    "API 设计确认依据：示例任务中的用户确认\n"
+                )
+            elif name == "数据库设计.md":
+                metadata = (
+                    "数据库设计确认：已确认\n"
+                    "数据库设计确认依据：示例任务中的用户确认\n"
+                )
+            else:
+                metadata = ""
             (system_root / name).write_text(
                 f"# {Path(name).stem}\n\n{metadata}",
                 encoding="utf-8",
@@ -938,6 +997,39 @@ def self_test() -> int:
             print("自检失败：Coding 检查未拒绝待确认的核心命名。")
             return 1
         system_split.write_text(valid_system_split_text, encoding="utf-8")
+
+        api_design = system_root / "API设计.md"
+        valid_api_design_text = api_design.read_text(encoding="utf-8")
+        api_design.write_text(
+            valid_api_design_text.replace(
+                "API 设计确认：已确认",
+                "API 设计确认：待确认",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(repo_root, coding_system="示例系统")
+        if not any("API 设计确认：已确认" in error for error in errors):
+            print("自检失败：Coding 检查未拒绝待确认的 API 设计。")
+            return 1
+        api_design.write_text(valid_api_design_text, encoding="utf-8")
+
+        database_design = system_root / "数据库设计.md"
+        valid_database_design_text = database_design.read_text(encoding="utf-8")
+        database_design.write_text(
+            valid_database_design_text.replace(
+                "数据库设计确认：已确认",
+                "数据库设计确认：待确认",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(repo_root, coding_system="示例系统")
+        if not any("数据库设计确认：已确认" in error for error in errors):
+            print("自检失败：Coding 检查未拒绝待确认的数据库设计。")
+            return 1
+        database_design.write_text(
+            valid_database_design_text,
+            encoding="utf-8",
+        )
 
         task_index.write_text(
             task_text.replace(
