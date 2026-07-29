@@ -20,12 +20,20 @@ BASELINE_STATUS_RE = re.compile(
 BASELINE_HEADINGS = ["Domain", "业务线与 API", "数据库设计"]
 BUSINESS_DESIGN_HEADINGS = ["业务目标与范围", "系统设计", "业务线逻辑"]
 SYSTEM_FACT_FILES = ["系统拆分.md", "模块拆分.md", "API设计.md", "数据库设计.md"]
-OWNERSHIP_CONFIRMATION_RE = re.compile(
-    r"^所有权确认[ \t]*[：:][ \t]*(待确认|已确认)[ \t]*$",
+BUSINESS_SUBJECT_CONFIRMATION_RE = re.compile(
+    r"^业务主体确认[ \t]*[：:][ \t]*(待确认|已确认)[ \t]*$",
     re.MULTILINE,
 )
-OWNERSHIP_EVIDENCE_RE = re.compile(
-    r"^确认依据[ \t]*[：:][ \t]*(\S.*)$",
+BUSINESS_SUBJECT_EVIDENCE_RE = re.compile(
+    r"^业务主体确认依据[ \t]*[：:][ \t]*(\S.*)$",
+    re.MULTILINE,
+)
+DOMAIN_DESIGN_CONFIRMATION_RE = re.compile(
+    r"^Domain 设计确认[ \t]*[：:][ \t]*(待确认|已确认)[ \t]*$",
+    re.MULTILINE,
+)
+DOMAIN_DESIGN_EVIDENCE_RE = re.compile(
+    r"^Domain 设计确认依据[ \t]*[：:][ \t]*(\S.*)$",
     re.MULTILINE,
 )
 NAMING_CONFIRMATION_RE = re.compile(
@@ -414,14 +422,26 @@ def validate(
 
         system_split = system_root / "系统拆分.md"
         system_split_text = system_split.read_text(encoding="utf-8")
-        if OWNERSHIP_CONFIRMATION_RE.findall(system_split_text) != ["已确认"]:
+        if BUSINESS_SUBJECT_CONFIRMATION_RE.findall(system_split_text) != ["已确认"]:
             errors.append(
                 "准备 Coding 的系统拆分必须且只能声明"
-                f"“所有权确认：已确认”：{system_split}"
+                f"“业务主体确认：已确认”：{system_split}"
             )
-        if len(OWNERSHIP_EVIDENCE_RE.findall(system_split_text)) != 1:
+        if len(BUSINESS_SUBJECT_EVIDENCE_RE.findall(system_split_text)) != 1:
             errors.append(
-                "准备 Coding 的系统拆分必须且只能声明一个非空确认依据："
+                "准备 Coding 的系统拆分必须且只能声明一个"
+                "非空业务主体确认依据："
+                f"{system_split}"
+            )
+        if DOMAIN_DESIGN_CONFIRMATION_RE.findall(system_split_text) != ["已确认"]:
+            errors.append(
+                "准备 Coding 的系统拆分必须且只能声明"
+                f"“Domain 设计确认：已确认”：{system_split}"
+            )
+        if len(DOMAIN_DESIGN_EVIDENCE_RE.findall(system_split_text)) != 1:
+            errors.append(
+                "准备 Coding 的系统拆分必须且只能声明一个"
+                "非空 Domain 设计确认依据："
                 f"{system_split}"
             )
         if NAMING_CONFIRMATION_RE.findall(system_split_text) != ["已确认"]:
@@ -723,8 +743,10 @@ def self_test() -> int:
         )
         for name in SYSTEM_FACT_FILES:
             metadata = (
-                "所有权确认：已确认\n"
-                "确认依据：示例任务中的用户确认\n"
+                "业务主体确认：已确认\n"
+                "业务主体确认依据：示例任务中的用户确认\n"
+                "Domain 设计确认：已确认\n"
+                "Domain 设计确认依据：示例任务中的用户确认\n"
                 "核心命名确认：已确认\n"
                 "核心命名确认依据：示例任务中的用户确认\n"
                 if name == "系统拆分.md"
@@ -880,14 +902,27 @@ def self_test() -> int:
         valid_system_split_text = system_split.read_text(encoding="utf-8")
         system_split.write_text(
             valid_system_split_text.replace(
-                "所有权确认：已确认",
-                "所有权确认：待确认",
+                "业务主体确认：已确认",
+                "业务主体确认：待确认",
             ),
             encoding="utf-8",
         )
         errors, _ = validate(repo_root, coding_system="示例系统")
-        if not any("所有权确认：已确认" in error for error in errors):
-            print("自检失败：Coding 检查未拒绝待确认的所有权。")
+        if not any("业务主体确认：已确认" in error for error in errors):
+            print("自检失败：Coding 检查未拒绝待确认的业务主体。")
+            return 1
+        system_split.write_text(valid_system_split_text, encoding="utf-8")
+
+        system_split.write_text(
+            valid_system_split_text.replace(
+                "Domain 设计确认：已确认",
+                "Domain 设计确认：待确认",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(repo_root, coding_system="示例系统")
+        if not any("Domain 设计确认：已确认" in error for error in errors):
+            print("自检失败：Coding 检查未拒绝待确认的 Domain 设计。")
             return 1
         system_split.write_text(valid_system_split_text, encoding="utf-8")
 
