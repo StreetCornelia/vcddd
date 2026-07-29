@@ -81,6 +81,24 @@ TASK_RECOVERY_FIELDS = [
     "下一步",
     "恢复完成的判断标准",
 ]
+CONTROLLER_STATE_FIELDS = [
+    "任务文档",
+    "当前负责角色",
+    "角色 reference",
+    "通信状态",
+    "当前讨论对象",
+    "专业结果位置",
+    "本轮变更",
+    "用户交互包",
+    "待处理用户反馈",
+    "反馈处理结果",
+    "下一步",
+]
+CONTROLLER_STATUS_RE = re.compile(
+    r"^通信状态[ \t]*[：:][ \t]*"
+    r"(待派发|Agent 工作中|等待用户|可继续|阻塞|完成)[ \t]*$",
+    re.MULTILINE,
+)
 IMPLEMENTATION_HEADINGS = [
     "业务结果",
     "设计与代码对应",
@@ -262,8 +280,30 @@ def validate(
             else set()
         )
         for task_index in sorted(work_root.glob("*/index.md")):
-            if task_index.resolve() not in work_targets:
-                errors.append(f"工作入口未直接链接任务恢复文档：{task_index}")
+            controller_state = task_index.parent / "主控状态.md"
+            if not controller_state.exists():
+                if task_index.resolve() not in work_targets:
+                    errors.append(
+                        f"工作入口未直接链接旧任务恢复文档：{task_index}"
+                    )
+                warnings.append(
+                    f"活动任务尚未建立短主控状态，恢复前需要迁移：{controller_state}"
+                )
+                continue
+
+            if controller_state.resolve() not in work_targets:
+                errors.append(f"工作入口未直接链接主控状态：{controller_state}")
+
+            controller_targets = {
+                local_link_path(controller_state, raw_target)
+                for raw_target in LINK_RE.findall(
+                    controller_state.read_text(encoding="utf-8")
+                )
+            }
+            if task_index.resolve() not in controller_targets:
+                errors.append(
+                    f"主控状态未直接链接完整任务恢复文档：{controller_state}"
+                )
 
     if recovery_task:
         if Path(recovery_task).name != recovery_task:
@@ -271,8 +311,12 @@ def validate(
             return errors, warnings
 
         task_index = work_root / recovery_task / "index.md"
+        controller_state = work_root / recovery_task / "主控状态.md"
         if not task_index.exists():
             errors.append(f"缺少任务恢复文档：{task_index}")
+            return errors, warnings
+        if not controller_state.exists():
+            errors.append(f"缺少主控状态：{controller_state}")
             return errors, warnings
 
         task_text = task_index.read_text(encoding="utf-8")
@@ -300,8 +344,39 @@ def validate(
                     f"（{' / '.join(invalid_fields)}）：{task_index}"
                 )
 
-        if task_index.resolve() not in work_targets:
-            errors.append(f"当前任务未由工作入口直接链接：{task_index}")
+        controller_text = controller_state.read_text(encoding="utf-8")
+        invalid_controller_fields = []
+        for field in CONTROLLER_STATE_FIELDS:
+            matches = re.findall(
+                rf"^{re.escape(field)}[ \t]*[：:][ \t]*(\S.*)$",
+                controller_text,
+                re.MULTILINE,
+            )
+            if len(matches) != 1:
+                invalid_controller_fields.append(field)
+        if invalid_controller_fields:
+            errors.append(
+                "主控状态缺少、重复或留空的合同字段"
+                f"（{' / '.join(invalid_controller_fields)}）："
+                f"{controller_state}"
+            )
+        if len(CONTROLLER_STATUS_RE.findall(controller_text)) != 1:
+            errors.append(
+                "主控状态必须且只能声明一个有效通信状态"
+                "（待派发/Agent 工作中/等待用户/可继续/阻塞/完成）："
+                f"{controller_state}"
+            )
+
+        controller_targets = {
+            local_link_path(controller_state, raw_target)
+            for raw_target in LINK_RE.findall(controller_text)
+        }
+        if task_index.resolve() not in controller_targets:
+            errors.append(
+                f"主控状态未直接链接完整任务恢复文档：{controller_state}"
+            )
+        if controller_state.resolve() not in work_targets:
+            errors.append(f"当前任务未由工作入口直接链接主控状态：{controller_state}")
 
     if review_slice and not coding_system:
         errors.append("--review-slice 必须同时指定 --coding-system")
@@ -631,7 +706,7 @@ def self_test() -> int:
         )
         (vcddd_root / "work" / "index.md").write_text(
             "# 工作\n\n"
-            "[示例任务](示例任务/index.md)\n",
+            "[示例任务](示例任务/主控状态.md)\n",
             encoding="utf-8",
         )
         (vcddd_root / "systems" / "index.md").write_text(
@@ -723,6 +798,22 @@ def self_test() -> int:
         )
         task_index = task_root / "index.md"
         task_index.write_text(task_text, encoding="utf-8")
+        controller_text = (
+            "# 主控状态：示例任务\n\n"
+            "任务文档：[完整任务](index.md)\n"
+            "当前负责角色：系统与开发设计 Agent\n"
+            "角色 reference：system-design-agent.md\n"
+            "通信状态：可继续\n"
+            "当前讨论对象：示例系统\n"
+            "专业结果位置：[系统入口](../../systems/示例系统/index.md)\n"
+            "本轮变更：系统设计文档\n"
+            "用户交互包：无\n"
+            "待处理用户反馈：无\n"
+            "反馈处理结果：无\n"
+            "下一步：继续维护系统拆分\n"
+        )
+        controller_state = task_root / "主控状态.md"
+        controller_state.write_text(controller_text, encoding="utf-8")
         development_root = system_root / "开发记录"
         slice_root = development_root / "示例切片"
         review_root = slice_root / "审核"
@@ -778,6 +869,13 @@ def self_test() -> int:
                 print(f"ERROR: {error}")
             return 1
 
+        controller_state.unlink()
+        errors, _ = validate(repo_root, recovery_task="示例任务")
+        if not any("缺少主控状态" in error for error in errors):
+            print("自检失败：未识别缺少短主控状态的旧任务。")
+            return 1
+        controller_state.write_text(controller_text, encoding="utf-8")
+
         system_split = system_root / "系统拆分.md"
         valid_system_split_text = system_split.read_text(encoding="utf-8")
         system_split.write_text(
@@ -818,6 +916,19 @@ def self_test() -> int:
             print("自检失败：未识别缺失的角色 reference。")
             return 1
         task_index.write_text(task_text, encoding="utf-8")
+
+        controller_state.write_text(
+            controller_text.replace(
+                "下一步：继续维护系统拆分\n",
+                "下一步：\n",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(repo_root, recovery_task="示例任务")
+        if not any("主控状态" in error and "下一步" in error for error in errors):
+            print("自检失败：未识别主控状态缺失的下一步。")
+            return 1
+        controller_state.write_text(controller_text, encoding="utf-8")
 
         subprocess.run(
             ["git", "-C", str(repo_root), "init", "--quiet"],
@@ -962,7 +1073,7 @@ def main() -> int:
     parser.add_argument(
         "--recovery-task",
         metavar="中文任务名",
-        help="检查指定任务的七段式恢复合同、必填字段和工作入口链接。",
+        help="检查指定任务的短主控状态、七段式完整恢复合同、必填字段和工作入口链接。",
     )
     args = parser.parse_args()
 
