@@ -17,7 +17,7 @@ BASELINE_STATUS_RE = re.compile(
     r"^状态[ \t]*[：:][ \t]*(当前|待确认|待重新生成|已替代)[ \t]*$",
     re.MULTILINE,
 )
-BASELINE_HEADINGS = ["Domain", "业务线与 API", "数据库设计"]
+BASELINE_HEADINGS = ["Domain", "架构与模块", "业务线与 API", "数据库设计"]
 BUSINESS_DESIGN_HEADINGS = ["业务目标与范围", "系统设计", "业务线逻辑"]
 ORCHESTRATION_API_HEADINGS = [
     "业务结果",
@@ -130,6 +130,7 @@ DATABASE_DDL_RE = re.compile(
 )
 SYSTEM_FACT_FILES = [
     "系统拆分.md",
+    "架构设计.md",
     "模块拆分.md",
     "API设计.md",
     "核心接口内部编排.md",
@@ -138,15 +139,84 @@ SYSTEM_FACT_FILES = [
 ENGINEERING_CODING_STANDARD_FILE = "工程编码规范.md"
 ENGINEERING_STANDARD_HEADINGS = [
     "使用与演化规则",
+    "形成过程与依据",
     "当前规则索引",
-    "当前系统工程约束",
-    "当前编码规则",
+    "架构与代码组织",
+    "Domain 与应用编排",
+    "命名与代码表达",
+    "事务",
+    "数据访问",
+    "错误处理",
+    "日志与可观察性",
+    "外部系统协作",
+    "并发、异步与幂等",
+    "配置与安全",
+    "测试",
+    "封装、复用与重复代码",
+    "工具链与交付验证",
     "例外与存量处理",
     "尚未形成规范的问题",
     "重要演化",
 ]
 ENGINEERING_STANDARD_STATUS_RE = re.compile(
-    r"^状态[ \t]*[：:][ \t]*(待建立|当前|待重新判断)[ \t]*$",
+    r"^状态[ \t]*[：:][ \t]*(待建立|待确认|当前|待重新判断)[ \t]*$",
+    re.MULTILINE,
+)
+ARCHITECTURE_HEADINGS = [
+    "架构目标与约束",
+    "总体架构",
+    "层次与主要组件",
+    "依赖与调用边界",
+    "数据、外部系统与运行协作",
+    "系统级技术机制",
+    "技术选择与理由",
+    "Coding 必须遵守的边界",
+    "允许 Coding 决定的内容",
+    "尚未确定的问题",
+]
+MODULE_PREFIX_HEADINGS = ["模块全景", "模块目录"]
+MODULE_DETAIL_HEADINGS = [
+    "存在意义",
+    "职责与非职责",
+    "承载的 Domain 与数据",
+    "对外提供与依赖",
+    "代码范围",
+]
+MODULE_TAIL_HEADINGS = [
+    "模块依赖规则",
+    "业务覆盖",
+    "Coding 必须遵守的边界",
+    "尚未确定的问题",
+]
+MODULE_TITLE_RE = re.compile(
+    r"^(MOD-[^\s：:]+)[ \t]*[：:][ \t]*(\S.*)$"
+)
+ARCHITECTURE_CONFIRMATION_RE = re.compile(
+    r"^架构设计确认[ \t]*[：:][ \t]*(待确认|已确认)[ \t]*$",
+    re.MULTILINE,
+)
+ARCHITECTURE_EVIDENCE_RE = re.compile(
+    r"^架构设计确认依据[ \t]*[：:][ \t]*(\S.*)$",
+    re.MULTILINE,
+)
+MODULE_CONFIRMATION_RE = re.compile(
+    r"^模块拆分确认[ \t]*[：:][ \t]*(待确认|已确认)[ \t]*$",
+    re.MULTILINE,
+)
+MODULE_EVIDENCE_RE = re.compile(
+    r"^模块拆分确认依据[ \t]*[：:][ \t]*(\S.*)$",
+    re.MULTILINE,
+)
+ENGINEERING_STANDARD_CONFIRMATION_RE = re.compile(
+    r"^规范确认[ \t]*[：:][ \t]*(待确认|已确认)[ \t]*$",
+    re.MULTILINE,
+)
+ENGINEERING_STANDARD_EVIDENCE_RE = re.compile(
+    r"^规范确认依据[ \t]*[：:][ \t]*(\S.*)$",
+    re.MULTILINE,
+)
+ENGINEERING_STANDARD_FORMATION_RE = re.compile(
+    r"^形成方式[ \t]*[：:][ \t]*(已有代码归纳|全新系统初始化)[ \t]*$",
     re.MULTILINE,
 )
 BUSINESS_SUBJECT_CONFIRMATION_RE = re.compile(
@@ -874,9 +944,182 @@ def validate_database_design(
     return errors, warnings
 
 
+def validate_architecture_and_modules(
+    system_root: Path,
+    require_confirmed: bool,
+) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    architecture_design = system_root / "架构设计.md"
+    module_design = system_root / "模块拆分.md"
+
+    for path in (architecture_design, module_design):
+        if not path.exists():
+            errors.append(f"缺少架构或模块固定设计文档：{path}")
+    if errors:
+        return errors, warnings
+
+    architecture_text = architecture_design.read_text(encoding="utf-8")
+    architecture_confirmations = ARCHITECTURE_CONFIRMATION_RE.findall(
+        architecture_text
+    )
+    if len(architecture_confirmations) != 1:
+        errors.append(
+            "架构设计必须且只能声明一个确认状态"
+            f"（待确认/已确认）：{architecture_design}"
+        )
+    elif require_confirmed and architecture_confirmations != ["已确认"]:
+        errors.append(
+            f"准备 Coding 的架构设计尚未确认：{architecture_design}"
+        )
+    architecture_evidence = ARCHITECTURE_EVIDENCE_RE.findall(
+        architecture_text
+    )
+    if len(architecture_evidence) != 1:
+        errors.append(
+            f"架构设计必须声明一个非空确认依据：{architecture_design}"
+        )
+    elif (
+        require_confirmed
+        and architecture_evidence[0].strip() in {"无", "待确认"}
+    ):
+        errors.append(
+            f"已确认架构设计不能使用空确认依据：{architecture_design}"
+        )
+
+    architecture_headings = re.findall(
+        r"^##\s+(.+?)\s*$", architecture_text, re.MULTILINE
+    )
+    if architecture_headings != ARCHITECTURE_HEADINGS:
+        errors.append(
+            "架构设计必须且只能按顺序包含"
+            f"（{' / '.join(ARCHITECTURE_HEADINGS)}）：{architecture_design}"
+        )
+    for field in (
+        "适用系统",
+        "适用范围",
+        "语言及版本",
+        "主要框架及版本",
+        "代码现实快照",
+    ):
+        if len(
+            re.findall(
+                rf"^{re.escape(field)}[ \t]*[：:][ \t]*(\S.*)$",
+                architecture_text,
+                re.MULTILINE,
+            )
+        ) != 1:
+            errors.append(
+                f"架构设计必须且只能声明一个非空“{field}”："
+                f"{architecture_design}"
+            )
+
+    module_text = module_design.read_text(encoding="utf-8")
+    module_confirmations = MODULE_CONFIRMATION_RE.findall(module_text)
+    if len(module_confirmations) != 1:
+        errors.append(
+            "模块拆分必须且只能声明一个确认状态"
+            f"（待确认/已确认）：{module_design}"
+        )
+    elif require_confirmed and module_confirmations != ["已确认"]:
+        errors.append(
+            f"准备 Coding 的模块拆分尚未确认：{module_design}"
+        )
+    module_evidence = MODULE_EVIDENCE_RE.findall(module_text)
+    if len(module_evidence) != 1:
+        errors.append(
+            f"模块拆分必须声明一个非空确认依据：{module_design}"
+        )
+    elif (
+        require_confirmed
+        and module_evidence[0].strip() in {"无", "待确认"}
+    ):
+        errors.append(
+            f"已确认模块拆分不能使用空确认依据：{module_design}"
+        )
+    for field in (
+        "适用系统",
+        "适用范围",
+        "代码现实快照",
+    ):
+        if len(
+            re.findall(
+                rf"^{re.escape(field)}[ \t]*[：:][ \t]*(\S.*)$",
+                module_text,
+                re.MULTILINE,
+            )
+        ) != 1:
+            errors.append(
+                f"模块拆分必须且只能声明一个非空“{field}”："
+                f"{module_design}"
+            )
+
+    module_h2_matches = list(
+        re.finditer(r"^##\s+(.+?)\s*$", module_text, re.MULTILINE)
+    )
+    module_h2_titles = [match.group(1) for match in module_h2_matches]
+    if module_h2_titles[:2] != MODULE_PREFIX_HEADINGS:
+        errors.append(
+            "模块拆分必须先按顺序包含"
+            f"（{' / '.join(MODULE_PREFIX_HEADINGS)}）：{module_design}"
+        )
+    if module_h2_titles[-len(MODULE_TAIL_HEADINGS):] != MODULE_TAIL_HEADINGS:
+        errors.append(
+            "模块拆分必须最后按顺序包含"
+            f"（{' / '.join(MODULE_TAIL_HEADINGS)}）：{module_design}"
+        )
+
+    detail_start = len(MODULE_PREFIX_HEADINGS)
+    detail_end = len(module_h2_titles) - len(MODULE_TAIL_HEADINGS)
+    module_detail_matches = module_h2_matches[detail_start:detail_end]
+    if not module_detail_matches:
+        errors.append(f"模块拆分至少需要一个 MOD- 模块章节：{module_design}")
+    seen_module_ids: set[str] = set()
+    for index, module_match in enumerate(module_detail_matches):
+        parsed_title = MODULE_TITLE_RE.fullmatch(module_match.group(1))
+        if parsed_title is None:
+            errors.append(
+                "模块详细章节标题必须为"
+                f"“MOD-<标识>：<模块名称>”：{module_design}"
+            )
+            continue
+        module_id = parsed_title.group(1)
+        if module_id in seen_module_ids:
+            errors.append(f"模块标识重复“{module_id}”：{module_design}")
+        seen_module_ids.add(module_id)
+
+        section_end = (
+            module_detail_matches[index + 1].start()
+            if index + 1 < len(module_detail_matches)
+            else (
+                module_h2_matches[detail_end].start()
+                if detail_end < len(module_h2_matches)
+                else len(module_text)
+            )
+        )
+        detail_text = module_text[module_match.end():section_end]
+        h3_headings = re.findall(
+            r"^###\s+(.+?)\s*$", detail_text, re.MULTILINE
+        )
+        if h3_headings != MODULE_DETAIL_HEADINGS:
+            errors.append(
+                f"{module_id} 必须且只能按顺序包含"
+                f"（{' / '.join(MODULE_DETAIL_HEADINGS)}）：{module_design}"
+            )
+
+    if (
+        "| 模块标识 | 模块名称 | 为什么存在 | 主要责任 |"
+        " 承载的 Domain | 详细章节 |"
+    ) not in module_text:
+        errors.append(f"模块目录缺少固定表头：{module_design}")
+
+    return errors, warnings
+
+
 def validate(
     repo_root: Path,
     coding_system: str | None = None,
+    architecture_system: str | None = None,
     orchestration_system: str | None = None,
     database_system: str | None = None,
     review_slice: str | None = None,
@@ -1111,6 +1354,19 @@ def validate(
         errors.append("--review-slice 必须同时指定 --coding-system")
         return errors, warnings
 
+    if architecture_system:
+        if Path(architecture_system).name != architecture_system:
+            errors.append(f"系统名必须是单个目录名：{architecture_system}")
+            return errors, warnings
+        architecture_errors, architecture_warnings = (
+            validate_architecture_and_modules(
+                systems_root / architecture_system,
+                require_confirmed=False,
+            )
+        )
+        errors.extend(architecture_errors)
+        warnings.extend(architecture_warnings)
+
     if orchestration_system:
         if Path(orchestration_system).name != orchestration_system:
             errors.append(f"系统名必须是单个目录名：{orchestration_system}")
@@ -1175,6 +1431,15 @@ def validate(
         )
         errors.extend(database_errors)
         warnings.extend(database_warnings)
+
+        architecture_errors, architecture_warnings = (
+            validate_architecture_and_modules(
+                system_root,
+                require_confirmed=True,
+            )
+        )
+        errors.extend(architecture_errors)
+        warnings.extend(architecture_warnings)
 
         system_split = system_root / "系统拆分.md"
         system_split_text = system_split.read_text(encoding="utf-8")
@@ -1262,11 +1527,39 @@ def validate(
                 "准备 Coding 的工程编码规范必须且只能声明"
                 f"“状态：当前”：{engineering_standard}"
             )
+        if ENGINEERING_STANDARD_CONFIRMATION_RE.findall(
+            engineering_standard_text
+        ) != ["已确认"]:
+            errors.append(
+                "准备 Coding 的工程编码规范必须且只能声明"
+                f"“规范确认：已确认”：{engineering_standard}"
+            )
+        standard_evidence = ENGINEERING_STANDARD_EVIDENCE_RE.findall(
+            engineering_standard_text
+        )
+        if (
+            len(standard_evidence) != 1
+            or standard_evidence[0].strip() in {"无", "待确认"}
+        ):
+            errors.append(
+                "准备 Coding 的工程编码规范必须声明一个"
+                f"有效确认依据：{engineering_standard}"
+            )
+        if ENGINEERING_STANDARD_FORMATION_RE.findall(
+            engineering_standard_text
+        ) not in (["已有代码归纳"], ["全新系统初始化"]):
+            errors.append(
+                "工程编码规范必须且只能声明有效形成方式"
+                f"（已有代码归纳/全新系统初始化）：{engineering_standard}"
+            )
         for field in (
             "适用系统",
             "适用代码范围",
+            "语言及版本",
+            "主要框架及版本",
             "规范版本",
             "生效代码快照",
+            "最佳实践资料版本或取得时间",
             "维护角色",
         ):
             matches = re.findall(
@@ -1716,6 +2009,7 @@ def self_test() -> int:
         )
         (system_root / "index.md").write_text(
             "[系统拆分](系统拆分.md)\n"
+            "[架构设计](架构设计.md)\n"
             "[模块拆分](模块拆分.md)\n"
             "[API设计](API设计.md)\n"
             "[核心接口内部编排](核心接口内部编排.md)\n"
@@ -1734,6 +2028,53 @@ def self_test() -> int:
                     "Domain 设计确认依据：示例任务中的用户确认\n"
                     "核心命名确认：已确认\n"
                     "核心命名确认依据：示例任务中的用户确认\n"
+                )
+            elif name == "架构设计.md":
+                metadata = (
+                    "架构设计确认：已确认\n"
+                    "架构设计确认依据：示例任务中的用户确认\n"
+                    "设计来源：[系统拆分](系统拆分.md)\n"
+                    "适用系统：示例系统\n"
+                    "适用范围：示例系统代码\n"
+                    "语言及版本：Python 3\n"
+                    "主要框架及版本：示例框架 1\n"
+                    "代码现实快照：无代码\n\n"
+                    "## 架构目标与约束\n\n"
+                    "## 总体架构\n\n"
+                    "## 层次与主要组件\n\n"
+                    "## 依赖与调用边界\n\n"
+                    "## 数据、外部系统与运行协作\n\n"
+                    "## 系统级技术机制\n\n"
+                    "## 技术选择与理由\n\n"
+                    "## Coding 必须遵守的边界\n\n"
+                    "## 允许 Coding 决定的内容\n\n"
+                    "## 尚未确定的问题\n"
+                )
+            elif name == "模块拆分.md":
+                metadata = (
+                    "模块拆分确认：已确认\n"
+                    "模块拆分确认依据：示例任务中的用户确认\n"
+                    "设计来源：[架构设计](架构设计.md)\n"
+                    "适用系统：示例系统\n"
+                    "适用范围：示例系统代码\n"
+                    "代码现实快照：无代码\n\n"
+                    "## 模块全景\n\n"
+                    "## 模块目录\n\n"
+                    "| 模块标识 | 模块名称 | 为什么存在 | 主要责任 |"
+                    " 承载的 Domain | 详细章节 |\n"
+                    "| --- | --- | --- | --- | --- | --- |\n"
+                    "| MOD-example | 示例模块 | 承载示例 | 示例责任 |"
+                    " 示例 Domain | 本文 |\n\n"
+                    "## MOD-example：示例模块\n\n"
+                    "### 存在意义\n\n"
+                    "### 职责与非职责\n\n"
+                    "### 承载的 Domain 与数据\n\n"
+                    "### 对外提供与依赖\n\n"
+                    "### 代码范围\n\n"
+                    "## 模块依赖规则\n\n"
+                    "## 业务覆盖\n\n"
+                    "## Coding 必须遵守的边界\n\n"
+                    "## 尚未确定的问题\n"
                 )
             elif name == "API设计.md":
                 metadata = (
@@ -1876,11 +2217,13 @@ def self_test() -> int:
             "来源：\n"
             "- [业务设计](../../business/示例业务/业务设计.md)\n"
             "- [系统拆分](系统拆分.md)\n"
+            "- [架构设计](架构设计.md)\n"
             "- [模块拆分](模块拆分.md)\n"
             "- [API设计](API设计.md)\n"
             "- [核心接口内部编排](核心接口内部编排.md)\n"
             "- [数据库设计](数据库设计.md)\n\n"
             "## Domain\n\n"
+            "## 架构与模块\n\n"
             "## 业务线与 API\n\n"
             "## 数据库设计\n"
         )
@@ -1890,15 +2233,33 @@ def self_test() -> int:
         engineering_standard_text = (
             "# 示例系统工程编码规范\n\n"
             "状态：当前\n"
+            "规范确认：已确认\n"
+            "规范确认依据：示例任务中的用户确认\n"
+            "形成方式：全新系统初始化\n"
             "适用系统：示例系统\n"
             "适用代码范围：示例系统代码\n"
+            "语言及版本：Python 3\n"
+            "主要框架及版本：示例框架 1\n"
             "规范版本：v1\n"
-            "生效代码快照：当前仓库\n"
+            "生效代码快照：无代码\n"
+            "最佳实践资料版本或取得时间：示例资料 2026-07\n"
             "维护角色：Coding Agent\n\n"
             "## 使用与演化规则\n\n"
+            "## 形成过程与依据\n\n"
             "## 当前规则索引\n\n"
-            "## 当前系统工程约束\n\n"
-            "## 当前编码规则\n\n"
+            "## 架构与代码组织\n\n"
+            "## Domain 与应用编排\n\n"
+            "## 命名与代码表达\n\n"
+            "## 事务\n\n"
+            "## 数据访问\n\n"
+            "## 错误处理\n\n"
+            "## 日志与可观察性\n\n"
+            "## 外部系统协作\n\n"
+            "## 并发、异步与幂等\n\n"
+            "## 配置与安全\n\n"
+            "## 测试\n\n"
+            "## 封装、复用与重复代码\n\n"
+            "## 工具链与交付验证\n\n"
             "## 例外与存量处理\n\n"
             "## 尚未形成规范的问题\n\n"
             "## 重要演化\n"
@@ -1906,6 +2267,34 @@ def self_test() -> int:
         engineering_standard = system_root / ENGINEERING_CODING_STANDARD_FILE
         engineering_standard.write_text(
             engineering_standard_text,
+            encoding="utf-8",
+        )
+        errors, _ = validate_architecture_and_modules(
+            system_root,
+            require_confirmed=False,
+        )
+        if errors:
+            print("自检失败：有效架构与模块样例未通过。")
+            for error in errors:
+                print(f"ERROR: {error}")
+            return 1
+        architecture_file = system_root / "架构设计.md"
+        valid_architecture_text = architecture_file.read_text(
+            encoding="utf-8"
+        )
+        architecture_file.write_text(
+            valid_architecture_text.replace("## 总体架构\n\n", ""),
+            encoding="utf-8",
+        )
+        errors, _ = validate_architecture_and_modules(
+            system_root,
+            require_confirmed=False,
+        )
+        if not any("架构设计必须且只能按顺序包含" in error for error in errors):
+            print("自检失败：未识别架构设计固定模板缺失。")
+            return 1
+        architecture_file.write_text(
+            valid_architecture_text,
             encoding="utf-8",
         )
         task_text = (
@@ -2101,6 +2490,57 @@ def self_test() -> int:
             print("自检失败：Coding 检查未拒绝待确认的核心命名。")
             return 1
         system_split.write_text(valid_system_split_text, encoding="utf-8")
+
+        architecture_file = system_root / "架构设计.md"
+        valid_architecture_text = architecture_file.read_text(
+            encoding="utf-8"
+        )
+        architecture_file.write_text(
+            valid_architecture_text.replace(
+                "架构设计确认：已确认",
+                "架构设计确认：待确认",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(repo_root, coding_system="示例系统")
+        if not any("架构设计尚未确认" in error for error in errors):
+            print("自检失败：Coding 检查未拒绝待确认的架构设计。")
+            return 1
+        architecture_file.write_text(
+            valid_architecture_text,
+            encoding="utf-8",
+        )
+
+        module_file = system_root / "模块拆分.md"
+        valid_module_text = module_file.read_text(encoding="utf-8")
+        module_file.write_text(
+            valid_module_text.replace(
+                "模块拆分确认：已确认",
+                "模块拆分确认：待确认",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(repo_root, coding_system="示例系统")
+        if not any("模块拆分尚未确认" in error for error in errors):
+            print("自检失败：Coding 检查未拒绝待确认的模块拆分。")
+            return 1
+        module_file.write_text(valid_module_text, encoding="utf-8")
+
+        engineering_standard.write_text(
+            engineering_standard_text.replace(
+                "规范确认：已确认",
+                "规范确认：待确认",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(repo_root, coding_system="示例系统")
+        if not any("规范确认：已确认" in error for error in errors):
+            print("自检失败：Coding 检查未拒绝待确认的工程编码规范。")
+            return 1
+        engineering_standard.write_text(
+            engineering_standard_text,
+            encoding="utf-8",
+        )
 
         api_design = system_root / "API设计.md"
         valid_api_design_text = api_design.read_text(encoding="utf-8")
@@ -2517,6 +2957,7 @@ def self_test() -> int:
 
         (system_root / "index.md").write_text(
             "[系统拆分](系统拆分.md)\n"
+            "[架构设计](架构设计.md)\n"
             "[模块拆分](模块拆分.md)\n"
             "[API设计](API设计.md)\n"
             "[核心接口内部编排](核心接口内部编排.md)\n"
@@ -2530,6 +2971,7 @@ def self_test() -> int:
 
         (system_root / "index.md").write_text(
             "[系统拆分](系统拆分.md)\n"
+            "[架构设计](架构设计.md)\n"
             "[模块拆分](模块拆分.md)\n"
             "[API设计](API设计.md)\n"
             "[核心接口内部编排](核心接口内部编排.md)\n"
@@ -2551,7 +2993,7 @@ def self_test() -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="检查 VCDDD 必要入口、Markdown 断链和孤儿开发基线。"
+        description="检查 VCDDD 入口、固定设计模板、Coding 输入和审核结构。"
     )
     parser.add_argument(
         "repo",
@@ -2567,7 +3009,12 @@ def main() -> int:
     parser.add_argument(
         "--coding-system",
         metavar="中文系统名",
-        help="准备进入 Coding 的系统；额外要求所有权和核心命名已经用户确认，以及当前、已纳入版本管理的开发基线和系统工程编码规范。",
+        help="准备进入 Coding 的系统；额外要求 Domain、架构、模块和其他设计均已确认，以及已由用户确认且为当前、已纳入版本管理的开发基线和系统工程编码规范。",
+    )
+    parser.add_argument(
+        "--architecture-system",
+        metavar="中文系统名",
+        help="检查指定系统的架构设计与模块拆分固定模板；候选交给用户确认前运行。",
     )
     parser.add_argument(
         "--orchestration-system",
@@ -2598,6 +3045,7 @@ def main() -> int:
     errors, warnings = validate(
         repo_root,
         coding_system=args.coding_system,
+        architecture_system=args.architecture_system,
         orchestration_system=args.orchestration_system,
         database_system=args.database_system,
         review_slice=args.review_slice,
