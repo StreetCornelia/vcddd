@@ -367,6 +367,29 @@ TASK_DETAIL_FIELDS = [
     "编码完成边界",
     "发现问题时返回",
 ]
+TASK_CONTEXT_FIELDS = [
+    "必须读取",
+    "不得重新决定",
+    "允许自主决定",
+    "前置代码产物与 Commit",
+    "共享事务、不变量与失败语义",
+    "输入失效条件",
+    "问题返回所有者",
+]
+IMPLEMENTATION_DISPATCH_FIELDS = [
+    "实施任务",
+    "当前开发任务图",
+    "当前开发基线",
+    "当前工程编码规范及版本",
+    "共同起始 Commit",
+    "已合并前置任务",
+    "授权写入范围",
+    "本节点实施上下文",
+    "待处理用户反馈",
+    "任务进度",
+    "实现记录",
+    "完成回执",
+]
 TASK_TYPES = {
     "工程基础",
     "模块基础",
@@ -393,6 +416,35 @@ IMPLEMENTATION_HEADINGS = [
     "与任务图或设计的偏离",
     "剩余实现事项",
 ]
+TASK_PROGRESS_FIELDS = [
+    "开发任务图",
+    "实施任务",
+    "计划状态",
+    "最近一次 Agent 事件",
+    "Agent 事件依据",
+    "负责 Agent",
+    "worktree",
+    "起始 Commit",
+    "当前 Commit",
+    "已完成代码产物",
+    "当前处理对象",
+    "尚未完成",
+    "阻塞与等待对象",
+    "下一步",
+    "输出 Commit",
+    "合并 Commit",
+    "最近更新时间",
+]
+TASK_PROGRESS_STATUS_RE = re.compile(
+    r"^计划状态[ \t]*[：:][ \t]*"
+    r"(等待前置|可开始|进行中|阻塞|代码已提交|已合并)[ \t]*$",
+    re.MULTILINE,
+)
+TASK_AGENT_EVENT_RE = re.compile(
+    r"^最近一次 Agent 事件[ \t]*[：:][ \t]*"
+    r"(未启动|已启动|已结束|异常中断)[ \t]*$",
+    re.MULTILINE,
+)
 INTEGRATION_FIELDS = [
     "开发任务图",
     "起始代码快照",
@@ -1237,6 +1289,8 @@ def validate_implementation_task_graph(
         "开发批次",
         "开发基线",
         "工程编码规范",
+        "工程规范影响复核",
+        "工程规范影响复核依据",
         "起始代码快照",
         "维护角色",
     ):
@@ -1261,6 +1315,37 @@ def validate_implementation_task_graph(
             errors.append(f"执行开发要求任务图状态为“当前”或“已完成”：{task_graph}")
         if confirmations != ["已确认"]:
             errors.append(f"执行开发要求任务图确认：已确认：{task_graph}")
+        if re.findall(
+            r"^工程规范影响复核[ \t]*[：:][ \t]*(\S.*)$",
+            text,
+            re.MULTILINE,
+        ) != ["已完成"]:
+            errors.append(
+                f"执行开发要求工程规范影响复核：已完成：{task_graph}"
+            )
+
+    dispatch_match = re.search(
+        r"^###\s+实施任务派发信封\s*$"
+        r"(?P<body>.*?)"
+        r"(?=^##\s+开发任务\s*$)",
+        text,
+        re.MULTILINE | re.DOTALL,
+    )
+    if not dispatch_match:
+        errors.append(f"开发任务图缺少实施任务派发信封：{task_graph}")
+    else:
+        dispatch_body = dispatch_match.group("body")
+        for field in IMPLEMENTATION_DISPATCH_FIELDS:
+            values = re.findall(
+                rf"^{re.escape(field)}[ \t]*[：:][ \t]*(\S.*)$",
+                dispatch_body,
+                re.MULTILINE,
+            )
+            if len(values) != 1:
+                errors.append(
+                    f"实施任务派发信封必须且只能声明一个非空“{field}”："
+                    f"{task_graph}"
+                )
 
     task_matches = list(TASK_HEADING_RE.finditer(text))
     if not task_matches:
@@ -1354,6 +1439,40 @@ def validate_implementation_task_graph(
                 f"{task_graph}"
             )
 
+        context_match = re.search(
+            r"^####\s+实施上下文合同\s*$"
+            r"(?P<body>.*)$",
+            section,
+            re.MULTILINE | re.DOTALL,
+        )
+        if not context_match:
+            errors.append(f"{task_id} 缺少实施上下文合同：{task_graph}")
+        else:
+            context_body = context_match.group("body")
+            for field in TASK_CONTEXT_FIELDS:
+                values = re.findall(
+                    rf"^{re.escape(field)}[ \t]*[：:][ \t]*(\S.*)$",
+                    context_body,
+                    re.MULTILINE,
+                )
+                if len(values) != 1:
+                    errors.append(
+                        f"{task_id} 的实施上下文合同必须且只能声明一个"
+                        f"非空“{field}”：{task_graph}"
+                    )
+            required_sources = re.findall(
+                r"^必须读取[ \t]*[：:][ \t]*(\S.*)$",
+                context_body,
+                re.MULTILINE,
+            )
+            if len(required_sources) == 1 and not LINK_RE.search(
+                required_sources[0]
+            ):
+                errors.append(
+                    f"{task_id} 的“必须读取”至少需要一个精确链接："
+                    f"{task_graph}"
+                )
+
     known_task_ids = set(task_ids)
     for task_id, prerequisites in dependencies.items():
         for prerequisite in prerequisites:
@@ -1389,6 +1508,102 @@ def validate_implementation_task_graph(
     return errors, warnings
 
 
+def validate_task_progress(
+    batch_root: Path,
+    task_graph: Path,
+    require_merged: bool = False,
+) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    if not task_graph.exists():
+        return errors, warnings
+
+    task_ids = [
+        match.group(1)
+        for match in TASK_HEADING_RE.finditer(
+            task_graph.read_text(encoding="utf-8")
+        )
+    ]
+    expected_paths = {
+        task_id: (
+            batch_root
+            / "实施任务"
+            / task_id
+            / "任务进度.md"
+        )
+        for task_id in task_ids
+    }
+    actual_paths = {
+        path.parent.name: path
+        for path in (batch_root / "实施任务").glob("TASK-*/任务进度.md")
+    }
+
+    for task_id, progress_path in expected_paths.items():
+        if not progress_path.exists():
+            errors.append(f"实施任务缺少任务进度：{progress_path}")
+            continue
+
+        text = progress_path.read_text(encoding="utf-8")
+        if not re.search(
+            rf"^#\s+任务进度[：:]\s*{re.escape(task_id)}\s*$",
+            text,
+            re.MULTILINE,
+        ):
+            errors.append(
+                f"任务进度标题必须对应 {task_id}：{progress_path}"
+            )
+
+        for field in TASK_PROGRESS_FIELDS:
+            values = re.findall(
+                rf"^{re.escape(field)}[ \t]*[：:][ \t]*(\S.*)$",
+                text,
+                re.MULTILINE,
+            )
+            if len(values) != 1:
+                errors.append(
+                    f"任务进度必须且只能声明一个非空“{field}”："
+                    f"{progress_path}"
+                )
+
+        statuses = TASK_PROGRESS_STATUS_RE.findall(text)
+        if len(statuses) != 1:
+            errors.append(f"任务进度必须声明一个有效计划状态：{progress_path}")
+        elif require_merged and statuses != ["已合并"]:
+            errors.append(
+                f"完成开发批次要求任务计划状态为“已合并”：{progress_path}"
+            )
+
+        events = TASK_AGENT_EVENT_RE.findall(text)
+        if len(events) != 1:
+            errors.append(
+                f"任务进度必须声明一个有效最近一次 Agent 事件："
+                f"{progress_path}"
+            )
+        elif require_merged and events != ["已结束"]:
+            errors.append(
+                f"完成开发批次要求最近一次 Agent 事件为“已结束”："
+                f"{progress_path}"
+            )
+
+        targets = {
+            local_link_path(progress_path, raw_target)
+            for raw_target in LINK_RE.findall(text)
+        }
+        if task_graph.resolve() not in targets:
+            errors.append(
+                f"任务进度未直接链接当前开发任务图：{progress_path}"
+            )
+
+    for task_id, progress_path in actual_paths.items():
+        if task_id not in expected_paths:
+            errors.append(
+                f"任务进度对应的 TASK- 标识不在开发任务图中：{progress_path}"
+            )
+
+    return errors, warnings
+
+
 def validate(
     repo_root: Path,
     coding_system: str | None = None,
@@ -1404,12 +1619,15 @@ def validate(
     errors: list[str] = []
     warnings: list[str] = []
 
-    if implementation_system:
-        if coding_system and coding_system != implementation_system:
-            errors.append(
-                "--coding-system 与 --implementation-system 必须指向同一系统。"
-            )
-        coding_system = implementation_system
+    if (
+        implementation_system
+        and coding_system
+        and coding_system != implementation_system
+    ):
+        errors.append(
+            "--coding-system 与 --implementation-system 必须指向同一系统。"
+        )
+    target_coding_system = coding_system or implementation_system
     if review_batch and not coding_system:
         errors.append("--review-batch 必须同时指定 --coding-system。")
     if review_batch:
@@ -1422,10 +1640,12 @@ def validate(
         errors.append(
             "--implementation-system 必须同时指定 --development-batch。"
         )
-    if development_batch and not (implementation_system or review_batch):
+    if development_batch and not (
+        implementation_system or review_batch or coding_system
+    ):
         errors.append(
-            "--development-batch 必须与 --implementation-system 或"
-            " --review-batch 一起使用。"
+            "--development-batch 必须与 --implementation-system、"
+            "--coding-system 或 --review-batch 一起使用。"
         )
 
     if not vcddd_root.exists():
@@ -1686,12 +1906,13 @@ def validate(
         errors.extend(database_errors)
         warnings.extend(database_warnings)
 
-    if coding_system:
-        if Path(coding_system).name != coding_system:
-            errors.append(f"系统名必须是单个目录名：{coding_system}")
+    if target_coding_system:
+        if Path(target_coding_system).name != target_coding_system:
+            errors.append(f"系统名必须是单个目录名：{target_coding_system}")
             return errors, warnings
 
-        system_root = systems_root / coding_system
+        require_coding_ready = coding_system is not None
+        system_root = systems_root / target_coding_system
         system_index = system_root / "index.md"
         baseline = system_root / "开发基线.md"
         engineering_standard = (
@@ -1701,8 +1922,9 @@ def validate(
             system_index,
             *(system_root / name for name in SYSTEM_FACT_FILES),
             baseline,
-            engineering_standard,
         ]
+        if require_coding_ready:
+            required_design_files.append(engineering_standard)
         missing_design_files = [
             path for path in required_design_files if not path.exists()
         ]
@@ -1710,6 +1932,22 @@ def validate(
             for path in missing_design_files:
                 errors.append(f"准备 Coding 的系统缺少固定实现输入：{path}")
             return errors, warnings
+
+        engineering_standard_text = (
+            engineering_standard.read_text(encoding="utf-8")
+            if engineering_standard.exists()
+            else ""
+        )
+        engineering_standard_ready = (
+            ENGINEERING_STANDARD_STATUS_RE.findall(
+                engineering_standard_text
+            )
+            == ["当前"]
+            and ENGINEERING_STANDARD_CONFIRMATION_RE.findall(
+                engineering_standard_text
+            )
+            == ["已确认"]
+        )
 
         index_text = system_index.read_text(encoding="utf-8")
         index_targets = {
@@ -1812,82 +2050,87 @@ def validate(
                 f"（{' / '.join(BASELINE_HEADINGS)}）：{baseline}"
             )
 
-        engineering_standard_text = engineering_standard.read_text(
-            encoding="utf-8"
-        )
-        if ENGINEERING_STANDARD_STATUS_RE.findall(
-            engineering_standard_text
-        ) != ["当前"]:
-            errors.append(
-                "准备 Coding 的工程编码规范必须且只能声明"
-                f"“状态：当前”：{engineering_standard}"
+        if require_coding_ready:
+            if ENGINEERING_STANDARD_STATUS_RE.findall(
+                engineering_standard_text
+            ) != ["当前"]:
+                errors.append(
+                    "准备 Coding 的工程编码规范必须且只能声明"
+                    f"“状态：当前”：{engineering_standard}"
+                )
+            if ENGINEERING_STANDARD_CONFIRMATION_RE.findall(
+                engineering_standard_text
+            ) != ["已确认"]:
+                errors.append(
+                    "准备 Coding 的工程编码规范必须且只能声明"
+                    f"“规范确认：已确认”：{engineering_standard}"
+                )
+            standard_evidence = ENGINEERING_STANDARD_EVIDENCE_RE.findall(
+                engineering_standard_text
             )
-        if ENGINEERING_STANDARD_CONFIRMATION_RE.findall(
-            engineering_standard_text
-        ) != ["已确认"]:
-            errors.append(
-                "准备 Coding 的工程编码规范必须且只能声明"
-                f"“规范确认：已确认”：{engineering_standard}"
-            )
-        standard_evidence = ENGINEERING_STANDARD_EVIDENCE_RE.findall(
-            engineering_standard_text
-        )
-        if (
-            len(standard_evidence) != 1
-            or standard_evidence[0].strip() in {"无", "待确认"}
-        ):
-            errors.append(
-                "准备 Coding 的工程编码规范必须声明一个"
-                f"有效确认依据：{engineering_standard}"
-            )
-        if ENGINEERING_STANDARD_FORMATION_RE.findall(
-            engineering_standard_text
-        ) not in (["已有代码归纳"], ["全新系统初始化"]):
-            errors.append(
-                "工程编码规范必须且只能声明有效形成方式"
-                f"（已有代码归纳/全新系统初始化）：{engineering_standard}"
-            )
-        for field in (
-            "适用系统",
-            "适用代码范围",
-            "语言及版本",
-            "主要框架及版本",
-            "规范版本",
-            "生效代码快照",
-            "最佳实践资料版本或取得时间",
-            "维护角色",
-        ):
-            matches = re.findall(
-                rf"^{field}[ \t]*[：:][ \t]*(\S.*)$",
+            if (
+                len(standard_evidence) != 1
+                or standard_evidence[0].strip() in {"无", "待确认"}
+            ):
+                errors.append(
+                    "准备 Coding 的工程编码规范必须声明一个"
+                    f"有效确认依据：{engineering_standard}"
+                )
+            if ENGINEERING_STANDARD_FORMATION_RE.findall(
+                engineering_standard_text
+            ) not in (["已有代码归纳"], ["全新系统初始化"]):
+                errors.append(
+                    "工程编码规范必须且只能声明有效形成方式"
+                    f"（已有代码归纳/全新系统初始化）：{engineering_standard}"
+                )
+            for field in (
+                "适用系统",
+                "适用代码范围",
+                "语言及版本",
+                "主要框架及版本",
+                "规范版本",
+                "生效代码快照",
+                "最佳实践资料版本或取得时间",
+                "维护角色",
+            ):
+                matches = re.findall(
+                    rf"^{field}[ \t]*[：:][ \t]*(\S.*)$",
+                    engineering_standard_text,
+                    re.MULTILINE,
+                )
+                if len(matches) != 1:
+                    errors.append(
+                        f"工程编码规范必须且只能声明一个非空“{field}”："
+                        f"{engineering_standard}"
+                    )
+            engineering_headings = re.findall(
+                r"^##\s+(.+?)\s*$",
                 engineering_standard_text,
                 re.MULTILINE,
             )
-            if len(matches) != 1:
+            required_engineering_positions = [
+                engineering_headings.index(heading)
+                if heading in engineering_headings
+                else -1
+                for heading in ENGINEERING_STANDARD_HEADINGS
+            ]
+            if (
+                -1 in required_engineering_positions
+                or required_engineering_positions
+                != sorted(required_engineering_positions)
+            ):
                 errors.append(
-                    f"工程编码规范必须且只能声明一个非空“{field}”："
+                    "工程编码规范必须按顺序包含"
+                    f"（{' / '.join(ENGINEERING_STANDARD_HEADINGS)}）："
                     f"{engineering_standard}"
                 )
-        engineering_headings = re.findall(
-            r"^##\s+(.+?)\s*$",
-            engineering_standard_text,
-            re.MULTILINE,
-        )
-        required_engineering_positions = [
-            engineering_headings.index(heading)
-            if heading in engineering_headings
-            else -1
-            for heading in ENGINEERING_STANDARD_HEADINGS
-        ]
-        if (
-            -1 in required_engineering_positions
-            or required_engineering_positions
-            != sorted(required_engineering_positions)
-        ):
-            errors.append(
-                "工程编码规范必须按顺序包含"
-                f"（{' / '.join(ENGINEERING_STANDARD_HEADINGS)}）："
-                f"{engineering_standard}"
-            )
+            if (
+                "| 决策标识 | 当前选择 | 状态 | 用户依据 |"
+                " 是否影响任务图 | 影响位置 |"
+            ) not in engineering_standard_text:
+                errors.append(
+                    f"工程编码规范缺少形成过程决策表：{engineering_standard}"
+                )
 
         git_probe = subprocess.run(
             ["git", "-C", str(repo_root), "rev-parse", "--is-inside-work-tree"],
@@ -1932,10 +2175,42 @@ def validate(
 
             graph_errors, graph_warnings = validate_implementation_task_graph(
                 task_graph,
-                require_current=bool(review_batch),
+                require_current=bool(
+                    review_batch
+                    or (coding_system and not implementation_system)
+                ),
             )
             errors.extend(graph_errors)
             warnings.extend(graph_warnings)
+
+            if (
+                implementation_system
+                and not coding_system
+                and not engineering_standard_ready
+                and task_graph.exists()
+            ):
+                task_graph_text = task_graph.read_text(encoding="utf-8")
+                if TASK_GRAPH_STATUS_RE.findall(task_graph_text) != ["待确认"]:
+                    errors.append(
+                        "工程编码规范尚未确认时，开发任务图候选必须保持"
+                        f"“状态：待确认”：{task_graph}"
+                    )
+                if TASK_GRAPH_CONFIRMATION_RE.findall(
+                    task_graph_text
+                ) != ["待确认"]:
+                    errors.append(
+                        "工程编码规范尚未确认时，开发任务图候选必须保持"
+                        f"“任务图确认：待确认”：{task_graph}"
+                    )
+                if re.findall(
+                    r"^工程规范影响复核[ \t]*[：:][ \t]*(\S.*)$",
+                    task_graph_text,
+                    re.MULTILINE,
+                ) != ["待完成"]:
+                    errors.append(
+                        "工程编码规范尚未确认时，开发任务图候选必须声明"
+                        f"“工程规范影响复核：待完成”：{task_graph}"
+                    )
 
             if not development_index.exists():
                 errors.append(f"缺少开发记录入口：{development_index}")
@@ -1968,10 +2243,23 @@ def validate(
                     errors.append(
                         f"开发任务图未直接链接当前开发基线：{task_graph}"
                     )
-                if engineering_standard.resolve() not in task_graph_targets:
+                if (
+                    require_coding_ready
+                    and engineering_standard.resolve()
+                    not in task_graph_targets
+                ):
                     errors.append(
                         f"开发任务图未直接链接当前工程编码规范：{task_graph}"
                     )
+
+            if coding_system and not implementation_system:
+                progress_errors, progress_warnings = validate_task_progress(
+                    batch_root,
+                    task_graph,
+                    require_merged=bool(review_batch),
+                )
+                errors.extend(progress_errors)
+                warnings.extend(progress_warnings)
 
             if review_batch:
                 if task_graph.exists() and TASK_GRAPH_STATUS_RE.findall(
@@ -2770,6 +3058,9 @@ def self_test() -> int:
             "维护角色：Coding Agent\n\n"
             "## 使用与演化规则\n\n"
             "## 形成过程与依据\n\n"
+            "| 决策标识 | 当前选择 | 状态 | 用户依据 | 是否影响任务图 | 影响位置 |\n"
+            "| --- | --- | --- | --- | --- | --- |\n"
+            "| ENG-example | 示例规则 | 已选择 | 示例确认 | 否 | 无 |\n\n"
             "## 当前规则索引\n\n"
             "## 架构与代码组织\n\n"
             "## Domain 与应用编排\n\n"
@@ -2909,6 +3200,8 @@ def self_test() -> int:
             "开发批次：示例批次\n"
             "开发基线：[当前基线](../../开发基线.md)\n"
             "工程编码规范：[当前规范](../../工程编码规范.md)\n"
+            "工程规范影响复核：已完成\n"
+            "工程规范影响复核依据：示例规范未改变任务边界\n"
             "起始代码快照：base000\n"
             "维护角色：开发规划 Agent\n\n"
             "## 批次范围与完成边界\n\n"
@@ -2923,6 +3216,19 @@ def self_test() -> int:
             "第一批：TASK-base；共同起始快照 base000。\n\n"
             "## 共享写入与集成规则\n\n"
             "TASK-base 独占示例代码目录。\n\n"
+            "### 实施任务派发信封\n\n"
+            "实施任务：TASK-base\n"
+            "当前开发任务图：[当前任务图](开发任务图.md)\n"
+            "当前开发基线：[当前基线](../../开发基线.md)\n"
+            "当前工程编码规范及版本：[当前规范](../../工程编码规范.md) v1\n"
+            "共同起始 Commit：base000\n"
+            "已合并前置任务：无\n"
+            "授权写入范围：src/example\n"
+            "本节点实施上下文：TASK-base 实施上下文合同\n"
+            "待处理用户反馈：无\n"
+            "任务进度：[任务进度](实施任务/TASK-base/任务进度.md)\n"
+            "实现记录：[实现记录](实施任务/TASK-base/实现记录.md)\n"
+            "完成回执：输出 Commit、实际产物和偏离\n\n"
             "## 开发任务\n\n"
             "### TASK-base：建立示例生产代码\n\n"
             "任务类型：工程基础\n"
@@ -2941,6 +3247,14 @@ def self_test() -> int:
             "worktree 起始快照：base000\n"
             "编码完成边界：生产代码提交并登记产物\n"
             "发现问题时返回：开发规划 Agent\n\n"
+            "#### 实施上下文合同\n\n"
+            "必须读取：[架构设计](../../架构设计.md#总体架构)\n"
+            "不得重新决定：示例系统采用当前架构\n"
+            "允许自主决定：局部类型和方法组织\n"
+            "前置代码产物与 Commit：无；base000\n"
+            "共享事务、不变量与失败语义：不适用；工程基础不承载业务事务\n"
+            "输入失效条件：架构、代码路径或工程规范变化\n"
+            "问题返回所有者：开发规划 Agent或架构设计\n\n"
             "## 集成与统一代码快照\n\n"
             "TASK-base 合并后形成统一生产代码快照。\n\n"
             "## 尚未确定的问题\n\n"
@@ -2948,6 +3262,28 @@ def self_test() -> int:
         )
         task_graph = batch_root / "开发任务图.md"
         task_graph.write_text(task_graph_text, encoding="utf-8")
+        progress_text = (
+            "# 任务进度：TASK-base\n\n"
+            "开发任务图：[当前任务图](../../开发任务图.md)\n"
+            "实施任务：TASK-base\n"
+            "计划状态：已合并\n"
+            "最近一次 Agent 事件：已结束\n"
+            "Agent 事件依据：示例 Agent 完成通知\n"
+            "负责 Agent：示例开发 Agent\n"
+            "worktree：示例 worktree\n"
+            "起始 Commit：base000\n"
+            "当前 Commit：task111\n"
+            "已完成代码产物：ART-base\n"
+            "当前处理对象：无\n"
+            "尚未完成：无\n"
+            "阻塞与等待对象：无\n"
+            "下一步：进入集成记录\n"
+            "输出 Commit：task111\n"
+            "合并 Commit：prod123\n"
+            "最近更新时间：2026-07-30T12:00:00+08:00\n"
+        )
+        progress_record = implementation_root / "任务进度.md"
+        progress_record.write_text(progress_text, encoding="utf-8")
         implementation_text = (
             "# 实现记录：TASK-base\n\n"
             "开发任务图：[当前任务图](../../开发任务图.md)\n"
@@ -3397,6 +3733,17 @@ def self_test() -> int:
         errors, _ = validate(
             repo_root,
             coding_system="示例系统",
+            development_batch="示例批次",
+        )
+        if errors:
+            print("自检失败：有效 Coding 执行准入样例未通过。")
+            for error in errors:
+                print(f"ERROR: {error}")
+            return 1
+
+        errors, _ = validate(
+            repo_root,
+            coding_system="示例系统",
             review_batch="示例批次",
         )
         if errors:
@@ -3441,6 +3788,101 @@ def self_test() -> int:
         ):
             print("自检失败：任务图未拒绝一个任务组合多个任务类型。")
             return 1
+        task_graph.write_text(task_graph_text, encoding="utf-8")
+
+        task_graph.write_text(
+            task_graph_text.replace(
+                "不得重新决定：示例系统采用当前架构\n",
+                "",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(
+            repo_root,
+            implementation_system="示例系统",
+            development_batch="示例批次",
+        )
+        if not any(
+            "实施上下文合同" in error and "不得重新决定" in error
+            for error in errors
+        ):
+            print("自检失败：任务图未识别缺失的不得重决策上下文。")
+            return 1
+        task_graph.write_text(task_graph_text, encoding="utf-8")
+
+        progress_record.unlink()
+        errors, _ = validate(
+            repo_root,
+            coding_system="示例系统",
+            development_batch="示例批次",
+        )
+        if not any("缺少任务进度" in error for error in errors):
+            print("自检失败：Coding 执行准入未识别缺失任务进度。")
+            return 1
+        progress_record.write_text(progress_text, encoding="utf-8")
+
+        engineering_standard.write_text(
+            engineering_standard_text.replace(
+                "状态：当前",
+                "状态：待确认",
+            ).replace(
+                "规范确认：已确认",
+                "规范确认：待确认",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(
+            repo_root,
+            implementation_system="示例系统",
+            development_batch="示例批次",
+        )
+        if not any(
+            "任务图候选必须保持“状态：待确认”" in error
+            for error in errors
+        ):
+            print("自检失败：工程规范待确认时未阻止任务图提前成为当前。")
+            return 1
+
+        pending_task_graph_text = (
+            task_graph_text.replace(
+                "状态：已完成",
+                "状态：待确认",
+            )
+            .replace(
+                "任务图确认：已确认",
+                "任务图确认：待确认",
+            )
+            .replace(
+                "工程规范影响复核：已完成",
+                "工程规范影响复核：待完成",
+            )
+        )
+        task_graph.write_text(pending_task_graph_text, encoding="utf-8")
+        errors, _ = validate(
+            repo_root,
+            implementation_system="示例系统",
+            development_batch="示例批次",
+        )
+        if errors:
+            print("自检失败：工程规范待确认时任务图候选不应被阻塞。")
+            for error in errors:
+                print(f"ERROR: {error}")
+            return 1
+        errors, _ = validate(
+            repo_root,
+            coding_system="示例系统",
+            development_batch="示例批次",
+        )
+        if not any(
+            "工程编码规范" in error and "状态：当前" in error
+            for error in errors
+        ):
+            print("自检失败：Coding 执行准入未阻止待确认工程规范。")
+            return 1
+        engineering_standard.write_text(
+            engineering_standard_text,
+            encoding="utf-8",
+        )
         task_graph.write_text(task_graph_text, encoding="utf-8")
 
         task_graph.write_text(
@@ -3691,7 +4133,7 @@ def main() -> int:
     parser.add_argument(
         "--coding-system",
         metavar="中文系统名",
-        help="准备进入 Coding 的系统；额外要求 Domain、架构、模块和其他设计均已确认，以及已由用户确认且为当前、已纳入版本管理的开发基线和系统工程编码规范。",
+        help="准备进入 Coding 的系统；要求设计、开发基线和工程编码规范均为当前。与 --development-batch 同用时还检查当前任务图、工程规范影响复核和逐任务进度准入。",
     )
     parser.add_argument(
         "--architecture-system",
@@ -3711,12 +4153,12 @@ def main() -> int:
     parser.add_argument(
         "--implementation-system",
         metavar="中文系统名",
-        help="检查指定系统当前开发批次的开发任务图；同时要求 Coding 输入有效，并必须指定 --development-batch。",
+        help="检查指定系统当前开发批次的任务图候选；工程编码规范可以仍在形成，但设计与开发基线必须为当前，并必须指定 --development-batch。",
     )
     parser.add_argument(
         "--development-batch",
         metavar="中文开发批次",
-        help="与 --implementation-system 一起指定需要检查任务图的开发批次。",
+        help="与 --implementation-system、--coding-system 或 --review-batch 一起指定开发批次。",
     )
     parser.add_argument(
         "--review-batch",
