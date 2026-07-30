@@ -44,6 +44,90 @@ ORCHESTRATION_TABLE_HEADERS = [
     "| 边界 | 覆盖步骤 | 提交或外部动作 | 成功证明 | 失败或结果未知处理 |",
     "| 发生在步骤 | Domain 行为 | 输入事实 | 领域结果 | 权威规则位置 |",
 ]
+DATABASE_PREFIX_HEADINGS = ["数据承载全景", "表目录", "数据关系图"]
+DATABASE_TABLE_HEADINGS = [
+    "表的意义",
+    "产生、变化与使用",
+    "字段说明",
+    "身份、主键与唯一性",
+    "与其他表的关系",
+    "必须保持的约束",
+    "查询与索引",
+    "事务、并发与编排对应",
+    "历史、清理与迁移",
+    "尚未确定的问题",
+]
+DATABASE_TAIL_HEADINGS = [
+    "跨表事务与一致性",
+    "查询投影与非 Domain 数据",
+    "数据安全与保留",
+    "数据库实现交接",
+]
+DATABASE_TABLE_TITLE_RE = re.compile(
+    r"^(DBT-[^\s：:]+)[ \t]*[：:][ \t]*"
+    r"([A-Za-z_][A-Za-z0-9_]*)[ \t]+—[ \t]+(\S.*)$"
+)
+DATABASE_DESIGN_SOURCE_RE = re.compile(
+    r"^设计来源[ \t]*[：:][ \t]*$", re.MULTILINE
+)
+DATABASE_OVERVIEW_HEADER = (
+    "| 需要保存的事实 | 事实拥有者 | 为什么需要持久化 | 使用者与用途 |"
+    " 承载表 | 数据性质 |"
+)
+DATABASE_DIRECTORY_HEADER = (
+    "| 表标识 | 表名 | 中文名称 | 这张表为什么存在 | 一行表示什么 |"
+    " 详细章节 |"
+)
+DATABASE_FIELD_HEADER = (
+    "| 字段 | 中文名称 | 字段为什么存在 | 保存的事实或含义 | 事实来源 |"
+    " 数据类型 | 必填 | 空值含义 | 默认值及含义 | 允许值或范围 |"
+    " 何时产生或改变 | 是否敏感 | 数据库注释原文 |"
+)
+DATABASE_REQUIRED_TABLE_HEADERS = [
+    "| 时点或事件 | 写入者 | 写入或变化 | 使用者 | 用途 |",
+    DATABASE_FIELD_HEADER,
+    "| 类型 | 字段组合 | 保证的事实 | 冲突时的业务含义 |",
+    "| 关联表 | 本表字段 | 对方字段 | 关系与基数 | 存在性要求 |"
+    " 删除或失效语义 |",
+    "| 约束 | 约束保护的事实 | 数据库责任 | Domain 或应用责任 |"
+    " 违反时的结果 |",
+    "| 查询来源 | 查询条件与排序 | 频率或规模事实 | 建议索引 |"
+    " 为什么需要 | 代价与不采用条件 |",
+    "| API 与步骤 | 本表读写 | 原子范围或提交点 | 并发保护 |"
+    " 失败、回滚或结果未知处理 |",
+]
+DATABASE_TABLE_MEANING_FIELDS = [
+    "保存的事实",
+    "存在原因",
+    "一行表示",
+    "为什么独立成表",
+    "数据库表注释原文",
+    "数据性质",
+    "权威拥有者",
+    "是否参与业务判断",
+    "是否可重新生成",
+    "来源",
+]
+DATABASE_TAIL_TABLE_HEADERS = {
+    "跨表事务与一致性": (
+        "| API 与步骤 | 涉及表 | 必须共同成立的事实 | 原子边界 |"
+        " 外部影响顺序 | 失败与恢复 |"
+    ),
+    "数据安全与保留": (
+        "| 数据范围 | 敏感等级 | 访问者 | 脱敏或加密 | 保留与清理 |"
+        " 审计要求 |"
+    ),
+}
+DATABASE_HANDOFF_FIELDS = [
+    "Coding 阶段需要产生",
+    "实现必须保持",
+    "允许 Coding 决定",
+    "必须返回设计的情况",
+]
+DATABASE_DDL_RE = re.compile(
+    r"(?im)^\s*(CREATE\s+(?:TABLE|SCHEMA|INDEX)|ALTER\s+TABLE|"
+    r"DROP\s+(?:TABLE|SCHEMA|INDEX))\b"
+)
 SYSTEM_FACT_FILES = [
     "系统拆分.md",
     "模块拆分.md",
@@ -471,10 +555,297 @@ def validate_internal_orchestration(
     return errors, warnings
 
 
+def validate_database_design(
+    system_root: Path,
+    *,
+    require_confirmed: bool,
+) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    system_index = system_root / "index.md"
+    system_split = system_root / "系统拆分.md"
+    api_design = system_root / "API设计.md"
+    orchestration = system_root / "核心接口内部编排.md"
+    database_design = system_root / "数据库设计.md"
+
+    required_paths = (
+        system_index,
+        system_split,
+        api_design,
+        orchestration,
+        database_design,
+    )
+    for path in required_paths:
+        if not path.exists():
+            errors.append(f"数据库设计检查缺少输入：{path}")
+    if not database_design.exists():
+        return errors, warnings
+
+    if all(
+        path.exists()
+        for path in (system_index, api_design, orchestration)
+    ):
+        orchestration_errors, orchestration_warnings = (
+            validate_internal_orchestration(
+                system_root,
+                require_confirmed=True,
+            )
+        )
+        errors.extend(orchestration_errors)
+        warnings.extend(orchestration_warnings)
+
+    if system_index.exists():
+        index_targets = {
+            local_link_path(system_index, raw_target)
+            for raw_target in LINK_RE.findall(
+                system_index.read_text(encoding="utf-8")
+            )
+        }
+        if database_design.resolve() not in index_targets:
+            errors.append(f"系统入口未直接链接数据库设计：{database_design}")
+
+    text = database_design.read_text(encoding="utf-8")
+    statuses = DATABASE_DESIGN_CONFIRMATION_RE.findall(text)
+    if len(statuses) != 1:
+        errors.append(
+            "数据库设计必须且只能声明一个确认状态"
+            f"（待确认/已确认）：{database_design}"
+        )
+    elif require_confirmed and statuses != ["已确认"]:
+        errors.append(
+            "准备 Coding 的数据库设计必须声明"
+            f"“数据库设计确认：已确认”：{database_design}"
+        )
+
+    evidence = DATABASE_DESIGN_EVIDENCE_RE.findall(text)
+    if len(evidence) != 1:
+        errors.append(
+            f"数据库设计必须且只能声明一个非空确认依据：{database_design}"
+        )
+    elif statuses == ["已确认"] and evidence[0].strip() == "无":
+        errors.append(
+            f"已确认的数据库设计不能使用“无”作为确认依据：{database_design}"
+        )
+
+    if len(DATABASE_DESIGN_SOURCE_RE.findall(text)) != 1:
+        errors.append(
+            f"数据库设计必须且只能声明一个“设计来源”区块：{database_design}"
+        )
+    database_targets = {
+        local_link_path(database_design, raw_target)
+        for raw_target in LINK_RE.findall(text)
+    }
+    for source in (system_split, api_design, orchestration):
+        if source.resolve() not in database_targets:
+            errors.append(
+                f"数据库设计未直接链接固定设计来源：{source}"
+            )
+
+    h1_headings = re.findall(r"^#(?!#)[ \t]+(.+?)\s*$", text, re.MULTILINE)
+    if len(h1_headings) != 1:
+        errors.append(
+            f"数据库设计必须且只能有一个文档一级标题：{database_design}"
+        )
+
+    h2_matches = list(
+        re.finditer(r"^##[ \t]+(.+?)\s*$", text, re.MULTILINE)
+    )
+    h2_headings = [match.group(1) for match in h2_matches]
+    minimum_h2_count = (
+        len(DATABASE_PREFIX_HEADINGS) + 1 + len(DATABASE_TAIL_HEADINGS)
+    )
+    if len(h2_headings) < minimum_h2_count:
+        errors.append(
+            f"数据库设计至少需要一个逐表章节并保留固定首尾结构：{database_design}"
+        )
+
+    if h2_headings[: len(DATABASE_PREFIX_HEADINGS)] != DATABASE_PREFIX_HEADINGS:
+        errors.append(
+            "数据库设计必须以“"
+            + " / ".join(DATABASE_PREFIX_HEADINGS)
+            + f"”三个二级标题开场：{database_design}"
+        )
+    if h2_headings[-len(DATABASE_TAIL_HEADINGS):] != DATABASE_TAIL_HEADINGS:
+        errors.append(
+            "数据库设计必须以“"
+            + " / ".join(DATABASE_TAIL_HEADINGS)
+            + f"”四个二级标题收尾：{database_design}"
+        )
+
+    table_start = len(DATABASE_PREFIX_HEADINGS)
+    table_end = len(h2_matches) - len(DATABASE_TAIL_HEADINGS)
+    table_matches = h2_matches[table_start:table_end]
+    table_ids: list[str] = []
+    for table_match in table_matches:
+        title_match = DATABASE_TABLE_TITLE_RE.fullmatch(table_match.group(1))
+        if title_match is None:
+            errors.append(
+                "数据关系图与全局收尾之间每个二级标题必须只对应一张"
+                f"“DBT-标识：table_name — 中文名称”：{database_design}"
+            )
+            continue
+        table_ids.append(title_match.group(1))
+
+    if not table_ids:
+        errors.append(f"数据库设计至少需要一张带稳定标识的表：{database_design}")
+    if len(table_ids) != len(set(table_ids)):
+        errors.append(f"数据库设计中的表标识必须唯一：{database_design}")
+
+    if len(h2_matches) >= 2:
+        overview_start = h2_matches[0].end()
+        overview_end = h2_matches[1].start()
+        overview_text = text[overview_start:overview_end]
+        if DATABASE_OVERVIEW_HEADER not in overview_text:
+            errors.append(
+                f"数据承载全景缺少固定六列表头：{database_design}"
+            )
+        for table_id in table_ids:
+            if table_id not in overview_text:
+                errors.append(
+                    f"数据承载全景未说明表标识“{table_id}”承载的事实："
+                    f"{database_design}"
+                )
+
+    if len(h2_matches) >= 3:
+        directory_start = h2_matches[1].end()
+        directory_end = h2_matches[2].start()
+        directory_text = text[directory_start:directory_end]
+        if DATABASE_DIRECTORY_HEADER not in directory_text:
+            errors.append(f"表目录缺少固定六列表头：{database_design}")
+        for table_id in table_ids:
+            if not re.search(
+                rf"^\|[ \t]*{re.escape(table_id)}[ \t]*\|",
+                directory_text,
+                re.MULTILINE,
+            ):
+                errors.append(
+                    f"表目录缺少表标识“{table_id}”：{database_design}"
+                )
+
+    for table_index, table_match in enumerate(table_matches):
+        title_match = DATABASE_TABLE_TITLE_RE.fullmatch(
+            table_match.group(1)
+        )
+        if title_match is None:
+            continue
+        table_id = title_match.group(1)
+        absolute_index = table_start + table_index
+        section_end = (
+            h2_matches[absolute_index + 1].start()
+            if absolute_index + 1 < len(h2_matches)
+            else len(text)
+        )
+        section_text = text[table_match.end():section_end]
+        h3_matches = list(
+            re.finditer(
+                r"^###[ \t]+(.+?)\s*$",
+                section_text,
+                re.MULTILINE,
+            )
+        )
+        h3_headings = [match.group(1) for match in h3_matches]
+        if h3_headings != DATABASE_TABLE_HEADINGS:
+            errors.append(
+                f"{table_id} 必须且只能按顺序包含十个三级标题"
+                f"（{' / '.join(DATABASE_TABLE_HEADINGS)}）："
+                f"{database_design}"
+            )
+        for table_header in DATABASE_REQUIRED_TABLE_HEADERS:
+            if table_header not in section_text:
+                errors.append(
+                    f"{table_id} 缺少固定表头“{table_header}”："
+                    f"{database_design}"
+                )
+
+        if h3_matches:
+            meaning_end = (
+                h3_matches[1].start()
+                if len(h3_matches) > 1
+                else len(section_text)
+            )
+            meaning_text = section_text[h3_matches[0].end():meaning_end]
+            for field in DATABASE_TABLE_MEANING_FIELDS:
+                if not re.search(
+                    rf"^{re.escape(field)}[ \t]*[：:]",
+                    meaning_text,
+                    re.MULTILINE,
+                ):
+                    errors.append(
+                        f"{table_id} 的“表的意义”缺少“{field}”："
+                        f"{database_design}"
+                    )
+
+            try:
+                field_index = h3_headings.index("字段说明")
+            except ValueError:
+                field_index = -1
+            if field_index >= 0:
+                field_end = (
+                    h3_matches[field_index + 1].start()
+                    if field_index + 1 < len(h3_matches)
+                    else len(section_text)
+                )
+                field_text = section_text[
+                    h3_matches[field_index].end():field_end
+                ]
+                field_rows = [
+                    line
+                    for line in field_text.splitlines()
+                    if line.lstrip().startswith("|")
+                    and line.strip() != DATABASE_FIELD_HEADER
+                    and not re.fullmatch(
+                        r"\|(?:[ \t]*:?-+:?[ \t]*\|)+",
+                        line.strip(),
+                    )
+                ]
+                if not field_rows:
+                    errors.append(
+                        f"{table_id} 的字段说明至少需要一个实际字段："
+                        f"{database_design}"
+                    )
+
+    if re.search(r"^```(?:sql|postgresql|mysql|sqlite)\b", text, re.MULTILINE):
+        errors.append(
+            f"数据库设计禁止 SQL 代码块；DDL 与迁移属于 Coding：{database_design}"
+        )
+    if DATABASE_DDL_RE.search(text):
+        errors.append(
+            f"数据库设计禁止 DDL；建表和迁移属于 Coding：{database_design}"
+        )
+
+    h2_sections: dict[str, str] = {}
+    for index, h2_match in enumerate(h2_matches):
+        section_end = (
+            h2_matches[index + 1].start()
+            if index + 1 < len(h2_matches)
+            else len(text)
+        )
+        h2_sections[h2_match.group(1)] = text[h2_match.end():section_end]
+    for heading, table_header in DATABASE_TAIL_TABLE_HEADERS.items():
+        if heading in h2_sections and table_header not in h2_sections[heading]:
+            errors.append(
+                f"“{heading}”缺少固定表头“{table_header}”："
+                f"{database_design}"
+            )
+    handoff_text = h2_sections.get("数据库实现交接", "")
+    for field in DATABASE_HANDOFF_FIELDS:
+        if not re.search(
+            rf"^{re.escape(field)}[ \t]*[：:]",
+            handoff_text,
+            re.MULTILINE,
+        ):
+            errors.append(
+                f"数据库实现交接缺少“{field}”：{database_design}"
+            )
+
+    return errors, warnings
+
+
 def validate(
     repo_root: Path,
     coding_system: str | None = None,
     orchestration_system: str | None = None,
+    database_system: str | None = None,
     review_slice: str | None = None,
     recovery_task: str | None = None,
 ) -> tuple[list[str], list[str]]:
@@ -720,6 +1091,17 @@ def validate(
         errors.extend(orchestration_errors)
         warnings.extend(orchestration_warnings)
 
+    if database_system:
+        if Path(database_system).name != database_system:
+            errors.append(f"系统名必须是单个目录名：{database_system}")
+            return errors, warnings
+        database_errors, database_warnings = validate_database_design(
+            systems_root / database_system,
+            require_confirmed=False,
+        )
+        errors.extend(database_errors)
+        warnings.extend(database_warnings)
+
     if coding_system:
         if Path(coding_system).name != coding_system:
             errors.append(f"系统名必须是单个目录名：{coding_system}")
@@ -754,14 +1136,12 @@ def validate(
             if design_file.resolve() not in index_targets:
                 errors.append(f"系统入口未直接链接固定实现输入：{design_file}")
 
-        orchestration_errors, orchestration_warnings = (
-            validate_internal_orchestration(
-                system_root,
-                require_confirmed=True,
-            )
+        database_errors, database_warnings = validate_database_design(
+            system_root,
+            require_confirmed=True,
         )
-        errors.extend(orchestration_errors)
-        warnings.extend(orchestration_warnings)
+        errors.extend(database_errors)
+        warnings.extend(database_warnings)
 
         system_split = system_root / "系统拆分.md"
         system_split_text = system_split.read_text(encoding="utf-8")
@@ -796,25 +1176,6 @@ def validate(
             errors.append(
                 "准备 Coding 的系统拆分必须且只能声明一个"
                 f"非空核心命名确认依据：{system_split}"
-            )
-
-        database_design = system_root / "数据库设计.md"
-        database_design_text = database_design.read_text(encoding="utf-8")
-        if (
-            DATABASE_DESIGN_CONFIRMATION_RE.findall(database_design_text)
-            != ["已确认"]
-        ):
-            errors.append(
-                "准备 Coding 的数据库设计必须且只能声明"
-                f"“数据库设计确认：已确认”：{database_design}"
-            )
-        if (
-            len(DATABASE_DESIGN_EVIDENCE_RE.findall(database_design_text))
-            != 1
-        ):
-            errors.append(
-                "准备 Coding 的数据库设计必须且只能声明一个"
-                f"非空数据库设计确认依据：{database_design}"
             )
 
         baseline_text = baseline.read_text(encoding="utf-8")
@@ -1330,6 +1691,86 @@ def self_test() -> int:
                 metadata = (
                     "数据库设计确认：已确认\n"
                     "数据库设计确认依据：示例任务中的用户确认\n"
+                    "设计来源：\n"
+                    "- [系统拆分](系统拆分.md)\n"
+                    "- [API 设计](API设计.md)\n"
+                    "- [核心接口内部编排](核心接口内部编排.md)\n"
+                    "适用数据库：关系型数据库\n"
+                    "适用范围：示例系统\n"
+                    "明确不覆盖：无\n\n"
+                    "## 数据承载全景\n\n"
+                    "| 需要保存的事实 | 事实拥有者 | 为什么需要持久化 | 使用者与用途 | 承载表 | 数据性质 |\n"
+                    "| --- | --- | --- | --- | --- | --- |\n"
+                    "| 示例事实 | 示例 Domain | 重启后仍需存在 | API 查询 | DBT-example | Domain 状态 |\n\n"
+                    "## 表目录\n\n"
+                    "| 表标识 | 表名 | 中文名称 | 这张表为什么存在 | 一行表示什么 | 详细章节 |\n"
+                    "| --- | --- | --- | --- | --- | --- |\n"
+                    "| DBT-example | `examples` | 示例 | 保存示例事实 | 一个示例 | 本文 |\n\n"
+                    "## 数据关系图\n\n"
+                    "只有一张表，不需要关系图。\n\n"
+                    "## DBT-example：examples — 示例\n\n"
+                    "### 表的意义\n\n"
+                    "保存的事实：示例已经形成。\n\n"
+                    "存在原因：系统重启后仍需查询示例。\n\n"
+                    "一行表示：一个已经形成的示例。\n\n"
+                    "为什么独立成表：示例有独立身份和生命周期。\n\n"
+                    "数据库表注释原文：保存本系统已经形成的示例；一行代表一个示例。\n\n"
+                    "数据性质：Domain 状态。\n\n"
+                    "权威拥有者：示例 Domain。\n\n"
+                    "是否参与业务判断：是，判断示例是否存在。\n\n"
+                    "是否可重新生成：否。\n\n"
+                    "来源：[系统拆分](系统拆分.md)。\n\n"
+                    "### 产生、变化与使用\n\n"
+                    "| 时点或事件 | 写入者 | 写入或变化 | 使用者 | 用途 |\n"
+                    "| --- | --- | --- | --- | --- |\n"
+                    "| API-create-example / S3 | Repository | 新增示例 | API | 返回结果 |\n\n"
+                    "### 字段说明\n\n"
+                    "| 字段 | 中文名称 | 字段为什么存在 | 保存的事实或含义 | 事实来源 | 数据类型 | 必填 | 空值含义 | 默认值及含义 | 允许值或范围 | 何时产生或改变 | 是否敏感 | 数据库注释原文 |\n"
+                    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
+                    "| `id` | 示例标识 | 稳定识别示例 | 本系统分配的示例身份 | 示例 Domain | 标识 | 是 | 不允许为空 | 无 | 非空唯一值 | 创建时产生且不变 | 否 | 本系统分配的示例唯一标识。 |\n\n"
+                    "### 身份、主键与唯一性\n\n"
+                    "记录身份：由 id 稳定识别一个示例。\n\n"
+                    "| 类型 | 字段组合 | 保证的事实 | 冲突时的业务含义 |\n"
+                    "| --- | --- | --- | --- |\n"
+                    "| 主键 | id | 一个标识只有一个示例 | 拒绝重复写入 |\n\n"
+                    "### 与其他表的关系\n\n"
+                    "| 关联表 | 本表字段 | 对方字段 | 关系与基数 | 存在性要求 | 删除或失效语义 |\n"
+                    "| --- | --- | --- | --- | --- | --- |\n"
+                    "| 无 | 无 | 无 | 无 | 本表独立存在 | 不适用 |\n\n"
+                    "### 必须保持的约束\n\n"
+                    "| 约束 | 约束保护的事实 | 数据库责任 | Domain 或应用责任 | 违反时的结果 |\n"
+                    "| --- | --- | --- | --- | --- |\n"
+                    "| 主键唯一 | 示例身份唯一 | 拒绝重复 id | 创建唯一 id | 冲突 |\n\n"
+                    "### 查询与索引\n\n"
+                    "| 查询来源 | 查询条件与排序 | 频率或规模事实 | 建议索引 | 为什么需要 | 代价与不采用条件 |\n"
+                    "| --- | --- | --- | --- | --- | --- |\n"
+                    "| API 查询 | id 等值 | 待观测 | 主键 | 定位一个示例 | 主键已有 |\n\n"
+                    "### 事务、并发与编排对应\n\n"
+                    "| API 与步骤 | 本表读写 | 原子范围或提交点 | 并发保护 | 失败、回滚或结果未知处理 |\n"
+                    "| --- | --- | --- | --- | --- |\n"
+                    "| API-create-example / S3 | 插入示例 | T1 提交 | 主键唯一 | 失败时回滚 |\n\n"
+                    "### 历史、清理与迁移\n\n"
+                    "保留要求：示例存在期间保留。\n\n"
+                    "清理方式：业务删除时清理。\n\n"
+                    "历史语义：只保存当前事实。\n\n"
+                    "兼容与迁移要求：不涉及已有数据。\n\n"
+                    "### 尚未确定的问题\n\n"
+                    "无。\n\n"
+                    "## 跨表事务与一致性\n\n"
+                    "| API 与步骤 | 涉及表 | 必须共同成立的事实 | 原子边界 | 外部影响顺序 | 失败与恢复 |\n"
+                    "| --- | --- | --- | --- | --- | --- |\n"
+                    "| API-create-example / S3 | DBT-example | 示例完整保存 | T1 | 无外部影响 | 回滚 |\n\n"
+                    "## 查询投影与非 Domain 数据\n\n"
+                    "不适用；当前只有 Domain 状态。\n\n"
+                    "## 数据安全与保留\n\n"
+                    "| 数据范围 | 敏感等级 | 访问者 | 脱敏或加密 | 保留与清理 | 审计要求 |\n"
+                    "| --- | --- | --- | --- | --- | --- |\n"
+                    "| DBT-example | 普通 | 示例系统 | 不需要 | 随业务生命周期 | 写入日志 |\n\n"
+                    "## 数据库实现交接\n\n"
+                    "Coding 阶段需要产生：迁移、映射、数据库注释和测试。\n\n"
+                    "实现必须保持：本设计全部数据事实。\n\n"
+                    "允许 Coding 决定：数据库语法和迁移工具。\n\n"
+                    "必须返回设计的情况：数据事实或事务需要改变。\n"
                 )
             else:
                 metadata = ""
@@ -1661,15 +2102,71 @@ def self_test() -> int:
         database_design = system_root / "数据库设计.md"
         valid_database_design_text = database_design.read_text(encoding="utf-8")
         database_design.write_text(
-            valid_database_design_text.replace(
+            valid_database_design_text
+            .replace(
                 "数据库设计确认：已确认",
                 "数据库设计确认：待确认",
+            )
+            .replace(
+                "数据库设计确认依据：示例任务中的用户确认",
+                "数据库设计确认依据：无",
             ),
             encoding="utf-8",
         )
+        errors, _ = validate(
+            repo_root,
+            database_system="示例系统",
+        )
+        if errors:
+            print("自检失败：合法的待确认数据库候选未通过生成阶段检查。")
+            for error in errors:
+                print(f"ERROR: {error}")
+            return 1
         errors, _ = validate(repo_root, coding_system="示例系统")
         if not any("数据库设计确认：已确认" in error for error in errors):
             print("自检失败：Coding 检查未拒绝待确认的数据库设计。")
+            return 1
+        database_design.write_text(
+            valid_database_design_text,
+            encoding="utf-8",
+        )
+
+        database_design.write_text(
+            valid_database_design_text.replace(
+                "### 字段说明",
+                "### 字段列表",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(
+            repo_root,
+            database_system="示例系统",
+        )
+        if not any(
+            "十个三级标题" in error and "DBT-example" in error
+            for error in errors
+        ):
+            print("自检失败：数据库检查未拒绝偏离固定逐表模板。")
+            return 1
+        database_design.write_text(
+            valid_database_design_text,
+            encoding="utf-8",
+        )
+
+        database_design.write_text(
+            valid_database_design_text
+            + "\n```sql\nCREATE TABLE examples (id text);\n```\n",
+            encoding="utf-8",
+        )
+        errors, _ = validate(
+            repo_root,
+            database_system="示例系统",
+        )
+        if not any("禁止 SQL 代码块" in error for error in errors):
+            print("自检失败：数据库检查未拒绝 SQL 代码块。")
+            return 1
+        if not any("禁止 DDL" in error for error in errors):
+            print("自检失败：数据库检查未拒绝 DDL。")
             return 1
         database_design.write_text(
             valid_database_design_text,
@@ -1939,6 +2436,11 @@ def main() -> int:
         help="检查指定系统的 API 标识和逐 API 核心接口内部编排固定模板；候选交给用户确认前运行。",
     )
     parser.add_argument(
+        "--database-system",
+        metavar="中文系统名",
+        help="检查指定系统以表和字段意义为核心的数据库设计固定模板，并拒绝 DDL；候选交给用户确认前运行。",
+    )
+    parser.add_argument(
         "--review-slice",
         metavar="中文开发切片",
         help="检查指定系统开发切片的实现记录、工程改进、两个核心审核和审核结论；必须同时指定 --coding-system。",
@@ -1958,6 +2460,7 @@ def main() -> int:
         repo_root,
         coding_system=args.coding_system,
         orchestration_system=args.orchestration_system,
+        database_system=args.database_system,
         review_slice=args.review_slice,
         recovery_task=args.recovery_task,
     )
