@@ -289,6 +289,39 @@ ENGINEERING_IMPROVEMENT_FIELDS = [
     "输出代码快照",
     "剩余风险",
 ]
+DESIGN_FEEDBACK_FIELDS = [
+    "反馈状态",
+    "发现阶段",
+    "问题所在",
+    "对应的权威设计",
+    "实现、SQL 或运行证据",
+    "为什么当前设计不成立或不合理",
+    "影响的业务结果与代码范围",
+    "建议修改",
+    "替代方案与权衡",
+    "建议修改的权威文档和章节",
+    "当前代码处理",
+    "可以继续的范围",
+    "事实拥有者",
+    "上游处理结果",
+    "重新确认依据",
+    "受影响的下游文档、代码和测试",
+]
+DESIGN_FEEDBACK_STATUS_RE = re.compile(
+    r"^反馈状态[ \t]*[：:][ \t]*"
+    r"(待上游判断|已采纳|部分采纳|不采纳|已重新确认)[ \t]*$",
+    re.MULTILINE,
+)
+DESIGN_FEEDBACK_STAGE_RE = re.compile(
+    r"^发现阶段[ \t]*[：:][ \t]*"
+    r"(首次实现|SQL 与迁移|测试|运行验证|工程改进|代码审核)[ \t]*$",
+    re.MULTILINE,
+)
+DESIGN_FEEDBACK_CODE_ACTION_RE = re.compile(
+    r"^当前代码处理[ \t]*[：:][ \t]*"
+    r"(停止相关实现|仅保留技术验证|继续不受影响范围)[ \t]*$",
+    re.MULTILINE,
+)
 CORE_REVIEW_FILES = [
     "实现符合性.md",
     "工程质量.md",
@@ -1306,6 +1339,7 @@ def validate(
             development_index = development_root / "index.md"
             slice_root = development_root / review_slice
             implementation_record = slice_root / "实现记录.md"
+            design_feedback_root = slice_root / "设计反馈"
             improvement_root = slice_root / "工程改进"
             review_root = slice_root / "审核"
             review_files = [
@@ -1408,6 +1442,58 @@ def validate(
             first_implementation_snapshot = (
                 first_snapshots[0] if len(first_snapshots) == 1 else None
             )
+
+            design_feedback_files = sorted(
+                design_feedback_root.glob("*.md")
+            )
+            for feedback_file in design_feedback_files:
+                if feedback_file.resolve() not in implementation_targets:
+                    errors.append(
+                        "实现记录未直接链接设计反馈记录："
+                        f"{feedback_file}"
+                    )
+                feedback_text = feedback_file.read_text(encoding="utf-8")
+                for field in DESIGN_FEEDBACK_FIELDS:
+                    matches = re.findall(
+                        rf"^{re.escape(field)}[ \t]*[：:][ \t]*(\S.*)$",
+                        feedback_text,
+                        re.MULTILINE,
+                    )
+                    if len(matches) != 1:
+                        errors.append(
+                            "设计反馈记录缺少、重复或留空字段"
+                            f"“{field}”：{feedback_file}"
+                        )
+                statuses = DESIGN_FEEDBACK_STATUS_RE.findall(
+                    feedback_text
+                )
+                if len(statuses) != 1:
+                    errors.append(
+                        "设计反馈记录必须且只能声明一个有效反馈状态："
+                        f"{feedback_file}"
+                    )
+                elif statuses[0] not in ("不采纳", "已重新确认"):
+                    errors.append(
+                        "进入正式审核前设计反馈必须已经不采纳或完成"
+                        f"重新确认：{feedback_file}"
+                    )
+                if len(DESIGN_FEEDBACK_STAGE_RE.findall(feedback_text)) != 1:
+                    errors.append(
+                        "设计反馈记录必须且只能声明一个有效发现阶段："
+                        f"{feedback_file}"
+                    )
+                if (
+                    len(
+                        DESIGN_FEEDBACK_CODE_ACTION_RE.findall(
+                            feedback_text
+                        )
+                    )
+                    != 1
+                ):
+                    errors.append(
+                        "设计反馈记录必须且只能声明一个有效当前代码处理："
+                        f"{feedback_file}"
+                    )
 
             improvement_files = sorted(improvement_root.glob("*.md"))
             if not improvement_files:
@@ -1565,7 +1651,11 @@ def validate(
                     )
 
             if git_probe.returncode == 0:
-                for path in [*required_review_files, *improvement_files]:
+                for path in [
+                    *required_review_files,
+                    *design_feedback_files,
+                    *improvement_files,
+                ]:
                     relative_file = path.relative_to(repo_root)
                     tracked = subprocess.run(
                         [
@@ -2228,6 +2318,56 @@ def self_test() -> int:
                 print(f"ERROR: {error}")
             return 1
 
+        design_feedback_root = slice_root / "设计反馈"
+        design_feedback_root.mkdir()
+        feedback_file = design_feedback_root / "01-数据库设计.md"
+        feedback_text = (
+            "# 设计反馈：数据库设计\n\n"
+            "反馈状态：待上游判断\n"
+            "发现阶段：SQL 与迁移\n"
+            "问题所在：示例约束无法落地\n"
+            "对应的权威设计：数据库设计.md\n"
+            "实现、SQL 或运行证据：数据库拒绝当前约束\n"
+            "为什么当前设计不成立或不合理：无法保持示例不变量\n"
+            "影响的业务结果与代码范围：示例创建\n"
+            "建议修改：调整示例约束\n"
+            "替代方案与权衡：保留现状会产生错误数据\n"
+            "建议修改的权威文档和章节：数据库设计 / 必须保持的约束\n"
+            "当前代码处理：停止相关实现\n"
+            "可以继续的范围：无关查询\n"
+            "事实拥有者：系统与开发设计 Agent\n"
+            "上游处理结果：待判断\n"
+            "重新确认依据：无\n"
+            "受影响的下游文档、代码和测试：开发基线与示例测试\n"
+        )
+        feedback_file.write_text(feedback_text, encoding="utf-8")
+        implementation_record = slice_root / "实现记录.md"
+        implementation_record.write_text(
+            implementation_text.replace(
+                "## 与设计的偏离\n\n",
+                "## 与设计的偏离\n\n"
+                "[数据库设计反馈](设计反馈/01-数据库设计.md)\n\n",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(
+            repo_root,
+            coding_system="示例系统",
+            review_slice="示例切片",
+        )
+        if not any(
+            "设计反馈必须已经不采纳或完成重新确认" in error
+            for error in errors
+        ):
+            print("自检失败：未拒绝尚未解决设计反馈的正式审核。")
+            return 1
+        feedback_file.unlink()
+        design_feedback_root.rmdir()
+        implementation_record.write_text(
+            implementation_text,
+            encoding="utf-8",
+        )
+
         engineering_standard.unlink()
         errors, _ = validate(repo_root, coding_system="示例系统")
         if not any(
@@ -2242,7 +2382,6 @@ def self_test() -> int:
             encoding="utf-8",
         )
 
-        implementation_record = slice_root / "实现记录.md"
         implementation_record.write_text(
             implementation_text.replace(
                 "工程改进状态：完成",
@@ -2443,7 +2582,7 @@ def main() -> int:
     parser.add_argument(
         "--review-slice",
         metavar="中文开发切片",
-        help="检查指定系统开发切片的实现记录、工程改进、两个核心审核和审核结论；必须同时指定 --coding-system。",
+        help="检查指定系统开发切片的实现记录、设计反馈、工程改进、两个核心审核和审核结论；必须同时指定 --coding-system。",
     )
     parser.add_argument(
         "--recovery-task",

@@ -140,7 +140,9 @@ docs/vcddd/systems/<中文系统名>/工程编码规范.md
 
 每个开发切片维护 `systems/<系统>/开发记录/<切片>/实现记录.md`，记录开发基线、工程编码规范、固定代码快照、设计到代码与测试的对应、工程改进入口、偏差和剩余风险；不保存命令流水。
 
-代码现实与开发基线冲突时，开发 Agent 报告事实和影响，由主控路由到相应设计 Agent；代码不能静默成为新的业务或设计权威。调用时给当前任务、开发基线、工程编码规范、本切片直接来源、仓库规范、共同认知协议、[references/coding-guidance.md](references/coding-guidance.md)、[references/diagramming.md](references/diagramming.md) 和 [references/development-agent.md](references/development-agent.md)。
+忠于设计不表示假定设计永远正确。Coding 在生成 SQL、落地 Domain、编排事务、接入平台或验证运行结果时，若证据表明已确认设计不合理、无法保持不变量或会产生不可接受代价，必须形成设计反馈：说明问题位置、实现或运行证据、影响范围、建议修改及方案权衡，并由主控路由给事实拥有者。纯 DDL 语法、ORM 映射和其他不改变语义的问题由 Coding 自行解决；需要改变 Domain、API、事务或数据事实时，Coding 不静默修改上游，也不以临时代码绕过，等待相应设计修订和用户重新确认后再继续受影响范围。完整闭环见 [references/coding-guidance.md](references/coding-guidance.md#设计反馈闭环)。
+
+代码现实与开发基线冲突时，开发 Agent 按上述闭环报告证据与修改意见；代码不能静默成为新的业务或设计权威。调用时给当前任务、开发基线、工程编码规范、本切片直接来源、仓库规范、共同认知协议、[references/coding-guidance.md](references/coding-guidance.md)、[references/diagramming.md](references/diagramming.md) 和 [references/development-agent.md](references/development-agent.md)。
 
 ## 调用工程改进 Agent
 

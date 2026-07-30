@@ -1,4 +1,4 @@
 interface:
   display_name: "VCDDD"
   short_description: "用可恢复文档推进业务设计、可读数据设计、Coding 与审核"
-  default_prompt: "使用 $vcddd 从当前业务与设计事实恢复任务，按固定模板形成逐 API 核心接口内部编排和以表、字段意义为核心的数据库设计，再按系统工程编码规范完成忠实 Coding、渐进工程改进和固定快照独立审核。"
+  default_prompt: "使用 $vcddd 从当前业务与设计事实恢复任务，按固定模板形成逐 API 编排和人类可读的数据设计，再按系统工程编码规范忠实 Coding；实现证据表明 Domain、数据或事务设计不合理时形成带修改建议的上游反馈，修订确认后继续工程改进和固定快照独立审核。"
