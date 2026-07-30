@@ -330,32 +330,125 @@ CONTROLLER_STATUS_RE = re.compile(
     r"(待派发|Agent 工作中|等待用户|可继续|阻塞|完成)[ \t]*$",
     re.MULTILINE,
 )
-IMPLEMENTATION_HEADINGS = [
-    "业务结果",
-    "设计与代码对应",
-    "关键实现",
-    "工程改进",
-    "验证证据",
-    "与设计的偏离",
-    "剩余风险",
+TASK_GRAPH_HEADINGS = [
+    "批次范围与完成边界",
+    "代码产物清单",
+    "任务关系图",
+    "并行批次",
+    "共享写入与集成规则",
+    "开发任务",
+    "集成与统一代码快照",
+    "尚未确定的问题",
 ]
-IMPLEMENTATION_IMPROVEMENT_STATUS_RE = re.compile(
-    r"^工程改进状态[ \t]*[：:][ \t]*"
-    r"(未开始|分析中|修改中|完成)[ \t]*$",
+TASK_GRAPH_STATUS_RE = re.compile(
+    r"^状态[ \t]*[：:][ \t]*"
+    r"(待确认|当前|待重新判断|已完成)[ \t]*$",
     re.MULTILINE,
 )
+TASK_GRAPH_CONFIRMATION_RE = re.compile(
+    r"^任务图确认[ \t]*[：:][ \t]*(待确认|已确认)[ \t]*$",
+    re.MULTILINE,
+)
+TASK_DETAIL_FIELDS = [
+    "任务类型",
+    "代码责任",
+    "来源",
+    "要实现的代码",
+    "实现边界",
+    "主要写入范围",
+    "共享写入位置",
+    "前置输入",
+    "提供给后续任务",
+    "前置任务",
+    "依赖类型与原因",
+    "可以并行的任务",
+    "禁止并行的任务及原因",
+    "worktree 起始快照",
+    "编码完成边界",
+    "发现问题时返回",
+]
+TASK_TYPES = {
+    "工程基础",
+    "模块基础",
+    "数据与迁移",
+    "接口入口",
+    "业务实现",
+    "查询实现",
+    "外部系统集成",
+    "后台任务",
+    "系统级能力",
+    "装配与接线",
+    "现有代码改造",
+    "其他",
+}
+TASK_HEADING_RE = re.compile(
+    r"^###\s+(TASK-[A-Za-z0-9][A-Za-z0-9._-]*)[：:]\s*(\S.*)$",
+    re.MULTILINE,
+)
+IMPLEMENTATION_HEADINGS = [
+    "任务代码责任",
+    "来源与代码对应",
+    "实际产生的代码",
+    "提供给后续任务的产物",
+    "与任务图或设计的偏离",
+    "剩余实现事项",
+]
+INTEGRATION_FIELDS = [
+    "开发任务图",
+    "起始代码快照",
+    "已合并任务及 Commit",
+    "合并顺序",
+    "共享写入处理",
+    "未合并或未实现事项",
+    "统一生产代码快照",
+    "测试状态",
+    "工程改进状态",
+    "最终待审核快照",
+]
+TEST_FEEDBACK_FIELDS = [
+    "测试角度",
+    "输入生产代码快照",
+    "依据的开发基线",
+    "依据的工程编码规范",
+    "测试代码范围",
+    "禁止修改的生产代码范围",
+    "覆盖对象",
+    "未覆盖对象",
+    "新增或修改的测试",
+    "测试执行入口",
+    "测试结果",
+    "失败证据",
+    "要求达到的修正结果",
+    "问题责任",
+    "需要返回的任务或事实拥有者",
+    "测试代码快照",
+    "剩余风险",
+]
+TEST_CONCLUSION_FIELDS = [
+    "生产代码快照",
+    "测试代码快照",
+    "各测试反馈",
+    "失败与责任",
+    "测试分歧",
+    "修正任务",
+    "复测范围",
+    "未覆盖风险",
+    "当前结论",
+]
 ENGINEERING_IMPROVEMENT_FIELDS = [
     "分析角度",
     "工作方式",
     "输入代码快照",
+    "输入测试代码快照",
     "依据的开发基线",
     "依据的工程编码规范",
+    "依据的测试结论",
     "分析范围",
     "发现的问题",
     "决定修改或保留的理由",
     "实际修改",
     "更新的工程编码规范",
-    "验证结果",
+    "受影响测试结果",
     "输出代码快照",
     "剩余风险",
 ]
@@ -364,9 +457,9 @@ DESIGN_FEEDBACK_FIELDS = [
     "发现阶段",
     "问题所在",
     "对应的权威设计",
-    "实现、SQL 或运行证据",
+    "代码、SQL、测试或运行证据",
     "为什么当前设计不成立或不合理",
-    "影响的业务结果与代码范围",
+    "影响的任务与代码范围",
     "建议修改",
     "替代方案与权衡",
     "建议修改的权威文档和章节",
@@ -375,7 +468,7 @@ DESIGN_FEEDBACK_FIELDS = [
     "事实拥有者",
     "上游处理结果",
     "重新确认依据",
-    "受影响的下游文档、代码和测试",
+    "受影响的任务、代码和测试",
 ]
 DESIGN_FEEDBACK_STATUS_RE = re.compile(
     r"^反馈状态[ \t]*[：:][ \t]*"
@@ -384,7 +477,8 @@ DESIGN_FEEDBACK_STATUS_RE = re.compile(
 )
 DESIGN_FEEDBACK_STAGE_RE = re.compile(
     r"^发现阶段[ \t]*[：:][ \t]*"
-    r"(首次实现|SQL 与迁移|测试|运行验证|工程改进|代码审核)[ \t]*$",
+    r"(任务规划|生产代码实现|SQL 与迁移|统一测试|工程改进|代码审核)"
+    r"[ \t]*$",
     re.MULTILINE,
 )
 DESIGN_FEEDBACK_CODE_ACTION_RE = re.compile(
@@ -404,20 +498,20 @@ SOURCES_RE = re.compile(
     r"^来源[ \t]*[：:][ \t]*$\n(.*?)(?=^##[ \t]+Domain[ \t]*$)",
     re.MULTILINE | re.DOTALL,
 )
-CODE_SNAPSHOT_RE = re.compile(
-    r"^代码快照[ \t]*[：:][ \t]*(\S.*)$", re.MULTILINE
+UNIFIED_PRODUCTION_SNAPSHOT_RE = re.compile(
+    r"^统一生产代码快照[ \t]*[：:][ \t]*(\S.*)$", re.MULTILINE
 )
-FIRST_IMPLEMENTATION_SNAPSHOT_RE = re.compile(
-    r"^首次实现快照[ \t]*[：:][ \t]*(\S.*)$", re.MULTILINE
+FINAL_REVIEW_SNAPSHOT_RE = re.compile(
+    r"^最终待审核快照[ \t]*[：:][ \t]*(\S.*)$", re.MULTILINE
 )
-IMPROVEMENT_INPUT_SNAPSHOT_RE = re.compile(
-    r"^输入代码快照[ \t]*[：:][ \t]*(\S.*)$", re.MULTILINE
+TEST_CODE_SNAPSHOT_RE = re.compile(
+    r"^测试代码快照[ \t]*[：:][ \t]*(\S.*)$", re.MULTILINE
 )
 IMPROVEMENT_OUTPUT_SNAPSHOT_RE = re.compile(
     r"^输出代码快照[ \t]*[：:][ \t]*(\S.*)$", re.MULTILINE
 )
 REVIEW_OBJECT_RE = re.compile(
-    r"^审核对象[ \t]*[：:][ \t]*(\S.*)$", re.MULTILINE
+    r"^审核生产代码快照[ \t]*[：:][ \t]*(\S.*)$", re.MULTILINE
 )
 REVIEW_RESULT_RE = re.compile(
     r"^审核结论[ \t]*[：:][ \t]*(通过|有条件通过|不通过)[ \t]*$",
@@ -1116,18 +1210,223 @@ def validate_architecture_and_modules(
     return errors, warnings
 
 
+def validate_implementation_task_graph(
+    task_graph: Path,
+    require_current: bool = False,
+) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    if not task_graph.exists():
+        errors.append(f"缺少开发任务图：{task_graph}")
+        return errors, warnings
+
+    text = task_graph.read_text(encoding="utf-8")
+    headings = re.findall(r"^##\s+(.+?)\s*$", text, re.MULTILINE)
+    if headings != TASK_GRAPH_HEADINGS:
+        errors.append(
+            "开发任务图必须且只能按顺序包含八个二级标题"
+            f"（{' / '.join(TASK_GRAPH_HEADINGS)}）：{task_graph}"
+        )
+
+    for field in (
+        "状态",
+        "任务图确认",
+        "任务图确认依据",
+        "适用系统",
+        "开发批次",
+        "开发基线",
+        "工程编码规范",
+        "起始代码快照",
+        "维护角色",
+    ):
+        matches = re.findall(
+            rf"^{re.escape(field)}[ \t]*[：:][ \t]*(\S.*)$",
+            text,
+            re.MULTILINE,
+        )
+        if len(matches) != 1:
+            errors.append(
+                f"开发任务图必须且只能声明一个非空“{field}”：{task_graph}"
+            )
+
+    statuses = TASK_GRAPH_STATUS_RE.findall(text)
+    confirmations = TASK_GRAPH_CONFIRMATION_RE.findall(text)
+    if len(statuses) != 1:
+        errors.append(f"开发任务图必须声明一个有效状态：{task_graph}")
+    if len(confirmations) != 1:
+        errors.append(f"开发任务图必须声明一个有效确认状态：{task_graph}")
+    if require_current:
+        if statuses and statuses[0] not in ("当前", "已完成"):
+            errors.append(f"执行开发要求任务图状态为“当前”或“已完成”：{task_graph}")
+        if confirmations != ["已确认"]:
+            errors.append(f"执行开发要求任务图确认：已确认：{task_graph}")
+
+    task_matches = list(TASK_HEADING_RE.finditer(text))
+    if not task_matches:
+        errors.append(f"开发任务图至少需要一个 TASK- 任务：{task_graph}")
+        return errors, warnings
+
+    task_ids = [match.group(1) for match in task_matches]
+    if len(task_ids) != len(set(task_ids)):
+        errors.append(f"开发任务图中的 TASK- 标识必须唯一：{task_graph}")
+
+    dependencies: dict[str, list[str]] = {}
+    for index, match in enumerate(task_matches):
+        task_id = match.group(1)
+        end = (
+            task_matches[index + 1].start()
+            if index + 1 < len(task_matches)
+            else re.search(
+                r"^##\s+集成与统一代码快照\s*$",
+                text[match.end():],
+                re.MULTILINE,
+            )
+        )
+        if isinstance(end, re.Match):
+            section_end = match.end() + end.start()
+        elif isinstance(end, int):
+            section_end = end
+        else:
+            section_end = len(text)
+        section = text[match.end():section_end]
+
+        for field in TASK_DETAIL_FIELDS:
+            values = re.findall(
+                rf"^{re.escape(field)}[ \t]*[：:][ \t]*(\S.*)$",
+                section,
+                re.MULTILINE,
+            )
+            if len(values) != 1:
+                errors.append(
+                    f"{task_id} 必须且只能声明一个非空“{field}”：{task_graph}"
+                )
+
+        task_types = re.findall(
+            r"^任务类型[ \t]*[：:][ \t]*(\S.*)$",
+            section,
+            re.MULTILINE,
+        )
+        if len(task_types) == 1 and task_types[0] not in TASK_TYPES:
+            errors.append(
+                f"{task_id} 的任务类型不在固定分类中：{task_graph}"
+            )
+
+        prerequisite_values = re.findall(
+            r"^前置任务[ \t]*[：:][ \t]*(\S.*)$",
+            section,
+            re.MULTILINE,
+        )
+        if len(prerequisite_values) == 1:
+            value = prerequisite_values[0]
+            referenced = re.findall(
+                r"TASK-[A-Za-z0-9][A-Za-z0-9._-]*",
+                value,
+            )
+            if value != "无" and not referenced:
+                errors.append(
+                    f"{task_id} 的前置任务必须为“无”或 TASK- 标识列表："
+                    f"{task_graph}"
+                )
+            dependencies[task_id] = referenced
+
+        completion = re.findall(
+            r"^编码完成边界[ \t]*[：:][ \t]*(\S.*)$",
+            section,
+            re.MULTILINE,
+        )
+        if completion and re.search(
+            r"测试|验证|验收|通过",
+            completion[0],
+        ):
+            errors.append(
+                f"{task_id} 的编码完成边界不得包含测试、验证、验收或通过："
+                f"{task_graph}"
+            )
+
+        if re.search(
+            r"^(测试用例|验证方式|验收条件|运行证据)[ \t]*[：:]",
+            section,
+            re.MULTILINE,
+        ):
+            errors.append(
+                f"{task_id} 不得在生产代码任务中建立测试或验证字段："
+                f"{task_graph}"
+            )
+
+    known_task_ids = set(task_ids)
+    for task_id, prerequisites in dependencies.items():
+        for prerequisite in prerequisites:
+            if prerequisite not in known_task_ids:
+                errors.append(
+                    f"{task_id} 引用了不存在的前置任务 {prerequisite}："
+                    f"{task_graph}"
+                )
+            if prerequisite == task_id:
+                errors.append(
+                    f"{task_id} 不能依赖自身：{task_graph}"
+                )
+
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def has_cycle(task_id: str) -> bool:
+        if task_id in visiting:
+            return True
+        if task_id in visited:
+            return False
+        visiting.add(task_id)
+        for prerequisite in dependencies.get(task_id, []):
+            if prerequisite in known_task_ids and has_cycle(prerequisite):
+                return True
+        visiting.remove(task_id)
+        visited.add(task_id)
+        return False
+
+    if any(has_cycle(task_id) for task_id in task_ids):
+        errors.append(f"开发任务图存在循环依赖：{task_graph}")
+
+    return errors, warnings
+
+
 def validate(
     repo_root: Path,
     coding_system: str | None = None,
     architecture_system: str | None = None,
     orchestration_system: str | None = None,
     database_system: str | None = None,
-    review_slice: str | None = None,
+    implementation_system: str | None = None,
+    development_batch: str | None = None,
+    review_batch: str | None = None,
     recovery_task: str | None = None,
 ) -> tuple[list[str], list[str]]:
     vcddd_root = repo_root / "docs" / "vcddd"
     errors: list[str] = []
     warnings: list[str] = []
+
+    if implementation_system:
+        if coding_system and coding_system != implementation_system:
+            errors.append(
+                "--coding-system 与 --implementation-system 必须指向同一系统。"
+            )
+        coding_system = implementation_system
+    if review_batch and not coding_system:
+        errors.append("--review-batch 必须同时指定 --coding-system。")
+    if review_batch:
+        if development_batch and development_batch != review_batch:
+            errors.append(
+                "--development-batch 与 --review-batch 同时使用时必须一致。"
+            )
+        development_batch = review_batch
+    elif implementation_system and not development_batch:
+        errors.append(
+            "--implementation-system 必须同时指定 --development-batch。"
+        )
+    if development_batch and not (implementation_system or review_batch):
+        errors.append(
+            "--development-batch 必须与 --implementation-system 或"
+            " --review-batch 一起使用。"
+        )
 
     if not vcddd_root.exists():
         errors.append(f"缺少 VCDDD 目录：{vcddd_root}")
@@ -1349,10 +1648,6 @@ def validate(
             )
         if controller_state.resolve() not in work_targets:
             errors.append(f"当前任务未由工作入口直接链接主控状态：{controller_state}")
-
-    if review_slice and not coding_system:
-        errors.append("--review-slice 必须同时指定 --coding-system")
-        return errors, warnings
 
     if architecture_system:
         if Path(architecture_system).name != architecture_system:
@@ -1623,350 +1918,579 @@ def validate(
                         f"准备 Coding 的固定实现输入尚未纳入版本管理：{design_file}"
                     )
 
-        if review_slice:
-            if Path(review_slice).name != review_slice:
-                errors.append(f"开发切片名必须是单个目录名：{review_slice}")
+        if development_batch:
+            if Path(development_batch).name != development_batch:
+                errors.append(
+                    f"开发批次名必须是单个目录名：{development_batch}"
+                )
                 return errors, warnings
 
             development_root = system_root / "开发记录"
             development_index = development_root / "index.md"
-            slice_root = development_root / review_slice
-            implementation_record = slice_root / "实现记录.md"
-            design_feedback_root = slice_root / "设计反馈"
-            improvement_root = slice_root / "工程改进"
-            review_root = slice_root / "审核"
-            review_files = [
-                review_root / name for name in CORE_REVIEW_FILES
-            ]
-            review_summary = slice_root / "审核结论.md"
-            required_review_files = [
-                development_index,
-                implementation_record,
-                *review_files,
-                review_summary,
-            ]
+            batch_root = development_root / development_batch
+            task_graph = batch_root / "开发任务图.md"
 
-            missing_review_files = [
-                path for path in required_review_files if not path.exists()
-            ]
-            for path in missing_review_files:
-                errors.append(f"开发切片缺少实现或审核记录：{path}")
-
-            if missing_review_files:
-                return errors, warnings
-
-            if development_index.resolve() not in index_targets:
-                errors.append(
-                    f"系统入口未直接链接开发记录入口：{development_index}"
-                )
-
-            development_index_text = development_index.read_text(
-                encoding="utf-8"
+            graph_errors, graph_warnings = validate_implementation_task_graph(
+                task_graph,
+                require_current=bool(review_batch),
             )
-            development_targets = {
-                local_link_path(development_index, raw_target)
-                for raw_target in LINK_RE.findall(development_index_text)
-            }
-            for path in (implementation_record, review_summary):
-                if path.resolve() not in development_targets:
-                    errors.append(f"开发记录入口未直接链接切片文档：{path}")
+            errors.extend(graph_errors)
+            warnings.extend(graph_warnings)
 
-            implementation_text = implementation_record.read_text(
-                encoding="utf-8"
-            )
-            implementation_targets = {
-                local_link_path(implementation_record, raw_target)
-                for raw_target in LINK_RE.findall(implementation_text)
-            }
-            if baseline.resolve() not in implementation_targets:
-                errors.append(
-                    f"实现记录未直接链接当前开发基线：{implementation_record}"
-                )
-            if engineering_standard.resolve() not in implementation_targets:
-                errors.append(
-                    "实现记录未直接链接当前工程编码规范："
-                    f"{implementation_record}"
-                )
-            implementation_headings = re.findall(
-                r"^##\s+(.+?)\s*$", implementation_text, re.MULTILINE
-            )
-            if implementation_headings != IMPLEMENTATION_HEADINGS:
-                errors.append(
-                    "实现记录必须且只能按顺序包含七个二级标题"
-                    f"（{' / '.join(IMPLEMENTATION_HEADINGS)}）："
-                    f"{implementation_record}"
-                )
-
-            for field in (
-                "开发基线",
-                "工程编码规范",
-                "首次实现快照",
-                "代码快照",
-                "工程改进状态",
-                "实现范围",
-                "未覆盖范围",
-            ):
-                matches = re.findall(
-                    rf"^{field}[ \t]*[：:][ \t]*(\S.*)$",
-                    implementation_text,
-                    re.MULTILINE,
-                )
-                if len(matches) != 1:
+            if not development_index.exists():
+                errors.append(f"缺少开发记录入口：{development_index}")
+            else:
+                if development_index.resolve() not in index_targets:
                     errors.append(
-                        f"实现记录必须且只能声明一个非空“{field}”："
-                        f"{implementation_record}"
+                        f"系统入口未直接链接开发记录入口：{development_index}"
+                    )
+                development_index_text = development_index.read_text(
+                    encoding="utf-8"
+                )
+                development_targets = {
+                    local_link_path(development_index, raw_target)
+                    for raw_target in LINK_RE.findall(development_index_text)
+                }
+                if task_graph.exists() and (
+                    task_graph.resolve() not in development_targets
+                ):
+                    errors.append(
+                        f"开发记录入口未直接链接开发任务图：{task_graph}"
                     )
 
-            if IMPLEMENTATION_IMPROVEMENT_STATUS_RE.findall(
-                implementation_text
-            ) != ["完成"]:
-                errors.append(
-                    "进入正式审核前工程改进状态必须且只能为“完成”："
-                    f"{implementation_record}"
-                )
-
-            snapshots = CODE_SNAPSHOT_RE.findall(implementation_text)
-            implementation_snapshot = (
-                snapshots[0] if len(snapshots) == 1 else None
-            )
-            first_snapshots = FIRST_IMPLEMENTATION_SNAPSHOT_RE.findall(
-                implementation_text
-            )
-            first_implementation_snapshot = (
-                first_snapshots[0] if len(first_snapshots) == 1 else None
-            )
-
-            design_feedback_files = sorted(
-                design_feedback_root.glob("*.md")
-            )
-            for feedback_file in design_feedback_files:
-                if feedback_file.resolve() not in implementation_targets:
+            if task_graph.exists():
+                task_graph_text = task_graph.read_text(encoding="utf-8")
+                task_graph_targets = {
+                    local_link_path(task_graph, raw_target)
+                    for raw_target in LINK_RE.findall(task_graph_text)
+                }
+                if baseline.resolve() not in task_graph_targets:
                     errors.append(
-                        "实现记录未直接链接设计反馈记录："
-                        f"{feedback_file}"
+                        f"开发任务图未直接链接当前开发基线：{task_graph}"
                     )
-                feedback_text = feedback_file.read_text(encoding="utf-8")
-                for field in DESIGN_FEEDBACK_FIELDS:
+                if engineering_standard.resolve() not in task_graph_targets:
+                    errors.append(
+                        f"开发任务图未直接链接当前工程编码规范：{task_graph}"
+                    )
+
+            if review_batch:
+                if task_graph.exists() and TASK_GRAPH_STATUS_RE.findall(
+                    task_graph.read_text(encoding="utf-8")
+                ) != ["已完成"]:
+                    errors.append(
+                        f"进入统一测试与审核要求任务图状态为“已完成”："
+                        f"{task_graph}"
+                    )
+
+                implementation_root = batch_root / "实施任务"
+                implementation_records = sorted(
+                    implementation_root.glob("TASK-*/实现记录.md")
+                )
+                integration_record = batch_root / "集成记录.md"
+                test_feedback_root = batch_root / "测试反馈"
+                test_feedback_files = sorted(test_feedback_root.glob("*.md"))
+                test_conclusion = batch_root / "测试结论.md"
+                design_feedback_root = batch_root / "设计反馈"
+                improvement_root = batch_root / "工程改进"
+                improvement_files = sorted(improvement_root.glob("*.md"))
+                review_root = batch_root / "审核"
+                review_files = [
+                    review_root / name for name in CORE_REVIEW_FILES
+                ]
+                review_summary = batch_root / "审核结论.md"
+
+                required_batch_files = [
+                    integration_record,
+                    test_conclusion,
+                    *review_files,
+                    review_summary,
+                ]
+                for path in required_batch_files:
+                    if not path.exists():
+                        errors.append(f"开发批次缺少测试或审核记录：{path}")
+                if not implementation_records:
+                    errors.append(
+                        f"开发批次至少需要一个实施任务实现记录："
+                        f"{implementation_root}"
+                    )
+                if not test_feedback_files:
+                    errors.append(
+                        f"开发批次至少需要一份统一测试反馈："
+                        f"{test_feedback_root}"
+                    )
+                if not improvement_files:
+                    errors.append(
+                        f"进入正式审核前至少需要一份工程改进记录："
+                        f"{improvement_root}"
+                    )
+
+                if any(not path.exists() for path in required_batch_files):
+                    return errors, warnings
+
+                if development_index.exists():
+                    development_targets = {
+                        local_link_path(development_index, raw_target)
+                        for raw_target in LINK_RE.findall(
+                            development_index.read_text(encoding="utf-8")
+                        )
+                    }
+                    for path in (
+                        integration_record,
+                        test_conclusion,
+                        review_summary,
+                    ):
+                        if path.resolve() not in development_targets:
+                            errors.append(
+                                f"开发记录入口未直接链接批次文档：{path}"
+                            )
+
+                for implementation_record in implementation_records:
+                    implementation_text = implementation_record.read_text(
+                        encoding="utf-8"
+                    )
+                    implementation_targets = {
+                        local_link_path(implementation_record, raw_target)
+                        for raw_target in LINK_RE.findall(implementation_text)
+                    }
+                    for path, label in (
+                        (task_graph, "开发任务图"),
+                        (baseline, "开发基线"),
+                        (engineering_standard, "工程编码规范"),
+                    ):
+                        if path.resolve() not in implementation_targets:
+                            errors.append(
+                                f"实现记录未直接链接当前{label}："
+                                f"{implementation_record}"
+                            )
+                    implementation_headings = re.findall(
+                        r"^##\s+(.+?)\s*$",
+                        implementation_text,
+                        re.MULTILINE,
+                    )
+                    if implementation_headings != IMPLEMENTATION_HEADINGS:
+                        errors.append(
+                            "实现记录必须且只能按顺序包含六个二级标题"
+                            f"（{' / '.join(IMPLEMENTATION_HEADINGS)}）："
+                            f"{implementation_record}"
+                        )
+                    for field in (
+                        "开发任务图",
+                        "实施任务",
+                        "开发基线",
+                        "工程编码规范",
+                        "worktree 起始快照",
+                        "输出代码快照",
+                        "实现范围",
+                        "未覆盖范围",
+                    ):
+                        matches = re.findall(
+                            rf"^{re.escape(field)}[ \t]*[：:]"
+                            r"[ \t]*(\S.*)$",
+                            implementation_text,
+                            re.MULTILINE,
+                        )
+                        if len(matches) != 1:
+                            errors.append(
+                                "实现记录必须且只能声明一个非空"
+                                f"“{field}”：{implementation_record}"
+                            )
+                    if re.search(
+                        r"^##\s+(测试|验证|验收|运行证据)",
+                        implementation_text,
+                        re.MULTILINE,
+                    ):
+                        errors.append(
+                            "实施任务实现记录不得包含测试或验证章节："
+                            f"{implementation_record}"
+                        )
+
+                integration_text = integration_record.read_text(
+                    encoding="utf-8"
+                )
+                for field in INTEGRATION_FIELDS:
                     matches = re.findall(
-                        rf"^{re.escape(field)}[ \t]*[：:][ \t]*(\S.*)$",
+                        rf"^{re.escape(field)}[ \t]*[：:]"
+                        r"[ \t]*(\S.*)$",
+                        integration_text,
+                        re.MULTILINE,
+                    )
+                    if len(matches) != 1:
+                        errors.append(
+                            f"集成记录缺少、重复或留空字段“{field}”："
+                            f"{integration_record}"
+                        )
+                if re.findall(
+                    r"^测试状态[ \t]*[：:][ \t]*(\S.*)$",
+                    integration_text,
+                    re.MULTILINE,
+                ) != ["完成"]:
+                    errors.append(
+                        f"进入正式审核前统一测试状态必须为“完成”："
+                        f"{integration_record}"
+                    )
+                if re.findall(
+                    r"^工程改进状态[ \t]*[：:][ \t]*(\S.*)$",
+                    integration_text,
+                    re.MULTILINE,
+                ) != ["完成"]:
+                    errors.append(
+                        f"进入正式审核前工程改进状态必须为“完成”："
+                        f"{integration_record}"
+                    )
+                production_snapshots = (
+                    UNIFIED_PRODUCTION_SNAPSHOT_RE.findall(integration_text)
+                )
+                final_snapshots = FINAL_REVIEW_SNAPSHOT_RE.findall(
+                    integration_text
+                )
+                production_snapshot = (
+                    production_snapshots[0]
+                    if len(production_snapshots) == 1
+                    else None
+                )
+                final_snapshot = (
+                    final_snapshots[0]
+                    if len(final_snapshots) == 1
+                    else None
+                )
+
+                for feedback_file in test_feedback_files:
+                    feedback_text = feedback_file.read_text(encoding="utf-8")
+                    for field in TEST_FEEDBACK_FIELDS:
+                        matches = re.findall(
+                            rf"^{re.escape(field)}[ \t]*[：:]"
+                            r"[ \t]*(\S.*)$",
+                            feedback_text,
+                            re.MULTILINE,
+                        )
+                        if len(matches) != 1:
+                            errors.append(
+                                "测试反馈缺少、重复或留空字段"
+                                f"“{field}”：{feedback_file}"
+                            )
+                    feedback_inputs = re.findall(
+                        r"^输入生产代码快照[ \t]*[：:][ \t]*(\S.*)$",
                         feedback_text,
                         re.MULTILINE,
                     )
+                    if (
+                        production_snapshot is not None
+                        and feedback_inputs != [production_snapshot]
+                    ):
+                        errors.append(
+                            "测试反馈输入必须与集成记录统一生产代码快照"
+                            f"一致：{feedback_file}"
+                        )
+                    if len(re.findall(
+                        r"^测试结果[ \t]*[：:][ \t]*"
+                        r"(通过|发现问题|无法执行)[ \t]*$",
+                        feedback_text,
+                        re.MULTILINE,
+                    )) != 1:
+                        errors.append(
+                            f"测试反馈必须声明有效测试结果：{feedback_file}"
+                        )
+                    if len(re.findall(
+                        r"^问题责任[ \t]*[：:][ \t]*"
+                        r"(无|生产代码|测试代码|工程规范|上游设计|平台环境)"
+                        r"[ \t]*$",
+                        feedback_text,
+                        re.MULTILINE,
+                    )) != 1:
+                        errors.append(
+                            f"测试反馈必须声明有效问题责任：{feedback_file}"
+                        )
+
+                conclusion_text = test_conclusion.read_text(encoding="utf-8")
+                for field in TEST_CONCLUSION_FIELDS:
+                    matches = re.findall(
+                        rf"^{re.escape(field)}[ \t]*[：:]"
+                        r"[ \t]*(\S.*)$",
+                        conclusion_text,
+                        re.MULTILINE,
+                    )
                     if len(matches) != 1:
                         errors.append(
-                            "设计反馈记录缺少、重复或留空字段"
-                            f"“{field}”：{feedback_file}"
+                            f"测试结论缺少、重复或留空字段“{field}”："
+                            f"{test_conclusion}"
                         )
-                statuses = DESIGN_FEEDBACK_STATUS_RE.findall(
-                    feedback_text
+                conclusion_production = re.findall(
+                    r"^生产代码快照[ \t]*[：:][ \t]*(\S.*)$",
+                    conclusion_text,
+                    re.MULTILINE,
                 )
-                if len(statuses) != 1:
-                    errors.append(
-                        "设计反馈记录必须且只能声明一个有效反馈状态："
-                        f"{feedback_file}"
-                    )
-                elif statuses[0] not in ("不采纳", "已重新确认"):
-                    errors.append(
-                        "进入正式审核前设计反馈必须已经不采纳或完成"
-                        f"重新确认：{feedback_file}"
-                    )
-                if len(DESIGN_FEEDBACK_STAGE_RE.findall(feedback_text)) != 1:
-                    errors.append(
-                        "设计反馈记录必须且只能声明一个有效发现阶段："
-                        f"{feedback_file}"
-                    )
                 if (
-                    len(
-                        DESIGN_FEEDBACK_CODE_ACTION_RE.findall(
-                            feedback_text
-                        )
-                    )
-                    != 1
+                    production_snapshot is not None
+                    and conclusion_production != [production_snapshot]
                 ):
                     errors.append(
-                        "设计反馈记录必须且只能声明一个有效当前代码处理："
-                        f"{feedback_file}"
+                        f"测试结论生产代码快照必须与集成记录一致："
+                        f"{test_conclusion}"
                     )
-
-            improvement_files = sorted(improvement_root.glob("*.md"))
-            if not improvement_files:
-                errors.append(
-                    "进入正式审核前至少需要一份工程改进记录："
-                    f"{improvement_root}"
-                )
-            has_abstraction_analysis = False
-            improvement_input_snapshots = []
-            improvement_output_snapshots = []
-            for improvement_file in improvement_files:
-                if improvement_file.resolve() not in implementation_targets:
+                if re.findall(
+                    r"^当前结论[ \t]*[：:][ \t]*(\S.*)$",
+                    conclusion_text,
+                    re.MULTILINE,
+                ) != ["可进入工程改进"]:
                     errors.append(
-                        "实现记录未直接链接工程改进记录："
-                        f"{improvement_file}"
+                        f"进入工程改进要求测试结论为“可进入工程改进”："
+                        f"{test_conclusion}"
                     )
-                improvement_text = improvement_file.read_text(
-                    encoding="utf-8"
+                test_snapshots = TEST_CODE_SNAPSHOT_RE.findall(
+                    conclusion_text
                 )
-                for field in ENGINEERING_IMPROVEMENT_FIELDS:
-                    matches = re.findall(
-                        rf"^{re.escape(field)}[ \t]*[：:][ \t]*(\S.*)$",
+                test_snapshot = (
+                    test_snapshots[0] if len(test_snapshots) == 1 else None
+                )
+                conclusion_targets = {
+                    local_link_path(test_conclusion, raw_target)
+                    for raw_target in LINK_RE.findall(conclusion_text)
+                }
+                for feedback_file in test_feedback_files:
+                    if feedback_file.resolve() not in conclusion_targets:
+                        errors.append(
+                            f"测试结论未直接链接测试反馈：{feedback_file}"
+                        )
+
+                has_abstraction_analysis = False
+                improvement_input_snapshots: list[str] = []
+                improvement_output_snapshots: list[str] = []
+                for improvement_file in improvement_files:
+                    improvement_text = improvement_file.read_text(
+                        encoding="utf-8"
+                    )
+                    for field in ENGINEERING_IMPROVEMENT_FIELDS:
+                        matches = re.findall(
+                            rf"^{re.escape(field)}[ \t]*[：:]"
+                            r"[ \t]*(\S.*)$",
+                            improvement_text,
+                            re.MULTILINE,
+                        )
+                        if len(matches) != 1:
+                            errors.append(
+                                "工程改进记录缺少、重复或留空字段"
+                                f"“{field}”：{improvement_file}"
+                            )
+                    if len(re.findall(
+                        r"^工作方式[ \t]*[：:][ \t]*"
+                        r"(只读分析|代码改进)[ \t]*$",
+                        improvement_text,
+                        re.MULTILINE,
+                    )) != 1:
+                        errors.append(
+                            f"工程改进记录必须声明有效工作方式："
+                            f"{improvement_file}"
+                        )
+                    if re.search(
+                        r"^分析角度[ \t]*[：:][ \t]*.*"
+                        r"(重复|抽象).*$",
+                        improvement_text,
+                        re.MULTILINE,
+                    ):
+                        has_abstraction_analysis = True
+                    improvement_input_snapshots.extend(re.findall(
+                        r"^输入代码快照[ \t]*[：:][ \t]*(\S.*)$",
+                        improvement_text,
+                        re.MULTILINE,
+                    ))
+                    input_test_snapshots = re.findall(
+                        r"^输入测试代码快照[ \t]*[：:][ \t]*(\S.*)$",
                         improvement_text,
                         re.MULTILINE,
                     )
-                    if len(matches) != 1:
+                    if (
+                        test_snapshot is not None
+                        and input_test_snapshots != [test_snapshot]
+                    ):
                         errors.append(
-                            "工程改进记录缺少、重复或留空字段"
-                            f"“{field}”：{improvement_file}"
+                            f"工程改进输入测试快照必须与测试结论一致："
+                            f"{improvement_file}"
                         )
-                angles = re.findall(
-                    r"^分析角度[ \t]*[：:][ \t]*(\S.*)$",
-                    improvement_text,
-                    re.MULTILINE,
-                )
-                work_modes = re.findall(
-                    r"^工作方式[ \t]*[：:][ \t]*(\S.*)$",
-                    improvement_text,
-                    re.MULTILINE,
-                )
-                if len(work_modes) == 1 and work_modes[0] not in (
-                    "只读分析",
-                    "代码改进",
+                    improvement_output_snapshots.extend(
+                        IMPROVEMENT_OUTPUT_SNAPSHOT_RE.findall(
+                            improvement_text
+                        )
+                    )
+                if not has_abstraction_analysis:
+                    errors.append(
+                        "进入正式审核前缺少独立的重复与抽象工程改进"
+                        f"记录：{improvement_root}"
+                    )
+                if (
+                    production_snapshot is not None
+                    and production_snapshot not in improvement_input_snapshots
                 ):
                     errors.append(
-                        "工程改进记录的工作方式必须为“只读分析”或"
-                        f"“代码改进”：{improvement_file}"
+                        f"至少一份工程改进记录必须读取统一生产代码快照："
+                        f"{integration_record}"
                     )
-                input_snapshots = IMPROVEMENT_INPUT_SNAPSHOT_RE.findall(
-                    improvement_text
-                )
-                output_snapshots = IMPROVEMENT_OUTPUT_SNAPSHOT_RE.findall(
-                    improvement_text
-                )
-                if len(input_snapshots) == 1:
-                    improvement_input_snapshots.extend(input_snapshots)
-                if len(output_snapshots) == 1:
-                    improvement_output_snapshots.extend(output_snapshots)
-                if any(
-                    "重复" in angle or "抽象" in angle
-                    for angle in angles
+                if (
+                    final_snapshot is not None
+                    and final_snapshot not in improvement_output_snapshots
                 ):
-                    has_abstraction_analysis = True
-            if improvement_files and not has_abstraction_analysis:
-                errors.append(
-                    "进入正式审核前缺少独立的重复与抽象工程改进记录："
-                    f"{improvement_root}"
-                )
-            if (
-                first_implementation_snapshot is not None
-                and first_implementation_snapshot
-                not in improvement_input_snapshots
-            ):
-                errors.append(
-                    "至少一份工程改进记录必须读取首次实现快照："
-                    f"{implementation_record}"
-                )
-            if (
-                implementation_snapshot is not None
-                and implementation_snapshot
-                not in improvement_output_snapshots
-            ):
-                errors.append(
-                    "最终代码快照必须由工程改进记录输出："
-                    f"{implementation_record}"
-                )
+                    errors.append(
+                        f"最终待审核快照必须由工程改进记录输出："
+                        f"{integration_record}"
+                    )
 
-            for review_file in review_files:
-                review_text = review_file.read_text(encoding="utf-8")
-                for field in (
-                    "审核对象",
-                    "依据的开发基线",
-                    "依据的工程编码规范",
-                    "审核范围",
-                    "未覆盖范围",
-                ):
-                    matches = re.findall(
-                        rf"^{field}[ \t]*[：:][ \t]*(\S.*)$",
+                design_feedback_files = sorted(
+                    design_feedback_root.glob("*.md")
+                )
+                for feedback_file in design_feedback_files:
+                    feedback_text = feedback_file.read_text(encoding="utf-8")
+                    for field in DESIGN_FEEDBACK_FIELDS:
+                        matches = re.findall(
+                            rf"^{re.escape(field)}[ \t]*[：:]"
+                            r"[ \t]*(\S.*)$",
+                            feedback_text,
+                            re.MULTILINE,
+                        )
+                        if len(matches) != 1:
+                            errors.append(
+                                "设计反馈记录缺少、重复或留空字段"
+                                f"“{field}”：{feedback_file}"
+                            )
+                    statuses = DESIGN_FEEDBACK_STATUS_RE.findall(
+                        feedback_text
+                    )
+                    if len(statuses) != 1 or statuses[0] not in (
+                        "不采纳",
+                        "已重新确认",
+                    ):
+                        errors.append(
+                            "进入正式审核前设计反馈必须已经不采纳或完成"
+                            f"重新确认：{feedback_file}"
+                        )
+
+                for review_file in review_files:
+                    review_text = review_file.read_text(encoding="utf-8")
+                    for field in (
+                        "审核生产代码快照",
+                        "审核测试代码快照",
+                        "依据的开发基线",
+                        "依据的工程编码规范",
+                        "审核范围",
+                        "未覆盖范围",
+                    ):
+                        matches = re.findall(
+                            rf"^{re.escape(field)}[ \t]*[：:]"
+                            r"[ \t]*(\S.*)$",
+                            review_text,
+                            re.MULTILINE,
+                        )
+                        if len(matches) != 1:
+                            errors.append(
+                                "审核记录必须且只能声明一个非空"
+                                f"“{field}”：{review_file}"
+                            )
+                    if (
+                        final_snapshot is not None
+                        and REVIEW_OBJECT_RE.findall(review_text)
+                        != [final_snapshot]
+                    ):
+                        errors.append(
+                            f"审核生产代码快照必须与最终待审核快照一致："
+                            f"{review_file}"
+                        )
+                    review_test_snapshots = re.findall(
+                        r"^审核测试代码快照[ \t]*[：:][ \t]*(\S.*)$",
                         review_text,
                         re.MULTILINE,
                     )
-                    if len(matches) != 1:
+                    if (
+                        test_snapshot is not None
+                        and review_test_snapshots != [test_snapshot]
+                    ):
                         errors.append(
-                            f"审核记录必须且只能声明一个非空“{field}”："
+                            f"审核测试代码快照必须与测试结论一致："
                             f"{review_file}"
                         )
-                review_objects = REVIEW_OBJECT_RE.findall(review_text)
+                    if len(REVIEW_RESULT_RE.findall(review_text)) != 1:
+                        errors.append(
+                            "审核记录必须且只能声明一个审核结论"
+                            f"（通过/有条件通过/不通过）：{review_file}"
+                        )
+
+                summary_text = review_summary.read_text(encoding="utf-8")
+                summary_standards = re.findall(
+                    r"^工程编码规范[ \t]*[：:][ \t]*(\S.*)$",
+                    summary_text,
+                    re.MULTILINE,
+                )
+                if len(summary_standards) != 1:
+                    errors.append(
+                        f"审核结论必须声明一个非空工程编码规范："
+                        f"{review_summary}"
+                    )
+                summary_production = re.findall(
+                    r"^生产代码快照[ \t]*[：:][ \t]*(\S.*)$",
+                    summary_text,
+                    re.MULTILINE,
+                )
+                summary_tests = TEST_CODE_SNAPSHOT_RE.findall(summary_text)
                 if (
-                    implementation_snapshot is not None
-                    and review_objects != [implementation_snapshot]
+                    final_snapshot is not None
+                    and summary_production != [final_snapshot]
                 ):
                     errors.append(
-                        "审核对象必须与实现记录代码快照一致："
-                        f"{review_file}"
+                        f"审核结论生产代码快照必须与集成记录一致："
+                        f"{review_summary}"
                     )
-                if len(REVIEW_RESULT_RE.findall(review_text)) != 1:
+                if (
+                    test_snapshot is not None
+                    and summary_tests != [test_snapshot]
+                ):
                     errors.append(
-                        "审核记录必须且只能声明一个审核结论"
-                        f"（通过/有条件通过/不通过）：{review_file}"
+                        f"审核结论测试代码快照必须与测试结论一致："
+                        f"{review_summary}"
                     )
-
-            summary_text = review_summary.read_text(encoding="utf-8")
-            summary_engineering_standards = re.findall(
-                r"^工程编码规范[ \t]*[：:][ \t]*(\S.*)$",
-                summary_text,
-                re.MULTILINE,
-            )
-            if len(summary_engineering_standards) != 1:
-                errors.append(
-                    "审核结论必须且只能声明一个非空工程编码规范："
-                    f"{review_summary}"
-                )
-            summary_snapshots = CODE_SNAPSHOT_RE.findall(summary_text)
-            if (
-                implementation_snapshot is not None
-                and summary_snapshots != [implementation_snapshot]
-            ):
-                errors.append(
-                    f"审核结论代码快照必须与实现记录一致：{review_summary}"
-                )
-            if len(SUMMARY_RESULT_RE.findall(summary_text)) != 1:
-                errors.append(
-                    "审核结论必须且只能声明一个当前结论"
-                    f"（通过/需修改/需重写/等待上游修订）：{review_summary}"
-                )
-
-            summary_targets = {
-                local_link_path(review_summary, raw_target)
-                for raw_target in LINK_RE.findall(summary_text)
-            }
-            for review_file in review_files:
-                if review_file.resolve() not in summary_targets:
+                if len(SUMMARY_RESULT_RE.findall(summary_text)) != 1:
                     errors.append(
-                        f"审核结论未直接链接核心审核记录：{review_file}"
+                        "审核结论必须声明一个当前结论"
+                        f"（通过/需修改/需重写/等待上游修订）："
+                        f"{review_summary}"
                     )
-
-            if git_probe.returncode == 0:
-                for path in [
-                    *required_review_files,
-                    *design_feedback_files,
-                    *improvement_files,
-                ]:
-                    relative_file = path.relative_to(repo_root)
-                    tracked = subprocess.run(
-                        [
-                            "git",
-                            "-C",
-                            str(repo_root),
-                            "ls-files",
-                            "--error-unmatch",
-                            str(relative_file),
-                        ],
-                        capture_output=True,
-                        text=True,
-                        check=False,
-                    )
-                    if tracked.returncode != 0:
+                summary_targets = {
+                    local_link_path(review_summary, raw_target)
+                    for raw_target in LINK_RE.findall(summary_text)
+                }
+                for review_file in review_files:
+                    if review_file.resolve() not in summary_targets:
                         errors.append(
-                            f"实现或审核记录尚未纳入版本管理：{path}"
+                            f"审核结论未直接链接核心审核记录：{review_file}"
                         )
+
+                if git_probe.returncode == 0:
+                    tracked_batch_files = [
+                        task_graph,
+                        *implementation_records,
+                        integration_record,
+                        *test_feedback_files,
+                        test_conclusion,
+                        *design_feedback_files,
+                        *improvement_files,
+                        *review_files,
+                        review_summary,
+                    ]
+                    for path in tracked_batch_files:
+                        relative_file = path.relative_to(repo_root)
+                        tracked = subprocess.run(
+                            [
+                                "git",
+                                "-C",
+                                str(repo_root),
+                                "ls-files",
+                                "--error-unmatch",
+                                str(relative_file),
+                            ],
+                            capture_output=True,
+                            text=True,
+                            check=False,
+                        )
+                        if tracked.returncode != 0:
+                            errors.append(
+                                f"开发批次记录尚未纳入版本管理：{path}"
+                            )
 
     return errors, warnings
 
@@ -2360,70 +2884,182 @@ def self_test() -> int:
         controller_state = task_root / "主控状态.md"
         controller_state.write_text(controller_text, encoding="utf-8")
         development_root = system_root / "开发记录"
-        slice_root = development_root / "示例切片"
-        improvement_root = slice_root / "工程改进"
-        review_root = slice_root / "审核"
-        improvement_root.mkdir(parents=True)
-        review_root.mkdir(parents=True)
+        batch_root = development_root / "示例批次"
+        implementation_root = batch_root / "实施任务" / "TASK-base"
+        test_feedback_root = batch_root / "测试反馈"
+        improvement_root = batch_root / "工程改进"
+        review_root = batch_root / "审核"
+        implementation_root.mkdir(parents=True)
+        test_feedback_root.mkdir()
+        improvement_root.mkdir()
+        review_root.mkdir()
         (development_root / "index.md").write_text(
-            "[实现记录](示例切片/实现记录.md)\n"
-            "[审核结论](示例切片/审核结论.md)\n",
+            "[开发任务图](示例批次/开发任务图.md)\n"
+            "[集成记录](示例批次/集成记录.md)\n"
+            "[测试结论](示例批次/测试结论.md)\n"
+            "[审核结论](示例批次/审核结论.md)\n",
             encoding="utf-8",
         )
-        implementation_text = (
-            "# 实现记录\n\n"
+        task_graph_text = (
+            "# 开发任务图：示例批次\n\n"
+            "状态：已完成\n"
+            "任务图确认：已确认\n"
+            "任务图确认依据：示例任务中的用户确认\n"
+            "适用系统：示例系统\n"
+            "开发批次：示例批次\n"
             "开发基线：[当前基线](../../开发基线.md)\n"
             "工程编码规范：[当前规范](../../工程编码规范.md)\n"
-            "首次实现快照：initial123\n"
-            "代码快照：abc123\n"
-            "工程改进状态：完成\n"
-            "实现范围：示例切片\n"
+            "起始代码快照：base000\n"
+            "维护角色：开发规划 Agent\n\n"
+            "## 批次范围与完成边界\n\n"
+            "完成示例系统当前批次全部生产代码。\n\n"
+            "## 代码产物清单\n\n"
+            "| 产物 | 责任 | 来源 | 拥有任务 | 消费者 |\n"
+            "| --- | --- | --- | --- | --- |\n"
+            "| ART-base | 工程基础 | 架构设计 | TASK-base | 系统装配 |\n\n"
+            "## 任务关系图\n\n"
+            "TASK-base\n\n"
+            "## 并行批次\n\n"
+            "第一批：TASK-base；共同起始快照 base000。\n\n"
+            "## 共享写入与集成规则\n\n"
+            "TASK-base 独占示例代码目录。\n\n"
+            "## 开发任务\n\n"
+            "### TASK-base：建立示例生产代码\n\n"
+            "任务类型：工程基础\n"
+            "代码责任：形成示例生产代码\n"
+            "来源：架构设计与工程编码规范\n"
+            "要实现的代码：示例模块与启动装配\n"
+            "实现边界：仅示例模块\n"
+            "主要写入范围：src/example\n"
+            "共享写入位置：无\n"
+            "前置输入：base000\n"
+            "提供给后续任务：ART-base\n"
+            "前置任务：无\n"
+            "依赖类型与原因：无\n"
+            "可以并行的任务：无\n"
+            "禁止并行的任务及原因：无\n"
+            "worktree 起始快照：base000\n"
+            "编码完成边界：生产代码提交并登记产物\n"
+            "发现问题时返回：开发规划 Agent\n\n"
+            "## 集成与统一代码快照\n\n"
+            "TASK-base 合并后形成统一生产代码快照。\n\n"
+            "## 尚未确定的问题\n\n"
+            "无\n"
+        )
+        task_graph = batch_root / "开发任务图.md"
+        task_graph.write_text(task_graph_text, encoding="utf-8")
+        implementation_text = (
+            "# 实现记录：TASK-base\n\n"
+            "开发任务图：[当前任务图](../../开发任务图.md)\n"
+            "实施任务：TASK-base\n"
+            "开发基线：[当前基线](../../../../开发基线.md)\n"
+            "工程编码规范：[当前规范](../../../../工程编码规范.md)\n"
+            "worktree 起始快照：base000\n"
+            "输出代码快照：task111\n"
+            "实现范围：示例生产代码\n"
             "未覆盖范围：无\n\n"
-            "## 业务结果\n\n"
-            "## 设计与代码对应\n\n"
-            "## 关键实现\n\n"
-            "## 工程改进\n\n"
-            "[重复与抽象](工程改进/01-重复与抽象.md)\n\n"
-            "## 验证证据\n\n"
-            "## 与设计的偏离\n\n"
-            "## 剩余风险\n"
+            "## 任务代码责任\n\n"
+            "形成示例工程基础。\n\n"
+            "## 来源与代码对应\n\n"
+            "架构与工程规范对应到 src/example。\n\n"
+            "## 实际产生的代码\n\n"
+            "src/example。\n\n"
+            "## 提供给后续任务的产物\n\n"
+            "ART-base。\n\n"
+            "## 与任务图或设计的偏离\n\n"
+            "无。\n\n"
+            "## 剩余实现事项\n\n"
+            "无。\n"
         )
-        (slice_root / "实现记录.md").write_text(
-            implementation_text, encoding="utf-8"
+        implementation_record = implementation_root / "实现记录.md"
+        implementation_record.write_text(implementation_text, encoding="utf-8")
+        integration_text = (
+            "# 集成记录\n\n"
+            "开发任务图：[当前任务图](开发任务图.md)\n"
+            "起始代码快照：base000\n"
+            "已合并任务及 Commit：TASK-base task111\n"
+            "合并顺序：TASK-base\n"
+            "共享写入处理：无\n"
+            "未合并或未实现事项：无\n"
+            "统一生产代码快照：prod123\n"
+            "测试状态：完成\n"
+            "工程改进状态：完成\n"
+            "最终待审核快照：final456\n"
         )
+        integration_record = batch_root / "集成记录.md"
+        integration_record.write_text(integration_text, encoding="utf-8")
+        test_feedback_text = (
+            "# 测试反馈：系统集成\n\n"
+            "测试角度：系统集成\n"
+            "输入生产代码快照：prod123\n"
+            "依据的开发基线：当前基线\n"
+            "依据的工程编码规范：v1\n"
+            "测试代码范围：tests/integration\n"
+            "禁止修改的生产代码范围：src\n"
+            "覆盖对象：示例启动\n"
+            "未覆盖对象：无\n"
+            "新增或修改的测试：示例启动测试\n"
+            "测试执行入口：test integration\n"
+            "测试结果：通过\n"
+            "失败证据：无\n"
+            "要求达到的修正结果：无\n"
+            "问题责任：无\n"
+            "需要返回的任务或事实拥有者：无\n"
+            "测试代码快照：test789\n"
+            "剩余风险：无\n"
+        )
+        test_feedback_file = test_feedback_root / "系统集成.md"
+        test_feedback_file.write_text(test_feedback_text, encoding="utf-8")
+        test_conclusion_text = (
+            "# 测试结论\n\n"
+            "生产代码快照：prod123\n"
+            "测试代码快照：test789\n"
+            "各测试反馈：[系统集成](测试反馈/系统集成.md)\n"
+            "失败与责任：无\n"
+            "测试分歧：无\n"
+            "修正任务：无\n"
+            "复测范围：无\n"
+            "未覆盖风险：无\n"
+            "当前结论：可进入工程改进\n"
+        )
+        test_conclusion = batch_root / "测试结论.md"
+        test_conclusion.write_text(test_conclusion_text, encoding="utf-8")
         improvement_text = (
             "# 工程改进：重复与抽象\n\n"
             "分析角度：重复与抽象\n"
             "工作方式：代码改进\n"
-            "输入代码快照：initial123\n"
+            "输入代码快照：prod123\n"
+            "输入测试代码快照：test789\n"
             "依据的开发基线：当前基线\n"
             "依据的工程编码规范：v1\n"
-            "分析范围：示例切片\n"
+            "依据的测试结论：可进入工程改进\n"
+            "分析范围：示例批次\n"
             "发现的问题：无\n"
             "决定修改或保留的理由：当前实现清楚\n"
             "实际修改：无\n"
             "更新的工程编码规范：无\n"
-            "验证结果：通过现有测试\n"
-            "输出代码快照：abc123\n"
+            "受影响测试结果：通过\n"
+            "输出代码快照：final456\n"
             "剩余风险：无\n"
         )
-        (improvement_root / "01-重复与抽象.md").write_text(
-            improvement_text,
-            encoding="utf-8",
-        )
+        improvement_record = improvement_root / "01-重复与抽象.md"
+        improvement_record.write_text(improvement_text, encoding="utf-8")
         review_text = (
-            "审核对象：abc123\n"
+            "审核生产代码快照：final456\n"
+            "审核测试代码快照：test789\n"
             "依据的开发基线：当前基线\n"
             "依据的工程编码规范：v1\n"
-            "审核范围：示例切片\n"
+            "审核范围：示例批次\n"
             "未覆盖范围：无\n"
             "审核结论：通过\n"
         )
         for name in CORE_REVIEW_FILES:
             (review_root / name).write_text(review_text, encoding="utf-8")
-        (slice_root / "审核结论.md").write_text(
+        review_summary = batch_root / "审核结论.md"
+        review_summary.write_text(
             "# 审核结论\n\n"
-            "代码快照：abc123\n"
+            "生产代码快照：final456\n"
+            "测试代码快照：test789\n"
             "工程编码规范：v1\n"
             "当前结论：通过\n\n"
             "- [实现符合性](审核/实现符合性.md)\n"
@@ -2749,16 +3385,99 @@ def self_test() -> int:
 
         errors, _ = validate(
             repo_root,
-            coding_system="示例系统",
-            review_slice="示例切片",
+            implementation_system="示例系统",
+            development_batch="示例批次",
         )
         if errors:
-            print("自检失败：有效实现与审核样例未通过。")
+            print("自检失败：有效开发任务图样例未通过。")
             for error in errors:
                 print(f"ERROR: {error}")
             return 1
 
-        design_feedback_root = slice_root / "设计反馈"
+        errors, _ = validate(
+            repo_root,
+            coding_system="示例系统",
+            review_batch="示例批次",
+        )
+        if errors:
+            print("自检失败：有效开发批次与审核样例未通过。")
+            for error in errors:
+                print(f"ERROR: {error}")
+            return 1
+
+        task_graph.write_text(
+            task_graph_text.replace(
+                "编码完成边界：生产代码提交并登记产物",
+                "编码完成边界：生产代码提交并通过测试验证",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(
+            repo_root,
+            implementation_system="示例系统",
+            development_batch="示例批次",
+        )
+        if not any(
+            "编码完成边界不得包含测试" in error for error in errors
+        ):
+            print("自检失败：任务图未拒绝把验证放入编码任务。")
+            return 1
+        task_graph.write_text(task_graph_text, encoding="utf-8")
+
+        task_graph.write_text(
+            task_graph_text.replace(
+                "任务类型：工程基础",
+                "任务类型：工程基础、模块基础",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(
+            repo_root,
+            implementation_system="示例系统",
+            development_batch="示例批次",
+        )
+        if not any(
+            "任务类型不在固定分类" in error for error in errors
+        ):
+            print("自检失败：任务图未拒绝一个任务组合多个任务类型。")
+            return 1
+        task_graph.write_text(task_graph_text, encoding="utf-8")
+
+        task_graph.write_text(
+            task_graph_text.replace(
+                "前置任务：无",
+                "前置任务：TASK-base",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(
+            repo_root,
+            implementation_system="示例系统",
+            development_batch="示例批次",
+        )
+        if not any(
+            "不能依赖自身" in error or "循环依赖" in error
+            for error in errors
+        ):
+            print("自检失败：任务图未拒绝循环依赖。")
+            return 1
+        task_graph.write_text(task_graph_text, encoding="utf-8")
+
+        test_feedback_file.unlink()
+        errors, _ = validate(
+            repo_root,
+            coding_system="示例系统",
+            review_batch="示例批次",
+        )
+        if not any("至少需要一份统一测试反馈" in error for error in errors):
+            print("自检失败：未识别缺少统一测试反馈。")
+            return 1
+        test_feedback_file.write_text(
+            test_feedback_text,
+            encoding="utf-8",
+        )
+
+        design_feedback_root = batch_root / "设计反馈"
         design_feedback_root.mkdir()
         feedback_file = design_feedback_root / "01-数据库设计.md"
         feedback_text = (
@@ -2767,9 +3486,9 @@ def self_test() -> int:
             "发现阶段：SQL 与迁移\n"
             "问题所在：示例约束无法落地\n"
             "对应的权威设计：数据库设计.md\n"
-            "实现、SQL 或运行证据：数据库拒绝当前约束\n"
+            "代码、SQL、测试或运行证据：数据库拒绝当前约束\n"
             "为什么当前设计不成立或不合理：无法保持示例不变量\n"
-            "影响的业务结果与代码范围：示例创建\n"
+            "影响的任务与代码范围：TASK-base\n"
             "建议修改：调整示例约束\n"
             "替代方案与权衡：保留现状会产生错误数据\n"
             "建议修改的权威文档和章节：数据库设计 / 必须保持的约束\n"
@@ -2778,22 +3497,13 @@ def self_test() -> int:
             "事实拥有者：系统与开发设计 Agent\n"
             "上游处理结果：待判断\n"
             "重新确认依据：无\n"
-            "受影响的下游文档、代码和测试：开发基线与示例测试\n"
+            "受影响的任务、代码和测试：TASK-base 与系统集成测试\n"
         )
         feedback_file.write_text(feedback_text, encoding="utf-8")
-        implementation_record = slice_root / "实现记录.md"
-        implementation_record.write_text(
-            implementation_text.replace(
-                "## 与设计的偏离\n\n",
-                "## 与设计的偏离\n\n"
-                "[数据库设计反馈](设计反馈/01-数据库设计.md)\n\n",
-            ),
-            encoding="utf-8",
-        )
         errors, _ = validate(
             repo_root,
             coding_system="示例系统",
-            review_slice="示例切片",
+            review_batch="示例批次",
         )
         if not any(
             "设计反馈必须已经不采纳或完成重新确认" in error
@@ -2803,10 +3513,6 @@ def self_test() -> int:
             return 1
         feedback_file.unlink()
         design_feedback_root.rmdir()
-        implementation_record.write_text(
-            implementation_text,
-            encoding="utf-8",
-        )
 
         engineering_standard.unlink()
         errors, _ = validate(repo_root, coding_system="示例系统")
@@ -2822,32 +3528,28 @@ def self_test() -> int:
             encoding="utf-8",
         )
 
-        implementation_record.write_text(
-            implementation_text.replace(
+        integration_record.write_text(
+            integration_text.replace(
                 "工程改进状态：完成",
-                "工程改进状态：分析中",
+                "工程改进状态：进行中",
             ),
             encoding="utf-8",
         )
         errors, _ = validate(
             repo_root,
             coding_system="示例系统",
-            review_slice="示例切片",
+            review_batch="示例批次",
         )
         if not any("工程改进状态" in error for error in errors):
             print("自检失败：未拒绝工程改进尚未完成的正式审核。")
             return 1
-        implementation_record.write_text(
-            implementation_text,
-            encoding="utf-8",
-        )
+        integration_record.write_text(integration_text, encoding="utf-8")
 
-        improvement_record = improvement_root / "01-重复与抽象.md"
         improvement_record.unlink()
         errors, _ = validate(
             repo_root,
             coding_system="示例系统",
-            review_slice="示例切片",
+            review_batch="示例批次",
         )
         if not any("至少需要一份工程改进记录" in error for error in errors):
             print("自检失败：未识别缺少工程改进记录。")
@@ -2857,29 +3559,9 @@ def self_test() -> int:
             encoding="utf-8",
         )
 
-        implementation_record.write_text(
-            implementation_text.replace(
-                "[重复与抽象](工程改进/01-重复与抽象.md)\n\n",
-                "",
-            ),
-            encoding="utf-8",
-        )
-        errors, _ = validate(
-            repo_root,
-            coding_system="示例系统",
-            review_slice="示例切片",
-        )
-        if not any("未直接链接工程改进记录" in error for error in errors):
-            print("自检失败：未识别实现记录缺少工程改进入口。")
-            return 1
-        implementation_record.write_text(
-            implementation_text,
-            encoding="utf-8",
-        )
-
         improvement_record.write_text(
             improvement_text.replace(
-                "输出代码快照：abc123",
+                "输出代码快照：final456",
                 "输出代码快照：other456",
             ),
             encoding="utf-8",
@@ -2887,10 +3569,10 @@ def self_test() -> int:
         errors, _ = validate(
             repo_root,
             coding_system="示例系统",
-            review_slice="示例切片",
+            review_batch="示例批次",
         )
         if not any(
-            "最终代码快照必须由工程改进记录输出" in error
+            "最终待审核快照必须由工程改进记录输出" in error
             for error in errors
         ):
             print("自检失败：未识别工程改进输出与最终快照不一致。")
@@ -2905,10 +3587,10 @@ def self_test() -> int:
         errors, _ = validate(
             repo_root,
             coding_system="示例系统",
-            review_slice="示例切片",
+            review_batch="示例批次",
         )
         if not any(
-            "缺少实现或审核记录" in error
+            "缺少测试或审核记录" in error
             and "工程质量.md" in error
             for error in errors
         ):
@@ -3027,9 +3709,19 @@ def main() -> int:
         help="检查指定系统以表和字段意义为核心的数据库设计固定模板，并拒绝 DDL；候选交给用户确认前运行。",
     )
     parser.add_argument(
-        "--review-slice",
-        metavar="中文开发切片",
-        help="检查指定系统开发切片的实现记录、设计反馈、工程改进、两个核心审核和审核结论；必须同时指定 --coding-system。",
+        "--implementation-system",
+        metavar="中文系统名",
+        help="检查指定系统当前开发批次的开发任务图；同时要求 Coding 输入有效，并必须指定 --development-batch。",
+    )
+    parser.add_argument(
+        "--development-batch",
+        metavar="中文开发批次",
+        help="与 --implementation-system 一起指定需要检查任务图的开发批次。",
+    )
+    parser.add_argument(
+        "--review-batch",
+        metavar="中文开发批次",
+        help="检查指定开发批次的任务图、实施记录、统一测试、工程改进和审核；必须同时指定 --coding-system。",
     )
     parser.add_argument(
         "--recovery-task",
@@ -3048,7 +3740,9 @@ def main() -> int:
         architecture_system=args.architecture_system,
         orchestration_system=args.orchestration_system,
         database_system=args.database_system,
-        review_slice=args.review_slice,
+        implementation_system=args.implementation_system,
+        development_batch=args.development_batch,
+        review_batch=args.review_batch,
         recovery_task=args.recovery_task,
     )
 

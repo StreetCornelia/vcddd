@@ -1,4 +1,4 @@
 interface:
   display_name: "VCDDD"
-  short_description: "用可恢复文档推进业务、架构、Coding 与独立审核"
-  default_prompt: "使用 $vcddd 从当前事实恢复任务，先形成并确认业务、Domain、系统级架构、模块、逐 API 编排、可读数据设计和工程编码规范，再忠实 Coding；实现发现设计问题时带证据和建议返回上游，修订确认后继续工程改进与固定快照独立审核。"
+  short_description: "用任务图并行 Coding，统一测试后独立审核"
+  default_prompt: "使用 $vcddd 从当前事实恢复任务，先确认业务、Domain、架构、模块、逐 API 编排、可读数据设计和系统工程规范，再盘点全部业务与非业务代码产物，形成依赖明确的开发任务图并用隔离 worktree 并行实现；全部生产代码完成后统一由多个测试 Agent 编写测试和反馈，再工程改进与固定快照独立审核。"
