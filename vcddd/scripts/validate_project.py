@@ -19,10 +19,30 @@ BASELINE_STATUS_RE = re.compile(
 )
 BASELINE_HEADINGS = ["Domain", "业务线与 API", "数据库设计"]
 BUSINESS_DESIGN_HEADINGS = ["业务目标与范围", "系统设计", "业务线逻辑"]
-INTERNAL_ORCHESTRATION_HEADINGS = [
-    "业务线与 API 覆盖",
-    "API 内部编排",
-    "Domain 方法内部编排",
+ORCHESTRATION_API_HEADINGS = [
+    "业务结果",
+    "主流程",
+    "分支与失败",
+    "事务与外部影响",
+    "Domain 调用",
+    "业务证据与验证",
+]
+API_ID_RE = re.compile(
+    r"^API 标识[ \t]*[：:][ \t]*(API-[^\s：:]+)[ \t]*$",
+    re.MULTILINE,
+)
+ORCHESTRATION_API_TITLE_RE = re.compile(
+    r"^(API-[^\s：:]+)[ \t]*[：:][ \t]*(\S.*?)[ \t]+—[ \t]+(\S.*)$"
+)
+ORCHESTRATION_API_DESIGN_SOURCE_RE = re.compile(
+    r"^API 设计来源[ \t]*[：:][ \t]*(\S.*)$",
+    re.MULTILINE,
+)
+ORCHESTRATION_TABLE_HEADERS = [
+    "| 步骤 | 执行者 | 做什么 | 得到什么结果 | 下一步 |",
+    "| 分支 | 发生在步骤 | 条件 | 业务结果 | API 结果 | 后续 |",
+    "| 边界 | 覆盖步骤 | 提交或外部动作 | 成功证明 | 失败或结果未知处理 |",
+    "| 发生在步骤 | Domain 行为 | 输入事实 | 领域结果 | 权威规则位置 |",
 ]
 SYSTEM_FACT_FILES = [
     "系统拆分.md",
@@ -31,6 +51,20 @@ SYSTEM_FACT_FILES = [
     "核心接口内部编排.md",
     "数据库设计.md",
 ]
+ENGINEERING_CODING_STANDARD_FILE = "工程编码规范.md"
+ENGINEERING_STANDARD_HEADINGS = [
+    "使用与演化规则",
+    "当前规则索引",
+    "当前系统工程约束",
+    "当前编码规则",
+    "例外与存量处理",
+    "尚未形成规范的问题",
+    "重要演化",
+]
+ENGINEERING_STANDARD_STATUS_RE = re.compile(
+    r"^状态[ \t]*[：:][ \t]*(待建立|当前|待重新判断)[ \t]*$",
+    re.MULTILINE,
+)
 BUSINESS_SUBJECT_CONFIRMATION_RE = re.compile(
     r"^业务主体确认[ \t]*[：:][ \t]*(待确认|已确认)[ \t]*$",
     re.MULTILINE,
@@ -146,8 +180,29 @@ IMPLEMENTATION_HEADINGS = [
     "业务结果",
     "设计与代码对应",
     "关键实现",
+    "工程改进",
     "验证证据",
     "与设计的偏离",
+    "剩余风险",
+]
+IMPLEMENTATION_IMPROVEMENT_STATUS_RE = re.compile(
+    r"^工程改进状态[ \t]*[：:][ \t]*"
+    r"(未开始|分析中|修改中|完成)[ \t]*$",
+    re.MULTILINE,
+)
+ENGINEERING_IMPROVEMENT_FIELDS = [
+    "分析角度",
+    "工作方式",
+    "输入代码快照",
+    "依据的开发基线",
+    "依据的工程编码规范",
+    "分析范围",
+    "发现的问题",
+    "决定修改或保留的理由",
+    "实际修改",
+    "更新的工程编码规范",
+    "验证结果",
+    "输出代码快照",
     "剩余风险",
 ]
 CORE_REVIEW_FILES = [
@@ -164,6 +219,15 @@ SOURCES_RE = re.compile(
 )
 CODE_SNAPSHOT_RE = re.compile(
     r"^代码快照[ \t]*[：:][ \t]*(\S.*)$", re.MULTILINE
+)
+FIRST_IMPLEMENTATION_SNAPSHOT_RE = re.compile(
+    r"^首次实现快照[ \t]*[：:][ \t]*(\S.*)$", re.MULTILINE
+)
+IMPROVEMENT_INPUT_SNAPSHOT_RE = re.compile(
+    r"^输入代码快照[ \t]*[：:][ \t]*(\S.*)$", re.MULTILINE
+)
+IMPROVEMENT_OUTPUT_SNAPSHOT_RE = re.compile(
+    r"^输出代码快照[ \t]*[：:][ \t]*(\S.*)$", re.MULTILINE
 )
 REVIEW_OBJECT_RE = re.compile(
     r"^审核对象[ \t]*[：:][ \t]*(\S.*)$", re.MULTILINE
@@ -190,9 +254,227 @@ def local_link_path(source: Path, raw_target: str) -> Path | None:
     return (source.parent / target).resolve()
 
 
+def validate_internal_orchestration(
+    system_root: Path,
+    *,
+    require_confirmed: bool,
+) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    system_index = system_root / "index.md"
+    api_design = system_root / "API设计.md"
+    orchestration = system_root / "核心接口内部编排.md"
+
+    for path in (system_index, api_design, orchestration):
+        if not path.exists():
+            errors.append(f"核心接口内部编排检查缺少输入：{path}")
+    if errors:
+        return errors, warnings
+
+    index_targets = {
+        local_link_path(system_index, raw_target)
+        for raw_target in LINK_RE.findall(
+            system_index.read_text(encoding="utf-8")
+        )
+    }
+    for path in (api_design, orchestration):
+        if path.resolve() not in index_targets:
+            errors.append(f"系统入口未直接链接编排输入：{path}")
+
+    api_text = api_design.read_text(encoding="utf-8")
+    if API_DESIGN_CONFIRMATION_RE.findall(api_text) != ["已确认"]:
+        errors.append(
+            "形成核心接口内部编排前 API 设计必须且只能声明"
+            f"“API 设计确认：已确认”：{api_design}"
+        )
+    if len(API_DESIGN_EVIDENCE_RE.findall(api_text)) != 1:
+        errors.append(
+            "形成核心接口内部编排前 API 设计必须且只能声明一个"
+            f"非空确认依据：{api_design}"
+        )
+
+    api_ids = API_ID_RE.findall(api_text)
+    if not api_ids:
+        errors.append(f"API 设计至少需要一个稳定“API 标识”：{api_design}")
+    if len(api_ids) != len(set(api_ids)):
+        errors.append(f"API 设计中的 API 标识必须唯一：{api_design}")
+
+    text = orchestration.read_text(encoding="utf-8")
+    statuses = INTERNAL_ORCHESTRATION_CONFIRMATION_RE.findall(text)
+    if len(statuses) != 1:
+        errors.append(
+            "核心接口内部编排必须且只能声明一个确认状态"
+            f"（待确认/已确认）：{orchestration}"
+        )
+    elif require_confirmed and statuses != ["已确认"]:
+        errors.append(
+            "准备 Coding 的核心接口内部编排必须声明"
+            f"“核心接口内部编排确认：已确认”：{orchestration}"
+        )
+
+    evidence = INTERNAL_ORCHESTRATION_EVIDENCE_RE.findall(text)
+    if len(evidence) != 1:
+        errors.append(
+            "核心接口内部编排必须且只能声明一个非空确认依据："
+            f"{orchestration}"
+        )
+    elif statuses == ["已确认"] and evidence[0].strip() == "无":
+        errors.append(
+            f"已确认的核心接口内部编排不能使用“无”作为确认依据：{orchestration}"
+        )
+
+    if len(ORCHESTRATION_API_DESIGN_SOURCE_RE.findall(text)) != 1:
+        errors.append(
+            f"核心接口内部编排必须声明一个非空 API 设计来源：{orchestration}"
+        )
+    orchestration_targets = {
+        local_link_path(orchestration, raw_target)
+        for raw_target in LINK_RE.findall(text)
+    }
+    if api_design.resolve() not in orchestration_targets:
+        errors.append(
+            f"核心接口内部编排未直接链接 API 设计：{orchestration}"
+        )
+
+    h1_headings = re.findall(r"^#(?!#)[ \t]+(.+?)\s*$", text, re.MULTILINE)
+    if len(h1_headings) != 1:
+        errors.append(
+            f"核心接口内部编排必须且只能有一个文档一级标题：{orchestration}"
+        )
+
+    h2_matches = list(
+        re.finditer(r"^##[ \t]+(.+?)\s*$", text, re.MULTILINE)
+    )
+    if not h2_matches or h2_matches[0].group(1) != "接口目录":
+        errors.append(
+            f"核心接口内部编排的第一个二级标题必须为“接口目录”：{orchestration}"
+        )
+
+    orchestration_ids: list[str] = []
+    for h2_match in h2_matches[1:]:
+        title_match = ORCHESTRATION_API_TITLE_RE.fullmatch(
+            h2_match.group(1)
+        )
+        if title_match is None:
+            errors.append(
+                "接口目录之后每个二级标题必须只对应一个"
+                f"“API-标识：入口 — 名称”：{orchestration}"
+            )
+            continue
+        orchestration_ids.append(title_match.group(1))
+
+    if len(orchestration_ids) != len(set(orchestration_ids)):
+        errors.append(f"编排文档中的 API 标识必须唯一：{orchestration}")
+    if api_ids and orchestration_ids != api_ids:
+        errors.append(
+            "编排文档的逐 API 标识必须与 API 设计按顺序完整一致；"
+            f"API设计={api_ids}，编排={orchestration_ids}：{orchestration}"
+        )
+
+    if h2_matches:
+        directory_start = h2_matches[0].end()
+        directory_end = (
+            h2_matches[1].start() if len(h2_matches) > 1 else len(text)
+        )
+        directory_text = text[directory_start:directory_end]
+        required_directory_header = (
+            "| API 标识 | 方法与路径或入口 | 调用者要得到的业务结果 |"
+            " 编排章节 |"
+        )
+        if required_directory_header not in directory_text:
+            errors.append(
+                f"接口目录缺少固定四列表头：{orchestration}"
+            )
+        for api_id in api_ids:
+            if not re.search(
+                rf"^\|[ \t]*{re.escape(api_id)}[ \t]*\|",
+                directory_text,
+                re.MULTILINE,
+            ):
+                errors.append(
+                    f"接口目录缺少 API 标识“{api_id}”：{orchestration}"
+                )
+
+    for index, h2_match in enumerate(h2_matches[1:], start=1):
+        title_match = ORCHESTRATION_API_TITLE_RE.fullmatch(
+            h2_match.group(1)
+        )
+        if title_match is None:
+            continue
+        api_id = title_match.group(1)
+        section_end = (
+            h2_matches[index + 1].start()
+            if index + 1 < len(h2_matches)
+            else len(text)
+        )
+        section_text = text[h2_match.end():section_end]
+        h3_headings = re.findall(
+            r"^###[ \t]+(.+?)\s*$", section_text, re.MULTILINE
+        )
+        if h3_headings != ORCHESTRATION_API_HEADINGS:
+            errors.append(
+                f"{api_id} 必须且只能按顺序包含六个三级标题"
+                f"（{' / '.join(ORCHESTRATION_API_HEADINGS)}）："
+                f"{orchestration}"
+            )
+
+        for table_header in ORCHESTRATION_TABLE_HEADERS:
+            if table_header not in section_text:
+                errors.append(
+                    f"{api_id} 缺少固定表头“{table_header}”："
+                    f"{orchestration}"
+                )
+
+        h3_matches = list(
+            re.finditer(r"^###[ \t]+(.+?)\s*$", section_text, re.MULTILINE)
+        )
+        main_flow_text = ""
+        for h3_index, h3_match in enumerate(h3_matches):
+            if h3_match.group(1) != "主流程":
+                continue
+            main_flow_end = (
+                h3_matches[h3_index + 1].start()
+                if h3_index + 1 < len(h3_matches)
+                else len(section_text)
+            )
+            main_flow_text = section_text[h3_match.end():main_flow_end]
+            break
+        step_ids = re.findall(
+            r"^\|[ \t]*(S\d+)[ \t]*\|",
+            main_flow_text,
+            re.MULTILINE,
+        )
+        expected_steps = [f"S{number}" for number in range(1, len(step_ids) + 1)]
+        if not step_ids or step_ids != expected_steps:
+            errors.append(
+                f"{api_id} 主流程步骤必须从 S1 连续编号：{orchestration}"
+            )
+
+        mermaid_blocks = len(
+            re.findall(r"^```mermaid[ \t]*$", section_text, re.MULTILINE)
+        )
+        if mermaid_blocks > 2:
+            errors.append(
+                f"{api_id} 最多使用两张补充图，当前为 {mermaid_blocks}："
+                f"{orchestration}"
+            )
+
+        nonblank_lines = sum(
+            1 for line in section_text.splitlines() if line.strip()
+        )
+        if nonblank_lines > 180:
+            warnings.append(
+                f"{api_id} 超过 180 行非空内容，需重新检查是否复制了"
+                f" API、Domain、数据库或 Coding 事实：{orchestration}"
+            )
+
+    return errors, warnings
+
+
 def validate(
     repo_root: Path,
     coding_system: str | None = None,
+    orchestration_system: str | None = None,
     review_slice: str | None = None,
     recovery_task: str | None = None,
 ) -> tuple[list[str], list[str]]:
@@ -425,6 +707,19 @@ def validate(
         errors.append("--review-slice 必须同时指定 --coding-system")
         return errors, warnings
 
+    if orchestration_system:
+        if Path(orchestration_system).name != orchestration_system:
+            errors.append(f"系统名必须是单个目录名：{orchestration_system}")
+            return errors, warnings
+        orchestration_errors, orchestration_warnings = (
+            validate_internal_orchestration(
+                systems_root / orchestration_system,
+                require_confirmed=False,
+            )
+        )
+        errors.extend(orchestration_errors)
+        warnings.extend(orchestration_warnings)
+
     if coding_system:
         if Path(coding_system).name != coding_system:
             errors.append(f"系统名必须是单个目录名：{coding_system}")
@@ -433,17 +728,21 @@ def validate(
         system_root = systems_root / coding_system
         system_index = system_root / "index.md"
         baseline = system_root / "开发基线.md"
+        engineering_standard = (
+            system_root / ENGINEERING_CODING_STANDARD_FILE
+        )
         required_design_files = [
             system_index,
             *(system_root / name for name in SYSTEM_FACT_FILES),
             baseline,
+            engineering_standard,
         ]
         missing_design_files = [
             path for path in required_design_files if not path.exists()
         ]
         if missing_design_files:
             for path in missing_design_files:
-                errors.append(f"准备 Coding 的系统缺少固定设计文档：{path}")
+                errors.append(f"准备 Coding 的系统缺少固定实现输入：{path}")
             return errors, warnings
 
         index_text = system_index.read_text(encoding="utf-8")
@@ -453,7 +752,16 @@ def validate(
         }
         for design_file in required_design_files[1:]:
             if design_file.resolve() not in index_targets:
-                errors.append(f"系统入口未直接链接固定设计文档：{design_file}")
+                errors.append(f"系统入口未直接链接固定实现输入：{design_file}")
+
+        orchestration_errors, orchestration_warnings = (
+            validate_internal_orchestration(
+                system_root,
+                require_confirmed=True,
+            )
+        )
+        errors.extend(orchestration_errors)
+        warnings.extend(orchestration_warnings)
 
         system_split = system_root / "系统拆分.md"
         system_split_text = system_split.read_text(encoding="utf-8")
@@ -488,68 +796,6 @@ def validate(
             errors.append(
                 "准备 Coding 的系统拆分必须且只能声明一个"
                 f"非空核心命名确认依据：{system_split}"
-            )
-
-        api_design = system_root / "API设计.md"
-        api_design_text = api_design.read_text(encoding="utf-8")
-        if API_DESIGN_CONFIRMATION_RE.findall(api_design_text) != ["已确认"]:
-            errors.append(
-                "准备 Coding 的 API 设计必须且只能声明"
-                f"“API 设计确认：已确认”：{api_design}"
-            )
-        if len(API_DESIGN_EVIDENCE_RE.findall(api_design_text)) != 1:
-            errors.append(
-                "准备 Coding 的 API 设计必须且只能声明一个"
-                f"非空 API 设计确认依据：{api_design}"
-            )
-
-        internal_orchestration = system_root / "核心接口内部编排.md"
-        internal_orchestration_text = internal_orchestration.read_text(
-            encoding="utf-8"
-        )
-        if (
-            INTERNAL_ORCHESTRATION_CONFIRMATION_RE.findall(
-                internal_orchestration_text
-            )
-            != ["已确认"]
-        ):
-            errors.append(
-                "准备 Coding 的核心接口内部编排必须且只能声明"
-                "“核心接口内部编排确认：已确认”："
-                f"{internal_orchestration}"
-            )
-        if (
-            len(
-                INTERNAL_ORCHESTRATION_EVIDENCE_RE.findall(
-                    internal_orchestration_text
-                )
-            )
-            != 1
-        ):
-            errors.append(
-                "准备 Coding 的核心接口内部编排必须且只能声明一个"
-                "非空核心接口内部编排确认依据："
-                f"{internal_orchestration}"
-            )
-        internal_orchestration_headings = re.findall(
-            r"^##\s+(.+?)\s*$",
-            internal_orchestration_text,
-            re.MULTILINE,
-        )
-        required_heading_positions = [
-            internal_orchestration_headings.index(heading)
-            if heading in internal_orchestration_headings
-            else -1
-            for heading in INTERNAL_ORCHESTRATION_HEADINGS
-        ]
-        if (
-            -1 in required_heading_positions
-            or required_heading_positions != sorted(required_heading_positions)
-        ):
-            errors.append(
-                "准备 Coding 的核心接口内部编排必须按顺序包含"
-                f"（{' / '.join(INTERNAL_ORCHESTRATION_HEADINGS)}）："
-                f"{internal_orchestration}"
             )
 
         database_design = system_root / "数据库设计.md"
@@ -612,6 +858,55 @@ def validate(
                 f"（{' / '.join(BASELINE_HEADINGS)}）：{baseline}"
             )
 
+        engineering_standard_text = engineering_standard.read_text(
+            encoding="utf-8"
+        )
+        if ENGINEERING_STANDARD_STATUS_RE.findall(
+            engineering_standard_text
+        ) != ["当前"]:
+            errors.append(
+                "准备 Coding 的工程编码规范必须且只能声明"
+                f"“状态：当前”：{engineering_standard}"
+            )
+        for field in (
+            "适用系统",
+            "适用代码范围",
+            "规范版本",
+            "生效代码快照",
+            "维护角色",
+        ):
+            matches = re.findall(
+                rf"^{field}[ \t]*[：:][ \t]*(\S.*)$",
+                engineering_standard_text,
+                re.MULTILINE,
+            )
+            if len(matches) != 1:
+                errors.append(
+                    f"工程编码规范必须且只能声明一个非空“{field}”："
+                    f"{engineering_standard}"
+                )
+        engineering_headings = re.findall(
+            r"^##\s+(.+?)\s*$",
+            engineering_standard_text,
+            re.MULTILINE,
+        )
+        required_engineering_positions = [
+            engineering_headings.index(heading)
+            if heading in engineering_headings
+            else -1
+            for heading in ENGINEERING_STANDARD_HEADINGS
+        ]
+        if (
+            -1 in required_engineering_positions
+            or required_engineering_positions
+            != sorted(required_engineering_positions)
+        ):
+            errors.append(
+                "工程编码规范必须按顺序包含"
+                f"（{' / '.join(ENGINEERING_STANDARD_HEADINGS)}）："
+                f"{engineering_standard}"
+            )
+
         git_probe = subprocess.run(
             ["git", "-C", str(repo_root), "rev-parse", "--is-inside-work-tree"],
             capture_output=True,
@@ -638,7 +933,7 @@ def validate(
                 )
                 if tracked.returncode != 0:
                     errors.append(
-                        f"准备 Coding 的固定设计文档尚未纳入版本管理：{design_file}"
+                        f"准备 Coding 的固定实现输入尚未纳入版本管理：{design_file}"
                     )
 
         if review_slice:
@@ -650,6 +945,7 @@ def validate(
             development_index = development_root / "index.md"
             slice_root = development_root / review_slice
             implementation_record = slice_root / "实现记录.md"
+            improvement_root = slice_root / "工程改进"
             review_root = slice_root / "审核"
             review_files = [
                 review_root / name for name in CORE_REVIEW_FILES
@@ -698,19 +994,27 @@ def validate(
                 errors.append(
                     f"实现记录未直接链接当前开发基线：{implementation_record}"
                 )
+            if engineering_standard.resolve() not in implementation_targets:
+                errors.append(
+                    "实现记录未直接链接当前工程编码规范："
+                    f"{implementation_record}"
+                )
             implementation_headings = re.findall(
                 r"^##\s+(.+?)\s*$", implementation_text, re.MULTILINE
             )
             if implementation_headings != IMPLEMENTATION_HEADINGS:
                 errors.append(
-                    "实现记录必须且只能按顺序包含六个二级标题"
+                    "实现记录必须且只能按顺序包含七个二级标题"
                     f"（{' / '.join(IMPLEMENTATION_HEADINGS)}）："
                     f"{implementation_record}"
                 )
 
             for field in (
                 "开发基线",
+                "工程编码规范",
+                "首次实现快照",
                 "代码快照",
+                "工程改进状态",
                 "实现范围",
                 "未覆盖范围",
             ):
@@ -725,16 +1029,117 @@ def validate(
                         f"{implementation_record}"
                     )
 
+            if IMPLEMENTATION_IMPROVEMENT_STATUS_RE.findall(
+                implementation_text
+            ) != ["完成"]:
+                errors.append(
+                    "进入正式审核前工程改进状态必须且只能为“完成”："
+                    f"{implementation_record}"
+                )
+
             snapshots = CODE_SNAPSHOT_RE.findall(implementation_text)
             implementation_snapshot = (
                 snapshots[0] if len(snapshots) == 1 else None
             )
+            first_snapshots = FIRST_IMPLEMENTATION_SNAPSHOT_RE.findall(
+                implementation_text
+            )
+            first_implementation_snapshot = (
+                first_snapshots[0] if len(first_snapshots) == 1 else None
+            )
+
+            improvement_files = sorted(improvement_root.glob("*.md"))
+            if not improvement_files:
+                errors.append(
+                    "进入正式审核前至少需要一份工程改进记录："
+                    f"{improvement_root}"
+                )
+            has_abstraction_analysis = False
+            improvement_input_snapshots = []
+            improvement_output_snapshots = []
+            for improvement_file in improvement_files:
+                if improvement_file.resolve() not in implementation_targets:
+                    errors.append(
+                        "实现记录未直接链接工程改进记录："
+                        f"{improvement_file}"
+                    )
+                improvement_text = improvement_file.read_text(
+                    encoding="utf-8"
+                )
+                for field in ENGINEERING_IMPROVEMENT_FIELDS:
+                    matches = re.findall(
+                        rf"^{re.escape(field)}[ \t]*[：:][ \t]*(\S.*)$",
+                        improvement_text,
+                        re.MULTILINE,
+                    )
+                    if len(matches) != 1:
+                        errors.append(
+                            "工程改进记录缺少、重复或留空字段"
+                            f"“{field}”：{improvement_file}"
+                        )
+                angles = re.findall(
+                    r"^分析角度[ \t]*[：:][ \t]*(\S.*)$",
+                    improvement_text,
+                    re.MULTILINE,
+                )
+                work_modes = re.findall(
+                    r"^工作方式[ \t]*[：:][ \t]*(\S.*)$",
+                    improvement_text,
+                    re.MULTILINE,
+                )
+                if len(work_modes) == 1 and work_modes[0] not in (
+                    "只读分析",
+                    "代码改进",
+                ):
+                    errors.append(
+                        "工程改进记录的工作方式必须为“只读分析”或"
+                        f"“代码改进”：{improvement_file}"
+                    )
+                input_snapshots = IMPROVEMENT_INPUT_SNAPSHOT_RE.findall(
+                    improvement_text
+                )
+                output_snapshots = IMPROVEMENT_OUTPUT_SNAPSHOT_RE.findall(
+                    improvement_text
+                )
+                if len(input_snapshots) == 1:
+                    improvement_input_snapshots.extend(input_snapshots)
+                if len(output_snapshots) == 1:
+                    improvement_output_snapshots.extend(output_snapshots)
+                if any(
+                    "重复" in angle or "抽象" in angle
+                    for angle in angles
+                ):
+                    has_abstraction_analysis = True
+            if improvement_files and not has_abstraction_analysis:
+                errors.append(
+                    "进入正式审核前缺少独立的重复与抽象工程改进记录："
+                    f"{improvement_root}"
+                )
+            if (
+                first_implementation_snapshot is not None
+                and first_implementation_snapshot
+                not in improvement_input_snapshots
+            ):
+                errors.append(
+                    "至少一份工程改进记录必须读取首次实现快照："
+                    f"{implementation_record}"
+                )
+            if (
+                implementation_snapshot is not None
+                and implementation_snapshot
+                not in improvement_output_snapshots
+            ):
+                errors.append(
+                    "最终代码快照必须由工程改进记录输出："
+                    f"{implementation_record}"
+                )
 
             for review_file in review_files:
                 review_text = review_file.read_text(encoding="utf-8")
                 for field in (
                     "审核对象",
                     "依据的开发基线",
+                    "依据的工程编码规范",
                     "审核范围",
                     "未覆盖范围",
                 ):
@@ -764,6 +1169,16 @@ def validate(
                     )
 
             summary_text = review_summary.read_text(encoding="utf-8")
+            summary_engineering_standards = re.findall(
+                r"^工程编码规范[ \t]*[：:][ \t]*(\S.*)$",
+                summary_text,
+                re.MULTILINE,
+            )
+            if len(summary_engineering_standards) != 1:
+                errors.append(
+                    "审核结论必须且只能声明一个非空工程编码规范："
+                    f"{review_summary}"
+                )
             summary_snapshots = CODE_SNAPSHOT_RE.findall(summary_text)
             if (
                 implementation_snapshot is not None
@@ -789,7 +1204,7 @@ def validate(
                     )
 
             if git_probe.returncode == 0:
-                for path in required_review_files:
+                for path in [*required_review_files, *improvement_files]:
                     relative_file = path.relative_to(repo_root)
                     tracked = subprocess.run(
                         [
@@ -855,6 +1270,7 @@ def self_test() -> int:
             "[核心接口内部编排](核心接口内部编排.md)\n"
             "[数据库设计](数据库设计.md)\n"
             "[开发基线](开发基线.md)\n"
+            "[工程编码规范](工程编码规范.md)\n"
             "[开发记录](开发记录/index.md)\n",
             encoding="utf-8",
         )
@@ -872,14 +1288,43 @@ def self_test() -> int:
                 metadata = (
                     "API 设计确认：已确认\n"
                     "API 设计确认依据：示例任务中的用户确认\n"
+                    "API 标识：API-create-example\n"
                 )
             elif name == "核心接口内部编排.md":
                 metadata = (
                     "核心接口内部编排确认：已确认\n"
                     "核心接口内部编排确认依据：示例任务中的用户确认\n"
-                    "\n## 业务线与 API 覆盖\n"
-                    "\n## API 内部编排\n"
-                    "\n## Domain 方法内部编排\n"
+                    "API 设计来源：[API 设计](API设计.md)\n"
+                    "\n## 接口目录\n\n"
+                    "| API 标识 | 方法与路径或入口 | 调用者要得到的业务结果 | 编排章节 |\n"
+                    "| --- | --- | --- | --- |\n"
+                    "| API-create-example | `POST /examples` | 形成示例 | 本文 |\n"
+                    "\n## API-create-example：POST /examples — 形成示例\n\n"
+                    "### 业务结果\n\n"
+                    "调用者意图：形成示例。\n\n"
+                    "成功结果：示例已经形成。\n\n"
+                    "明确不负责：无。\n\n"
+                    "### 主流程\n\n"
+                    "| 步骤 | 执行者 | 做什么 | 得到什么结果 | 下一步 |\n"
+                    "| --- | --- | --- | --- | --- |\n"
+                    "| S1 | API 入口 | 接收事实 | 有效输入 | S2 |\n"
+                    "| S2 | 示例 Domain | 形成示例 | 示例结果 | S3 |\n"
+                    "| S3 | Repository | 保存示例 | 提交成功 | 结束 |\n\n"
+                    "### 分支与失败\n\n"
+                    "| 分支 | 发生在步骤 | 条件 | 业务结果 | API 结果 | 后续 |\n"
+                    "| --- | --- | --- | --- | --- | --- |\n"
+                    "| F1 | S1 | 输入无效 | 未形成示例 | 拒绝 | 结束 |\n\n"
+                    "### 事务与外部影响\n\n"
+                    "| 边界 | 覆盖步骤 | 提交或外部动作 | 成功证明 | 失败或结果未知处理 |\n"
+                    "| --- | --- | --- | --- | --- |\n"
+                    "| T1 | S2-S3 | 保存示例 | 提交成功 | 回滚 |\n\n"
+                    "### Domain 调用\n\n"
+                    "| 发生在步骤 | Domain 行为 | 输入事实 | 领域结果 | 权威规则位置 |\n"
+                    "| --- | --- | --- | --- | --- |\n"
+                    "| S2 | `示例.形成` | 示例输入 | 示例结果 | 系统拆分 |\n\n"
+                    "### 业务证据与验证\n\n"
+                    "关键业务日志与关联标识：示例标识。\n\n"
+                    "必须验证的场景：正常、拒绝和提交失败。\n"
                 )
             elif name == "数据库设计.md":
                 metadata = (
@@ -910,6 +1355,27 @@ def self_test() -> int:
         )
         (system_root / "开发基线.md").write_text(
             baseline_text, encoding="utf-8"
+        )
+        engineering_standard_text = (
+            "# 示例系统工程编码规范\n\n"
+            "状态：当前\n"
+            "适用系统：示例系统\n"
+            "适用代码范围：示例系统代码\n"
+            "规范版本：v1\n"
+            "生效代码快照：当前仓库\n"
+            "维护角色：Coding Agent\n\n"
+            "## 使用与演化规则\n\n"
+            "## 当前规则索引\n\n"
+            "## 当前系统工程约束\n\n"
+            "## 当前编码规则\n\n"
+            "## 例外与存量处理\n\n"
+            "## 尚未形成规范的问题\n\n"
+            "## 重要演化\n"
+        )
+        engineering_standard = system_root / ENGINEERING_CODING_STANDARD_FILE
+        engineering_standard.write_text(
+            engineering_standard_text,
+            encoding="utf-8",
         )
         task_text = (
             "# 任务：示例任务\n\n"
@@ -975,7 +1441,9 @@ def self_test() -> int:
         controller_state.write_text(controller_text, encoding="utf-8")
         development_root = system_root / "开发记录"
         slice_root = development_root / "示例切片"
+        improvement_root = slice_root / "工程改进"
         review_root = slice_root / "审核"
+        improvement_root.mkdir(parents=True)
         review_root.mkdir(parents=True)
         (development_root / "index.md").write_text(
             "[实现记录](示例切片/实现记录.md)\n"
@@ -985,12 +1453,17 @@ def self_test() -> int:
         implementation_text = (
             "# 实现记录\n\n"
             "开发基线：[当前基线](../../开发基线.md)\n"
+            "工程编码规范：[当前规范](../../工程编码规范.md)\n"
+            "首次实现快照：initial123\n"
             "代码快照：abc123\n"
+            "工程改进状态：完成\n"
             "实现范围：示例切片\n"
             "未覆盖范围：无\n\n"
             "## 业务结果\n\n"
             "## 设计与代码对应\n\n"
             "## 关键实现\n\n"
+            "## 工程改进\n\n"
+            "[重复与抽象](工程改进/01-重复与抽象.md)\n\n"
             "## 验证证据\n\n"
             "## 与设计的偏离\n\n"
             "## 剩余风险\n"
@@ -998,9 +1471,30 @@ def self_test() -> int:
         (slice_root / "实现记录.md").write_text(
             implementation_text, encoding="utf-8"
         )
+        improvement_text = (
+            "# 工程改进：重复与抽象\n\n"
+            "分析角度：重复与抽象\n"
+            "工作方式：代码改进\n"
+            "输入代码快照：initial123\n"
+            "依据的开发基线：当前基线\n"
+            "依据的工程编码规范：v1\n"
+            "分析范围：示例切片\n"
+            "发现的问题：无\n"
+            "决定修改或保留的理由：当前实现清楚\n"
+            "实际修改：无\n"
+            "更新的工程编码规范：无\n"
+            "验证结果：通过现有测试\n"
+            "输出代码快照：abc123\n"
+            "剩余风险：无\n"
+        )
+        (improvement_root / "01-重复与抽象.md").write_text(
+            improvement_text,
+            encoding="utf-8",
+        )
         review_text = (
             "审核对象：abc123\n"
             "依据的开发基线：当前基线\n"
+            "依据的工程编码规范：v1\n"
             "审核范围：示例切片\n"
             "未覆盖范围：无\n"
             "审核结论：通过\n"
@@ -1010,6 +1504,7 @@ def self_test() -> int:
         (slice_root / "审核结论.md").write_text(
             "# 审核结论\n\n"
             "代码快照：abc123\n"
+            "工程编码规范：v1\n"
             "当前结论：通过\n\n"
             "- [实现符合性](审核/实现符合性.md)\n"
             "- [工程质量](审核/工程质量.md)\n",
@@ -1102,6 +1597,15 @@ def self_test() -> int:
             ),
             encoding="utf-8",
         )
+        errors, _ = validate(
+            repo_root,
+            orchestration_system="示例系统",
+        )
+        if errors:
+            print("自检失败：合法的待确认编排候选未通过生成阶段检查。")
+            for error in errors:
+                print(f"ERROR: {error}")
+            return 1
         errors, _ = validate(repo_root, coding_system="示例系统")
         if not any(
             "核心接口内部编排确认：已确认" in error for error in errors
@@ -1115,18 +1619,39 @@ def self_test() -> int:
 
         internal_orchestration.write_text(
             valid_internal_orchestration_text.replace(
-                "## Domain 方法内部编排",
-                "### Domain 方法内部编排",
+                "### 主流程",
+                "### 流程",
             ),
             encoding="utf-8",
         )
-        errors, _ = validate(repo_root, coding_system="示例系统")
+        errors, _ = validate(
+            repo_root,
+            orchestration_system="示例系统",
+        )
         if not any(
-            "必须按顺序包含" in error
-            and "Domain 方法内部编排" in error
+            "六个三级标题" in error and "API-create-example" in error
             for error in errors
         ):
-            print("自检失败：Coding 检查未拒绝缺少两层编排结构。")
+            print("自检失败：编排检查未拒绝偏离固定逐 API 模板。")
+            return 1
+        internal_orchestration.write_text(
+            valid_internal_orchestration_text,
+            encoding="utf-8",
+        )
+
+        internal_orchestration.write_text(
+            valid_internal_orchestration_text.replace(
+                "## API-create-example：POST /examples — 形成示例",
+                "## 创建类 API",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(
+            repo_root,
+            orchestration_system="示例系统",
+        )
+        if not any("每个二级标题必须只对应一个" in error for error in errors):
+            print("自检失败：编排检查未拒绝接口组标题。")
             return 1
         internal_orchestration.write_text(
             valid_internal_orchestration_text,
@@ -1206,6 +1731,99 @@ def self_test() -> int:
                 print(f"ERROR: {error}")
             return 1
 
+        engineering_standard.unlink()
+        errors, _ = validate(repo_root, coding_system="示例系统")
+        if not any(
+            "缺少固定实现输入" in error
+            and "工程编码规范.md" in error
+            for error in errors
+        ):
+            print("自检失败：未识别缺少系统工程编码规范。")
+            return 1
+        engineering_standard.write_text(
+            engineering_standard_text,
+            encoding="utf-8",
+        )
+
+        implementation_record = slice_root / "实现记录.md"
+        implementation_record.write_text(
+            implementation_text.replace(
+                "工程改进状态：完成",
+                "工程改进状态：分析中",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(
+            repo_root,
+            coding_system="示例系统",
+            review_slice="示例切片",
+        )
+        if not any("工程改进状态" in error for error in errors):
+            print("自检失败：未拒绝工程改进尚未完成的正式审核。")
+            return 1
+        implementation_record.write_text(
+            implementation_text,
+            encoding="utf-8",
+        )
+
+        improvement_record = improvement_root / "01-重复与抽象.md"
+        improvement_record.unlink()
+        errors, _ = validate(
+            repo_root,
+            coding_system="示例系统",
+            review_slice="示例切片",
+        )
+        if not any("至少需要一份工程改进记录" in error for error in errors):
+            print("自检失败：未识别缺少工程改进记录。")
+            return 1
+        improvement_record.write_text(
+            improvement_text,
+            encoding="utf-8",
+        )
+
+        implementation_record.write_text(
+            implementation_text.replace(
+                "[重复与抽象](工程改进/01-重复与抽象.md)\n\n",
+                "",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(
+            repo_root,
+            coding_system="示例系统",
+            review_slice="示例切片",
+        )
+        if not any("未直接链接工程改进记录" in error for error in errors):
+            print("自检失败：未识别实现记录缺少工程改进入口。")
+            return 1
+        implementation_record.write_text(
+            implementation_text,
+            encoding="utf-8",
+        )
+
+        improvement_record.write_text(
+            improvement_text.replace(
+                "输出代码快照：abc123",
+                "输出代码快照：other456",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(
+            repo_root,
+            coding_system="示例系统",
+            review_slice="示例切片",
+        )
+        if not any(
+            "最终代码快照必须由工程改进记录输出" in error
+            for error in errors
+        ):
+            print("自检失败：未识别工程改进输出与最终快照不一致。")
+            return 1
+        improvement_record.write_text(
+            improvement_text,
+            encoding="utf-8",
+        )
+
         missing_review = review_root / "工程质量.md"
         missing_review.unlink()
         errors, _ = validate(
@@ -1252,7 +1870,7 @@ def self_test() -> int:
         (system_root / "API设计.md").unlink()
         errors, _ = validate(repo_root, coding_system="示例系统")
         if not any(
-            "缺少固定设计文档" in error and "API设计.md" in error
+            "缺少固定实现输入" in error and "API设计.md" in error
             for error in errors
         ):
             print("自检失败：Coding 检查未识别缺失 API 设计。")
@@ -1281,12 +1899,13 @@ def self_test() -> int:
             "[核心接口内部编排](核心接口内部编排.md)\n"
             "[数据库设计](数据库设计.md)\n"
             "[开发基线](开发基线.md)\n"
+            "[工程编码规范](工程编码规范.md)\n"
             "[开发记录](开发记录/index.md)\n",
             encoding="utf-8",
         )
         (system_root / "开发基线.md").unlink()
         errors, _ = validate(repo_root, coding_system="示例系统")
-        if not any("缺少固定设计文档" in error for error in errors):
+        if not any("缺少固定实现输入" in error for error in errors):
             print("自检失败：Coding 检查未识别缺失开发基线。")
             return 1
 
@@ -1312,12 +1931,17 @@ def main() -> int:
     parser.add_argument(
         "--coding-system",
         metavar="中文系统名",
-        help="准备进入 Coding 的系统；额外要求所有权和核心命名已经用户确认，以及当前、三段式且已纳入版本管理的开发基线。",
+        help="准备进入 Coding 的系统；额外要求所有权和核心命名已经用户确认，以及当前、已纳入版本管理的开发基线和系统工程编码规范。",
+    )
+    parser.add_argument(
+        "--orchestration-system",
+        metavar="中文系统名",
+        help="检查指定系统的 API 标识和逐 API 核心接口内部编排固定模板；候选交给用户确认前运行。",
     )
     parser.add_argument(
         "--review-slice",
         metavar="中文开发切片",
-        help="检查指定系统开发切片的实现记录、两个核心审核和审核结论；必须同时指定 --coding-system。",
+        help="检查指定系统开发切片的实现记录、工程改进、两个核心审核和审核结论；必须同时指定 --coding-system。",
     )
     parser.add_argument(
         "--recovery-task",
@@ -1333,6 +1957,7 @@ def main() -> int:
     errors, warnings = validate(
         repo_root,
         coding_system=args.coding_system,
+        orchestration_system=args.orchestration_system,
         review_slice=args.review_slice,
         recovery_task=args.recovery_task,
     )
