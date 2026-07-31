@@ -177,7 +177,7 @@ API 设计来源：[API 设计](API设计.md)
 候选完成后运行：
 
 ```text
-python3 <本 Skill 目录>/scripts/validate_project.py <目标仓库根目录> --orchestration-system <中文系统名>
+python3 <本 Skill 目录>/scripts/validate_project.py <目标仓库根目录> --orchestration-system <system-id>
 ```
 
 结构验证通过以后，再把接口目录和逐 API 章节交给用户审核。确认包按 API 顺序展示每个接口的业务结果、主流程、主要失败、事务与外部影响；不要另写脱离正文的七项、十项或其他总结让用户代替阅读文档。

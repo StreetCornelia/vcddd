@@ -11,8 +11,10 @@ import tempfile
 from pathlib import Path
 from urllib.parse import unquote
 
+from sync_indexes import find_drift, sync
 
 LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
+STABLE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 BASELINE_STATUS_RE = re.compile(
     r"^状态[ \t]*[：:][ \t]*(当前|待确认|待重新生成|已替代)[ \t]*$",
     re.MULTILINE,
@@ -445,6 +447,79 @@ TASK_AGENT_EVENT_RE = re.compile(
     r"(未启动|已启动|已结束|异常中断)[ \t]*$",
     re.MULTILINE,
 )
+VALIDATION_FIELDS = [
+    "验证标识",
+    "所属系统",
+    "验证方法",
+    "验证命题",
+    "验证状态",
+    "当前结论",
+    "验证结论",
+    "最近有效运行",
+    "来源与受影响设计",
+]
+VALIDATION_METHOD_RE = re.compile(
+    r"^验证方法[ \t]*[：:][ \t]*"
+    r"(prototype|executable-poc|contract-check|inspection|benchmark|"
+    r"simulation|minimal-e2e)[ \t]*$",
+    re.MULTILINE,
+)
+VALIDATION_STATUS_RE = re.compile(
+    r"^验证状态[ \t]*[：:][ \t]*"
+    r"(计划中|可运行|已运行|已确认|证据不足|已替代)[ \t]*$",
+    re.MULTILINE,
+)
+VALIDATION_RUN_FIELDS = [
+    "验证标识",
+    "运行标识",
+    "运行状态",
+    "源码 Commit",
+    "运行环境",
+    "执行入口",
+    "输入与夹具",
+    "观察结果",
+    "证据产物",
+    "适用范围",
+    "未覆盖范围",
+    "用户确认状态",
+    "用户确认依据",
+    "确认范围",
+    "最近更新时间",
+]
+VALIDATION_RUN_STATUS_RE = re.compile(
+    r"^运行状态[ \t]*[：:][ \t]*"
+    r"(计划中|运行中|完成|失败|取消)[ \t]*$",
+    re.MULTILINE,
+)
+VALIDATION_RUN_CONFIRMATION_RE = re.compile(
+    r"^用户确认状态[ \t]*[：:][ \t]*"
+    r"(未请求|待确认|已确认)[ \t]*$",
+    re.MULTILINE,
+)
+STAGE_FIELDS = [
+    "交付单元",
+    "阶段",
+    "计划状态",
+    "计划起始 Commit",
+    "实际起始 Commit",
+    "起点差异与等价性",
+    "包含任务及输出 Commit",
+    "阶段 Commit",
+    "阶段核对",
+    "用户确认状态",
+    "用户确认依据",
+    "下一阶段",
+    "最近更新时间",
+]
+STAGE_STATUS_RE = re.compile(
+    r"^计划状态[ \t]*[：:][ \t]*"
+    r"(等待任务|汇合中|待用户确认|已确认|阻塞)[ \t]*$",
+    re.MULTILINE,
+)
+STAGE_CONFIRMATION_RE = re.compile(
+    r"^用户确认状态[ \t]*[：:][ \t]*(待确认|已确认)[ \t]*$",
+    re.MULTILINE,
+)
 INTEGRATION_FIELDS = [
     "开发任务图",
     "起始代码快照",
@@ -594,7 +669,7 @@ def validate_internal_orchestration(
 ) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
-    system_index = system_root / "index.md"
+    system_index = system_root.parent / "index.md"
     api_design = system_root / "API设计.md"
     orchestration = system_root / "核心接口内部编排.md"
 
@@ -811,7 +886,7 @@ def validate_database_design(
 ) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
-    system_index = system_root / "index.md"
+    system_index = system_root.parent / "index.md"
     system_split = system_root / "系统拆分.md"
     api_design = system_root / "API设计.md"
     orchestration = system_root / "核心接口内部编排.md"
@@ -1525,23 +1600,21 @@ def validate_task_progress(
             task_graph.read_text(encoding="utf-8")
         )
     ]
-    expected_paths = {
-        task_id: (
-            batch_root
-            / "实施任务"
-            / task_id
-            / "任务进度.md"
-        )
-        for task_id in task_ids
+    task_root = batch_root / "tasks"
+    dispatched_dirs = {
+        path.name: path
+        for path in task_root.glob("TASK-*")
+        if path.is_dir()
     }
-    actual_paths = {
-        path.parent.name: path
-        for path in (batch_root / "实施任务").glob("TASK-*/任务进度.md")
+    expected_ids = set(task_ids) if require_merged else set(dispatched_dirs)
+    expected_paths = {
+        task_id: task_root / task_id / "任务进度.md"
+        for task_id in expected_ids
     }
 
     for task_id, progress_path in expected_paths.items():
         if not progress_path.exists():
-            errors.append(f"实施任务缺少任务进度：{progress_path}")
+            errors.append(f"已派发任务缺少任务进度：{progress_path}")
             continue
 
         text = progress_path.read_text(encoding="utf-8")
@@ -1595,11 +1668,217 @@ def validate_task_progress(
                 f"任务进度未直接链接当前开发任务图：{progress_path}"
             )
 
-    for task_id, progress_path in actual_paths.items():
-        if task_id not in expected_paths:
+    for task_id, task_dir in dispatched_dirs.items():
+        if task_id not in task_ids:
             errors.append(
-                f"任务进度对应的 TASK- 标识不在开发任务图中：{progress_path}"
+                f"已派发任务的 TASK- 标识不在开发任务图中：{task_dir}"
             )
+
+    return errors, warnings
+
+
+def validate_validation_spaces(
+    systems_root: Path,
+) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    for system_root in sorted(
+        path for path in systems_root.iterdir() if path.is_dir()
+    ):
+        validation_root = system_root / "validation"
+        if not validation_root.exists():
+            continue
+        validation_index = validation_root / "index.md"
+        if not validation_index.exists():
+            errors.append(f"系统验证目录缺少入口：{validation_index}")
+
+        for item_root in sorted(
+            path for path in validation_root.iterdir() if path.is_dir()
+        ):
+            if not re.fullmatch(
+                r"VAL-[A-Za-z0-9._-]+(?:-[a-z0-9][a-z0-9-]*)?",
+                item_root.name,
+            ):
+                errors.append(
+                    f"验证目录必须使用稳定 ASCII VAL- 标识：{item_root}"
+                )
+            item_index = item_root / "index.md"
+            plan = item_root / "验证计划.md"
+            conclusion = item_root / "验证结论.md"
+            for required in (item_index, plan, conclusion):
+                if not required.exists():
+                    errors.append(f"验证项缺少固定文件：{required}")
+            if not item_index.exists():
+                continue
+
+            text = item_index.read_text(encoding="utf-8")
+            for field_name in VALIDATION_FIELDS:
+                values = re.findall(
+                    rf"^{re.escape(field_name)}[ \t]*[：:][ \t]*(\S.*)$",
+                    text,
+                    re.MULTILINE,
+                )
+                if len(values) != 1:
+                    errors.append(
+                        f"验证入口必须且只能声明一个非空“{field_name}”："
+                        f"{item_index}"
+                    )
+            if len(VALIDATION_METHOD_RE.findall(text)) != 1:
+                errors.append(f"验证入口必须声明有效验证方法：{item_index}")
+            validation_statuses = VALIDATION_STATUS_RE.findall(text)
+            if len(validation_statuses) != 1:
+                errors.append(f"验证入口必须声明有效验证状态：{item_index}")
+            item_targets = {
+                local_link_path(item_index, raw_target)
+                for raw_target in LINK_RE.findall(text)
+            }
+            if conclusion.resolve() not in item_targets:
+                errors.append(
+                    f"验证入口未直接链接验证结论：{item_index}"
+                )
+            if VALIDATION_METHOD_RE.findall(text) == ["prototype"]:
+                if not (item_root / "src").is_dir():
+                    errors.append(f"原型验证缺少 src/：{item_root}")
+
+            runs_root = item_root / "runs"
+            run_records: set[Path] = set()
+            confirmed_run_records: set[Path] = set()
+            if runs_root.exists():
+                for run_root in sorted(
+                    path for path in runs_root.iterdir() if path.is_dir()
+                ):
+                    if not re.fullmatch(
+                        r"RUN-[A-Za-z0-9][A-Za-z0-9._-]*",
+                        run_root.name,
+                    ):
+                        errors.append(
+                            f"验证运行目录必须使用 RUN- 标识：{run_root}"
+                        )
+                    run_record = run_root / "运行记录.md"
+                    if not run_record.exists():
+                        errors.append(f"验证运行缺少运行记录：{run_root}")
+                        continue
+                    run_records.add(run_record.resolve())
+                    run_text = run_record.read_text(encoding="utf-8")
+                    for field_name in VALIDATION_RUN_FIELDS:
+                        values = re.findall(
+                            rf"^{re.escape(field_name)}"
+                            rf"[ \t]*[：:][ \t]*(\S.*)$",
+                            run_text,
+                            re.MULTILINE,
+                        )
+                        if len(values) != 1:
+                            errors.append(
+                                "验证运行记录必须且只能声明一个非空"
+                                f"“{field_name}”：{run_record}"
+                            )
+                    if len(VALIDATION_RUN_STATUS_RE.findall(run_text)) != 1:
+                        errors.append(
+                            f"验证运行记录必须声明有效运行状态：{run_record}"
+                        )
+                    confirmations = (
+                        VALIDATION_RUN_CONFIRMATION_RE.findall(run_text)
+                    )
+                    if len(confirmations) != 1:
+                        errors.append(
+                            "验证运行记录必须声明有效用户确认状态："
+                            f"{run_record}"
+                        )
+                    elif confirmations == ["已确认"]:
+                        confirmed_run_records.add(run_record.resolve())
+                        for field_name in (
+                            "源码 Commit",
+                            "用户确认依据",
+                            "确认范围",
+                        ):
+                            values = re.findall(
+                                rf"^{re.escape(field_name)}"
+                                rf"[ \t]*[：:][ \t]*(\S.*)$",
+                                run_text,
+                                re.MULTILINE,
+                            )
+                            if (
+                                not values
+                                or values[0]
+                                in {"无", "不适用", "待确认", "待生成"}
+                            ):
+                                errors.append(
+                                    "已确认验证运行必须记录有效"
+                                    f"“{field_name}”：{run_record}"
+                                )
+            latest_values = re.findall(
+                r"^最近有效运行[ \t]*[：:][ \t]*(\S.*)$",
+                text,
+                re.MULTILINE,
+            )
+            latest_targets = {
+                local_link_path(item_index, raw_target)
+                for raw_target in (
+                    LINK_RE.findall(latest_values[0])
+                    if len(latest_values) == 1
+                    else []
+                )
+            }
+            if (
+                validation_statuses
+                and validation_statuses[0] in {"已运行", "已确认", "证据不足"}
+                and not (latest_targets & run_records)
+            ):
+                errors.append(
+                    f"验证状态要求最近有效运行直接链接运行记录：{item_index}"
+                )
+            if validation_statuses == ["已确认"] and not (
+                latest_targets & confirmed_run_records
+            ):
+                errors.append(
+                    "验证状态为已确认但最近有效运行未绑定已确认记录："
+                    f"{item_index}"
+                )
+
+    return errors, warnings
+
+
+def validate_stage_records(
+    delivery_root: Path,
+) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    for stage_record in sorted(
+        (delivery_root / "stages").glob("*/阶段记录.md")
+    ):
+        if not STABLE_ID_RE.fullmatch(stage_record.parent.name):
+            errors.append(
+                f"阶段目录必须使用稳定 ASCII 标识：{stage_record.parent}"
+            )
+        text = stage_record.read_text(encoding="utf-8")
+        for field_name in STAGE_FIELDS:
+            values = re.findall(
+                rf"^{re.escape(field_name)}[ \t]*[：:][ \t]*(\S.*)$",
+                text,
+                re.MULTILINE,
+            )
+            if len(values) != 1:
+                errors.append(
+                    f"阶段记录必须且只能声明一个非空“{field_name}”："
+                    f"{stage_record}"
+                )
+        if len(STAGE_STATUS_RE.findall(text)) != 1:
+            errors.append(f"阶段记录必须声明有效计划状态：{stage_record}")
+        confirmations = STAGE_CONFIRMATION_RE.findall(text)
+        if len(confirmations) != 1:
+            errors.append(f"阶段记录必须声明用户确认状态：{stage_record}")
+        elif confirmations == ["已确认"]:
+            evidence = re.findall(
+                r"^用户确认依据[ \t]*[：:][ \t]*(\S.*)$",
+                text,
+                re.MULTILINE,
+            )
+            if evidence and evidence[0] in {"无", "待确认"}:
+                errors.append(
+                    f"已确认阶段必须记录有效用户确认依据：{stage_record}"
+                )
 
     return errors, warnings
 
@@ -1615,7 +1894,7 @@ def validate(
     review_batch: str | None = None,
     recovery_task: str | None = None,
 ) -> tuple[list[str], list[str]]:
-    vcddd_root = repo_root / "docs" / "vcddd"
+    vcddd_root = repo_root / "vcddd"
     errors: list[str] = []
     warnings: list[str] = []
 
@@ -1661,6 +1940,9 @@ def validate(
         if not required.exists():
             errors.append(f"缺少必要入口：{required}")
 
+    for path, reason in find_drift(repo_root):
+        errors.append(f"索引不同步（{reason}）：{path}")
+
     root_index = vcddd_root / "index.md"
     if root_index.exists():
         root_targets = {
@@ -1690,6 +1972,13 @@ def validate(
 
     business_root = vcddd_root / "business"
     if business_root.exists():
+        for goal_root in sorted(
+            path for path in business_root.iterdir() if path.is_dir()
+        ):
+            if not STABLE_ID_RE.fullmatch(goal_root.name):
+                errors.append(
+                    f"业务目标目录必须使用稳定 ASCII 标识：{goal_root}"
+                )
         business_index = business_root / "index.md"
         business_targets = (
             {
@@ -1716,6 +2005,25 @@ def validate(
 
     systems_root = vcddd_root / "systems"
     if systems_root.exists():
+        for system_root in sorted(
+            path for path in systems_root.iterdir() if path.is_dir()
+        ):
+            if not STABLE_ID_RE.fullmatch(system_root.name):
+                errors.append(
+                    f"系统目录必须使用稳定 ASCII 标识：{system_root}"
+                )
+            delivery_root = system_root / "delivery"
+            if delivery_root.exists():
+                for delivery_item in sorted(
+                    path
+                    for path in delivery_root.iterdir()
+                    if path.is_dir()
+                ):
+                    if not STABLE_ID_RE.fullmatch(delivery_item.name):
+                        errors.append(
+                            "交付目录必须使用稳定 ASCII 标识："
+                            f"{delivery_item}"
+                        )
         systems_index = systems_root / "index.md"
         system_targets = (
             {
@@ -1730,8 +2038,25 @@ def validate(
         for system_index in sorted(systems_root.glob("*/index.md")):
             if system_index.resolve() not in system_targets:
                 errors.append(f"系统入口未直接链接系统：{system_index}")
+            linked_targets = {
+                local_link_path(system_index, raw_target)
+                for raw_target in LINK_RE.findall(
+                    system_index.read_text(encoding="utf-8")
+                )
+            }
+            for section_index in (
+                system_index.parent / "validation" / "index.md",
+                system_index.parent / "delivery" / "index.md",
+            ):
+                if (
+                    section_index.exists()
+                    and section_index.resolve() not in linked_targets
+                ):
+                    errors.append(
+                        f"系统入口未直接链接工作区入口：{section_index}"
+                    )
 
-        for baseline in sorted(systems_root.glob("*/开发基线.md")):
+        for baseline in sorted(systems_root.glob("*/coding/开发基线.md")):
             text = baseline.read_text(encoding="utf-8")
             statuses = BASELINE_STATUS_RE.findall(text)
             if len(statuses) != 1:
@@ -1740,7 +2065,7 @@ def validate(
                     f"（当前/待确认/待重新生成/已替代）：{baseline}"
                 )
 
-            system_index = baseline.parent / "index.md"
+            system_index = baseline.parent.parent / "index.md"
             if not system_index.exists():
                 errors.append(f"开发基线缺少系统入口：{system_index}")
                 continue
@@ -1757,8 +2082,21 @@ def validate(
             if legacy.name != "开发基线.md":
                 warnings.append(f"检查可能与开发基线竞争的“最终”文件：{legacy}")
 
+        validation_errors, validation_warnings = validate_validation_spaces(
+            systems_root
+        )
+        errors.extend(validation_errors)
+        warnings.extend(validation_warnings)
+
     work_root = vcddd_root / "work"
     if work_root.exists():
+        for task_root in sorted(
+            path for path in work_root.iterdir() if path.is_dir()
+        ):
+            if not STABLE_ID_RE.fullmatch(task_root.name):
+                errors.append(
+                    f"工作目录必须使用稳定 ASCII 标识：{task_root}"
+                )
         work_index = work_root / "index.md"
         work_targets = (
             {
@@ -1797,8 +2135,10 @@ def validate(
                 )
 
     if recovery_task:
-        if Path(recovery_task).name != recovery_task:
-            errors.append(f"恢复任务名必须是单个目录名：{recovery_task}")
+        if not STABLE_ID_RE.fullmatch(recovery_task):
+            errors.append(
+                f"工作标识必须是稳定 ASCII 目录名：{recovery_task}"
+            )
             return errors, warnings
 
         task_index = work_root / recovery_task / "index.md"
@@ -1870,12 +2210,14 @@ def validate(
             errors.append(f"当前任务未由工作入口直接链接主控状态：{controller_state}")
 
     if architecture_system:
-        if Path(architecture_system).name != architecture_system:
-            errors.append(f"系统名必须是单个目录名：{architecture_system}")
+        if not STABLE_ID_RE.fullmatch(architecture_system):
+            errors.append(
+                f"系统标识必须是稳定 ASCII 目录名：{architecture_system}"
+            )
             return errors, warnings
         architecture_errors, architecture_warnings = (
             validate_architecture_and_modules(
-                systems_root / architecture_system,
+                systems_root / architecture_system / "design",
                 require_confirmed=False,
             )
         )
@@ -1883,12 +2225,14 @@ def validate(
         warnings.extend(architecture_warnings)
 
     if orchestration_system:
-        if Path(orchestration_system).name != orchestration_system:
-            errors.append(f"系统名必须是单个目录名：{orchestration_system}")
+        if not STABLE_ID_RE.fullmatch(orchestration_system):
+            errors.append(
+                f"系统标识必须是稳定 ASCII 目录名：{orchestration_system}"
+            )
             return errors, warnings
         orchestration_errors, orchestration_warnings = (
             validate_internal_orchestration(
-                systems_root / orchestration_system,
+                systems_root / orchestration_system / "design",
                 require_confirmed=False,
             )
         )
@@ -1896,31 +2240,38 @@ def validate(
         warnings.extend(orchestration_warnings)
 
     if database_system:
-        if Path(database_system).name != database_system:
-            errors.append(f"系统名必须是单个目录名：{database_system}")
+        if not STABLE_ID_RE.fullmatch(database_system):
+            errors.append(
+                f"系统标识必须是稳定 ASCII 目录名：{database_system}"
+            )
             return errors, warnings
         database_errors, database_warnings = validate_database_design(
-            systems_root / database_system,
+            systems_root / database_system / "design",
             require_confirmed=False,
         )
         errors.extend(database_errors)
         warnings.extend(database_warnings)
 
     if target_coding_system:
-        if Path(target_coding_system).name != target_coding_system:
-            errors.append(f"系统名必须是单个目录名：{target_coding_system}")
+        if not STABLE_ID_RE.fullmatch(target_coding_system):
+            errors.append(
+                "系统标识必须是稳定 ASCII 目录名："
+                f"{target_coding_system}"
+            )
             return errors, warnings
 
         require_coding_ready = coding_system is not None
         system_root = systems_root / target_coding_system
+        design_root = system_root / "design"
+        coding_root = system_root / "coding"
         system_index = system_root / "index.md"
-        baseline = system_root / "开发基线.md"
+        baseline = coding_root / "开发基线.md"
         engineering_standard = (
-            system_root / ENGINEERING_CODING_STANDARD_FILE
+            coding_root / ENGINEERING_CODING_STANDARD_FILE
         )
         required_design_files = [
             system_index,
-            *(system_root / name for name in SYSTEM_FACT_FILES),
+            *(design_root / name for name in SYSTEM_FACT_FILES),
             baseline,
         ]
         if require_coding_ready:
@@ -1959,7 +2310,7 @@ def validate(
                 errors.append(f"系统入口未直接链接固定实现输入：{design_file}")
 
         database_errors, database_warnings = validate_database_design(
-            system_root,
+            design_root,
             require_confirmed=True,
         )
         errors.extend(database_errors)
@@ -1967,14 +2318,14 @@ def validate(
 
         architecture_errors, architecture_warnings = (
             validate_architecture_and_modules(
-                system_root,
+                design_root,
                 require_confirmed=True,
             )
         )
         errors.extend(architecture_errors)
         warnings.extend(architecture_warnings)
 
-        system_split = system_root / "系统拆分.md"
+        system_split = design_root / "系统拆分.md"
         system_split_text = system_split.read_text(encoding="utf-8")
         if BUSINESS_SUBJECT_CONFIRMATION_RE.findall(system_split_text) != ["已确认"]:
             errors.append(
@@ -2031,7 +2382,7 @@ def validate(
                 for raw_target in LINK_RE.findall(source_sections[0])
             }
             for source_file in (
-                system_root / name for name in SYSTEM_FACT_FILES
+                design_root / name for name in SYSTEM_FACT_FILES
             ):
                 if source_file.resolve() not in source_targets:
                     errors.append(
@@ -2162,16 +2513,21 @@ def validate(
                     )
 
         if development_batch:
-            if Path(development_batch).name != development_batch:
+            if not STABLE_ID_RE.fullmatch(development_batch):
                 errors.append(
-                    f"开发批次名必须是单个目录名：{development_batch}"
+                    "交付标识必须是稳定 ASCII 目录名："
+                    f"{development_batch}"
                 )
                 return errors, warnings
 
-            development_root = system_root / "开发记录"
+            development_root = system_root / "delivery"
             development_index = development_root / "index.md"
             batch_root = development_root / development_batch
-            task_graph = batch_root / "开发任务图.md"
+            task_graph = batch_root / "plan" / "开发任务图.md"
+
+            stage_errors, stage_warnings = validate_stage_records(batch_root)
+            errors.extend(stage_errors)
+            warnings.extend(stage_warnings)
 
             graph_errors, graph_warnings = validate_implementation_task_graph(
                 task_graph,
@@ -2213,11 +2569,11 @@ def validate(
                     )
 
             if not development_index.exists():
-                errors.append(f"缺少开发记录入口：{development_index}")
+                errors.append(f"缺少交付入口：{development_index}")
             else:
                 if development_index.resolve() not in index_targets:
                     errors.append(
-                        f"系统入口未直接链接开发记录入口：{development_index}"
+                        f"系统入口未直接链接交付入口：{development_index}"
                     )
                 development_index_text = development_index.read_text(
                     encoding="utf-8"
@@ -2226,12 +2582,25 @@ def validate(
                     local_link_path(development_index, raw_target)
                     for raw_target in LINK_RE.findall(development_index_text)
                 }
-                if task_graph.exists() and (
-                    task_graph.resolve() not in development_targets
+                delivery_entry = batch_root / "index.md"
+                if (
+                    delivery_entry.exists()
+                    and delivery_entry.resolve() not in development_targets
                 ):
                     errors.append(
-                        f"开发记录入口未直接链接开发任务图：{task_graph}"
+                        f"交付入口未直接链接交付单元：{delivery_entry}"
                     )
+                if delivery_entry.exists() and task_graph.exists():
+                    delivery_entry_targets = {
+                        local_link_path(delivery_entry, raw_target)
+                        for raw_target in LINK_RE.findall(
+                            delivery_entry.read_text(encoding="utf-8")
+                        )
+                    }
+                    if task_graph.resolve() not in delivery_entry_targets:
+                        errors.append(
+                            f"交付单元入口未直接链接开发任务图：{task_graph}"
+                        )
 
             if task_graph.exists():
                 task_graph_text = task_graph.read_text(encoding="utf-8")
@@ -2262,6 +2631,14 @@ def validate(
                 warnings.extend(progress_warnings)
 
             if review_batch:
+                stage_records = sorted(
+                    (batch_root / "stages").glob("*/阶段记录.md")
+                )
+                if not stage_records:
+                    errors.append(
+                        f"完成开发批次至少需要一个阶段记录："
+                        f"{batch_root / 'stages'}"
+                    )
                 if task_graph.exists() and TASK_GRAPH_STATUS_RE.findall(
                     task_graph.read_text(encoding="utf-8")
                 ) != ["已完成"]:
@@ -2270,22 +2647,22 @@ def validate(
                         f"{task_graph}"
                     )
 
-                implementation_root = batch_root / "实施任务"
+                implementation_root = batch_root / "tasks"
                 implementation_records = sorted(
                     implementation_root.glob("TASK-*/实现记录.md")
                 )
-                integration_record = batch_root / "集成记录.md"
-                test_feedback_root = batch_root / "测试反馈"
+                integration_record = batch_root / "integration" / "集成记录.md"
+                test_feedback_root = batch_root / "testing" / "feedback"
                 test_feedback_files = sorted(test_feedback_root.glob("*.md"))
-                test_conclusion = batch_root / "测试结论.md"
-                design_feedback_root = batch_root / "设计反馈"
-                improvement_root = batch_root / "工程改进"
+                test_conclusion = batch_root / "testing" / "测试结论.md"
+                design_feedback_root = batch_root / "feedback" / "design"
+                improvement_root = batch_root / "improvement"
                 improvement_files = sorted(improvement_root.glob("*.md"))
-                review_root = batch_root / "审核"
+                review_root = batch_root / "review"
                 review_files = [
                     review_root / name for name in CORE_REVIEW_FILES
                 ]
-                review_summary = batch_root / "审核结论.md"
+                review_summary = review_root / "审核结论.md"
 
                 required_batch_files = [
                     integration_record,
@@ -2315,11 +2692,12 @@ def validate(
                 if any(not path.exists() for path in required_batch_files):
                     return errors, warnings
 
-                if development_index.exists():
-                    development_targets = {
-                        local_link_path(development_index, raw_target)
+                delivery_entry = batch_root / "index.md"
+                if delivery_entry.exists():
+                    delivery_targets = {
+                        local_link_path(delivery_entry, raw_target)
                         for raw_target in LINK_RE.findall(
-                            development_index.read_text(encoding="utf-8")
+                            delivery_entry.read_text(encoding="utf-8")
                         )
                     }
                     for path in (
@@ -2327,9 +2705,9 @@ def validate(
                         test_conclusion,
                         review_summary,
                     ):
-                        if path.resolve() not in development_targets:
+                        if path.resolve() not in delivery_targets:
                             errors.append(
-                                f"开发记录入口未直接链接批次文档：{path}"
+                                f"交付单元入口未直接链接交付文档：{path}"
                             )
 
                 for implementation_record in implementation_records:
@@ -2786,13 +3164,16 @@ def validate(
 def self_test() -> int:
     with tempfile.TemporaryDirectory(prefix="vcddd-validator-") as temp_dir:
         repo_root = Path(temp_dir)
-        vcddd_root = repo_root / "docs" / "vcddd"
-        business_root = vcddd_root / "business" / "示例业务"
-        system_root = vcddd_root / "systems" / "示例系统"
+        vcddd_root = repo_root / "vcddd"
+        business_root = vcddd_root / "business" / "example-goal"
+        system_root = vcddd_root / "systems" / "example-system"
+        design_root = system_root / "design"
+        coding_root = system_root / "coding"
         business_root.mkdir(parents=True)
         (vcddd_root / "work").mkdir()
-        system_root.mkdir(parents=True)
-        task_root = vcddd_root / "work" / "示例任务"
+        design_root.mkdir(parents=True)
+        coding_root.mkdir()
+        task_root = vcddd_root / "work" / "example-work"
         task_root.mkdir()
 
         (vcddd_root / "index.md").write_text(
@@ -2801,7 +3182,7 @@ def self_test() -> int:
             encoding="utf-8",
         )
         (vcddd_root / "business" / "index.md").write_text(
-            "[示例业务](示例业务/业务设计.md)\n", encoding="utf-8"
+            "[example-goal](example-goal/业务设计.md)\n", encoding="utf-8"
         )
         business_design = business_root / "业务设计.md"
         business_design.write_text(
@@ -2813,41 +3194,42 @@ def self_test() -> int:
         )
         (vcddd_root / "work" / "index.md").write_text(
             "# 工作\n\n"
-            "[示例任务](示例任务/主控状态.md)\n",
+            "[example-work](example-work/主控状态.md)\n",
             encoding="utf-8",
         )
         (vcddd_root / "systems" / "index.md").write_text(
-            "[示例系统](示例系统/index.md)\n", encoding="utf-8"
+            "[example-system](example-system/index.md)\n", encoding="utf-8"
         )
         (system_root / "index.md").write_text(
-            "[系统拆分](系统拆分.md)\n"
-            "[架构设计](架构设计.md)\n"
-            "[模块拆分](模块拆分.md)\n"
-            "[API设计](API设计.md)\n"
-            "[核心接口内部编排](核心接口内部编排.md)\n"
-            "[数据库设计](数据库设计.md)\n"
-            "[开发基线](开发基线.md)\n"
-            "[工程编码规范](工程编码规范.md)\n"
-            "[开发记录](开发记录/index.md)\n",
+            "[系统拆分](design/系统拆分.md)\n"
+            "[架构设计](design/架构设计.md)\n"
+            "[模块拆分](design/模块拆分.md)\n"
+            "[API设计](design/API设计.md)\n"
+            "[核心接口内部编排](design/核心接口内部编排.md)\n"
+            "[数据库设计](design/数据库设计.md)\n"
+            "[开发基线](coding/开发基线.md)\n"
+            "[工程编码规范](coding/工程编码规范.md)\n"
+            "[系统验证](validation/index.md)\n"
+            "[交付](delivery/index.md)\n",
             encoding="utf-8",
         )
         for name in SYSTEM_FACT_FILES:
             if name == "系统拆分.md":
                 metadata = (
                     "业务主体确认：已确认\n"
-                    "业务主体确认依据：示例任务中的用户确认\n"
+                    "业务主体确认依据：example-work中的用户确认\n"
                     "Domain 设计确认：已确认\n"
-                    "Domain 设计确认依据：示例任务中的用户确认\n"
+                    "Domain 设计确认依据：example-work中的用户确认\n"
                     "核心命名确认：已确认\n"
-                    "核心命名确认依据：示例任务中的用户确认\n"
+                    "核心命名确认依据：example-work中的用户确认\n"
                 )
             elif name == "架构设计.md":
                 metadata = (
                     "架构设计确认：已确认\n"
-                    "架构设计确认依据：示例任务中的用户确认\n"
+                    "架构设计确认依据：example-work中的用户确认\n"
                     "设计来源：[系统拆分](系统拆分.md)\n"
-                    "适用系统：示例系统\n"
-                    "适用范围：示例系统代码\n"
+                    "适用系统：example-system\n"
+                    "适用范围：example-system代码\n"
                     "语言及版本：Python 3\n"
                     "主要框架及版本：示例框架 1\n"
                     "代码现实快照：无代码\n\n"
@@ -2865,10 +3247,10 @@ def self_test() -> int:
             elif name == "模块拆分.md":
                 metadata = (
                     "模块拆分确认：已确认\n"
-                    "模块拆分确认依据：示例任务中的用户确认\n"
+                    "模块拆分确认依据：example-work中的用户确认\n"
                     "设计来源：[架构设计](架构设计.md)\n"
-                    "适用系统：示例系统\n"
-                    "适用范围：示例系统代码\n"
+                    "适用系统：example-system\n"
+                    "适用范围：example-system代码\n"
                     "代码现实快照：无代码\n\n"
                     "## 模块全景\n\n"
                     "## 模块目录\n\n"
@@ -2891,13 +3273,13 @@ def self_test() -> int:
             elif name == "API设计.md":
                 metadata = (
                     "API 设计确认：已确认\n"
-                    "API 设计确认依据：示例任务中的用户确认\n"
+                    "API 设计确认依据：example-work中的用户确认\n"
                     "API 标识：API-create-example\n"
                 )
             elif name == "核心接口内部编排.md":
                 metadata = (
                     "核心接口内部编排确认：已确认\n"
-                    "核心接口内部编排确认依据：示例任务中的用户确认\n"
+                    "核心接口内部编排确认依据：example-work中的用户确认\n"
                     "API 设计来源：[API 设计](API设计.md)\n"
                     "\n## 接口目录\n\n"
                     "| API 标识 | 方法与路径或入口 | 调用者要得到的业务结果 | 编排章节 |\n"
@@ -2933,13 +3315,13 @@ def self_test() -> int:
             elif name == "数据库设计.md":
                 metadata = (
                     "数据库设计确认：已确认\n"
-                    "数据库设计确认依据：示例任务中的用户确认\n"
+                    "数据库设计确认依据：example-work中的用户确认\n"
                     "设计来源：\n"
                     "- [系统拆分](系统拆分.md)\n"
                     "- [API 设计](API设计.md)\n"
                     "- [核心接口内部编排](核心接口内部编排.md)\n"
                     "适用数据库：关系型数据库\n"
-                    "适用范围：示例系统\n"
+                    "适用范围：example-system\n"
                     "明确不覆盖：无\n\n"
                     "## 数据承载全景\n\n"
                     "| 需要保存的事实 | 事实拥有者 | 为什么需要持久化 | 使用者与用途 | 承载表 | 数据性质 |\n"
@@ -3008,7 +3390,7 @@ def self_test() -> int:
                     "## 数据安全与保留\n\n"
                     "| 数据范围 | 敏感等级 | 访问者 | 脱敏或加密 | 保留与清理 | 审计要求 |\n"
                     "| --- | --- | --- | --- | --- | --- |\n"
-                    "| DBT-example | 普通 | 示例系统 | 不需要 | 随业务生命周期 | 写入日志 |\n\n"
+                    "| DBT-example | 普通 | example-system | 不需要 | 随业务生命周期 | 写入日志 |\n\n"
                     "## 数据库实现交接\n\n"
                     "Coding 阶段需要产生：迁移、映射、数据库注释和测试。\n\n"
                     "实现必须保持：本设计全部数据事实。\n\n"
@@ -3017,7 +3399,7 @@ def self_test() -> int:
                 )
             else:
                 metadata = ""
-            (system_root / name).write_text(
+            (design_root / name).write_text(
                 f"# {Path(name).stem}\n\n{metadata}",
                 encoding="utf-8",
             )
@@ -3027,29 +3409,29 @@ def self_test() -> int:
             "适用范围：示例切片\n"
             "未覆盖范围：无\n"
             "来源：\n"
-            "- [业务设计](../../business/示例业务/业务设计.md)\n"
-            "- [系统拆分](系统拆分.md)\n"
-            "- [架构设计](架构设计.md)\n"
-            "- [模块拆分](模块拆分.md)\n"
-            "- [API设计](API设计.md)\n"
-            "- [核心接口内部编排](核心接口内部编排.md)\n"
-            "- [数据库设计](数据库设计.md)\n\n"
+            "- [业务设计](../../../business/example-goal/业务设计.md)\n"
+            "- [系统拆分](../design/系统拆分.md)\n"
+            "- [架构设计](../design/架构设计.md)\n"
+            "- [模块拆分](../design/模块拆分.md)\n"
+            "- [API设计](../design/API设计.md)\n"
+            "- [核心接口内部编排](../design/核心接口内部编排.md)\n"
+            "- [数据库设计](../design/数据库设计.md)\n\n"
             "## Domain\n\n"
             "## 架构与模块\n\n"
             "## 业务线与 API\n\n"
             "## 数据库设计\n"
         )
-        (system_root / "开发基线.md").write_text(
+        (coding_root / "开发基线.md").write_text(
             baseline_text, encoding="utf-8"
         )
         engineering_standard_text = (
-            "# 示例系统工程编码规范\n\n"
+            "# example-system工程编码规范\n\n"
             "状态：当前\n"
             "规范确认：已确认\n"
-            "规范确认依据：示例任务中的用户确认\n"
+            "规范确认依据：example-work中的用户确认\n"
             "形成方式：全新系统初始化\n"
-            "适用系统：示例系统\n"
-            "适用代码范围：示例系统代码\n"
+            "适用系统：example-system\n"
+            "适用代码范围：example-system代码\n"
             "语言及版本：Python 3\n"
             "主要框架及版本：示例框架 1\n"
             "规范版本：v1\n"
@@ -3079,13 +3461,13 @@ def self_test() -> int:
             "## 尚未形成规范的问题\n\n"
             "## 重要演化\n"
         )
-        engineering_standard = system_root / ENGINEERING_CODING_STANDARD_FILE
+        engineering_standard = coding_root / ENGINEERING_CODING_STANDARD_FILE
         engineering_standard.write_text(
             engineering_standard_text,
             encoding="utf-8",
         )
         errors, _ = validate_architecture_and_modules(
-            system_root,
+            design_root,
             require_confirmed=False,
         )
         if errors:
@@ -3093,7 +3475,7 @@ def self_test() -> int:
             for error in errors:
                 print(f"ERROR: {error}")
             return 1
-        architecture_file = system_root / "架构设计.md"
+        architecture_file = design_root / "架构设计.md"
         valid_architecture_text = architecture_file.read_text(
             encoding="utf-8"
         )
@@ -3102,7 +3484,7 @@ def self_test() -> int:
             encoding="utf-8",
         )
         errors, _ = validate_architecture_and_modules(
-            system_root,
+            design_root,
             require_confirmed=False,
         )
         if not any("架构设计必须且只能按顺序包含" in error for error in errors):
@@ -3113,25 +3495,25 @@ def self_test() -> int:
             encoding="utf-8",
         )
         task_text = (
-            "# 任务：示例任务\n\n"
+            "# 任务：example-work\n\n"
             "## 任务定义\n\n"
             "任务状态：进行中\n"
-            "任务目标：形成示例系统设计\n"
+            "任务目标：形成example-system设计\n"
             "完成条件：示例设计可恢复\n"
-            "服务的业务目标与系统：示例业务 / 示例系统\n\n"
+            "服务的业务目标与系统：example-goal / example-system\n\n"
             "## 当前角色\n\n"
             "当前负责角色：系统与开发设计 Agent\n"
             "角色 reference：system-design-agent.md\n"
             "交互状态：无等待\n"
-            "当前讨论对象：示例系统\n\n"
+            "当前讨论对象：example-system\n\n"
             "## 读取与写入合同\n\n"
-            "当前权威文档：[业务设计](../../business/示例业务/业务设计.md)\n"
-            "必须读取的权威文档：[业务设计](../../business/示例业务/业务设计.md)\n"
+            "当前权威文档：[业务设计](../../business/example-goal/业务设计.md)\n"
+            "必须读取的权威文档：[业务设计](../../business/example-goal/业务设计.md)\n"
             "直接证据或代码入口：无\n"
-            "允许写入路径：../../systems/示例系统/\n"
+            "允许写入路径：../../systems/example-system/\n"
             "禁止修改内容：业务设计\n\n"
             "## 当前判断\n\n"
-            "已经形成的认识或实现：示例系统负责示例能力\n"
+            "已经形成的认识或实现：example-system负责示例能力\n"
             "当前核心判断及答案：责任边界已明确\n"
             "已触发的条件判断：无\n"
             "补充判断：无\n"
@@ -3147,7 +3529,7 @@ def self_test() -> int:
             "尚未处理的用户反馈：无\n"
             "反馈处理结果：无\n\n"
             "## 已有产物\n\n"
-            "本轮维护的文档或代码：[系统入口](../../systems/示例系统/index.md)\n"
+            "本轮维护的文档或代码：[系统入口](../../systems/example-system/index.md)\n"
             "当前工作位置：系统设计\n"
             "当前开发基线与代码快照：无\n"
             "实现记录与审核状态：无\n\n"
@@ -3159,13 +3541,13 @@ def self_test() -> int:
         task_index = task_root / "index.md"
         task_index.write_text(task_text, encoding="utf-8")
         controller_text = (
-            "# 主控状态：示例任务\n\n"
+            "# 主控状态：example-work\n\n"
             "任务文档：[完整任务](index.md)\n"
             "当前负责角色：系统与开发设计 Agent\n"
             "角色 reference：system-design-agent.md\n"
             "通信状态：可继续\n"
-            "当前讨论对象：示例系统\n"
-            "专业结果位置：[系统入口](../../systems/示例系统/index.md)\n"
+            "当前讨论对象：example-system\n"
+            "专业结果位置：[系统入口](../../systems/example-system/index.md)\n"
             "本轮变更：系统设计文档\n"
             "用户交互包：无\n"
             "待处理用户反馈：无\n"
@@ -3174,38 +3556,115 @@ def self_test() -> int:
         )
         controller_state = task_root / "主控状态.md"
         controller_state.write_text(controller_text, encoding="utf-8")
-        development_root = system_root / "开发记录"
-        batch_root = development_root / "示例批次"
-        implementation_root = batch_root / "实施任务" / "TASK-base"
-        test_feedback_root = batch_root / "测试反馈"
-        improvement_root = batch_root / "工程改进"
-        review_root = batch_root / "审核"
+        validation_item = (
+            system_root
+            / "validation"
+            / "VAL-example-prototype"
+        )
+        validation_run = validation_item / "runs" / "RUN-001"
+        validation_run.mkdir(parents=True)
+        (validation_item / "src").mkdir()
+        (validation_item / "index.md").write_text(
+            "# 示例原型验证\n\n"
+            "验证标识：VAL-example-prototype\n"
+            "所属系统：example-system\n"
+            "验证方法：prototype\n"
+            "验证命题：示例页面可以呈现目标结果\n"
+            "验证状态：已运行\n"
+            "当前结论：命题得到当前运行支持\n"
+            "验证结论：[结论](验证结论.md)\n"
+            "最近有效运行：[RUN-001](runs/RUN-001/运行记录.md)\n"
+            "来源与受影响设计：[业务设计](../../../../business/example-goal/业务设计.md)\n",
+            encoding="utf-8",
+        )
+        (validation_item / "验证计划.md").write_text(
+            "# 验证计划\n\n运行示例原型并观察结果。\n",
+            encoding="utf-8",
+        )
+        (validation_item / "验证结论.md").write_text(
+            "# 验证结论\n\n当前运行支持验证命题。\n",
+            encoding="utf-8",
+        )
+        (validation_run / "运行记录.md").write_text(
+            "# 运行记录：RUN-001\n\n"
+            "验证标识：VAL-example-prototype\n"
+            "运行标识：RUN-001\n"
+            "运行状态：完成\n"
+            "源码 Commit：proto123\n"
+            "运行环境：本地浏览器\n"
+            "执行入口：python -m example\n"
+            "输入与夹具：示例数据\n"
+            "观察结果：页面呈现目标结果\n"
+            "证据产物：artifacts/screenshot.png\n"
+            "适用范围：示例页面主路线\n"
+            "未覆盖范围：异常路线\n"
+            "用户确认状态：待确认\n"
+            "用户确认依据：待确认\n"
+            "确认范围：待确认\n"
+            "最近更新时间：2026-07-30T11:00:00+08:00\n",
+            encoding="utf-8",
+        )
+        development_root = system_root / "delivery"
+        batch_root = development_root / "example-delivery"
+        implementation_root = batch_root / "tasks" / "TASK-base"
+        test_feedback_root = batch_root / "testing" / "feedback"
+        improvement_root = batch_root / "improvement"
+        review_root = batch_root / "review"
         implementation_root.mkdir(parents=True)
-        test_feedback_root.mkdir()
+        test_feedback_root.mkdir(parents=True)
         improvement_root.mkdir()
         review_root.mkdir()
+        (batch_root / "plan").mkdir()
+        stage_root = batch_root / "stages" / "stage-01"
+        stage_root.mkdir(parents=True)
+        (batch_root / "integration").mkdir()
+        (batch_root / "feedback" / "design").mkdir(parents=True)
+        (stage_root / "阶段记录.md").write_text(
+            "# 阶段记录：stage-01\n\n"
+            "交付单元：example-delivery\n"
+            "阶段：stage-01\n"
+            "计划状态：已确认\n"
+            "计划起始 Commit：base000\n"
+            "实际起始 Commit：base000\n"
+            "起点差异与等价性：无差异，完全相同\n"
+            "包含任务及输出 Commit：TASK-base task111\n"
+            "阶段 Commit：prod123\n"
+            "阶段核对：TASK-base 产物已经汇合\n"
+            "用户确认状态：已确认\n"
+            "用户确认依据：example-work中的用户确认\n"
+            "下一阶段：最终集成\n"
+            "最近更新时间：2026-07-30T12:30:00+08:00\n",
+            encoding="utf-8",
+        )
         (development_root / "index.md").write_text(
-            "[开发任务图](示例批次/开发任务图.md)\n"
-            "[集成记录](示例批次/集成记录.md)\n"
-            "[测试结论](示例批次/测试结论.md)\n"
-            "[审核结论](示例批次/审核结论.md)\n",
+            "[交付单元](example-delivery/index.md)\n",
+            encoding="utf-8",
+        )
+        (batch_root / "index.md").write_text(
+            "# example-delivery\n\n"
+            "交付状态：审核完成\n"
+            "当前阶段：最终审核\n"
+            "[开发任务图](plan/开发任务图.md)\n"
+            "[集成记录](integration/集成记录.md)\n"
+            "[测试结论](testing/测试结论.md)\n"
+            "[审核结论](review/审核结论.md)\n",
             encoding="utf-8",
         )
         task_graph_text = (
-            "# 开发任务图：示例批次\n\n"
+            "# 开发任务图：example-delivery\n\n"
             "状态：已完成\n"
             "任务图确认：已确认\n"
-            "任务图确认依据：示例任务中的用户确认\n"
-            "适用系统：示例系统\n"
-            "开发批次：示例批次\n"
-            "开发基线：[当前基线](../../开发基线.md)\n"
-            "工程编码规范：[当前规范](../../工程编码规范.md)\n"
+            "任务图确认依据：example-work中的用户确认\n"
+            "适用系统：example-system\n"
+            "开发批次：example-delivery\n"
+            "开发基线：[当前基线](../../../coding/开发基线.md)\n"
+            "工程编码规范：[当前规范](../../../coding/工程编码规范.md)\n"
             "工程规范影响复核：已完成\n"
             "工程规范影响复核依据：示例规范未改变任务边界\n"
             "起始代码快照：base000\n"
             "维护角色：开发规划 Agent\n\n"
             "## 批次范围与完成边界\n\n"
-            "完成示例系统当前批次全部生产代码。\n\n"
+            "完成example-system当前批次全部生产代码。\n\n"
             "## 代码产物清单\n\n"
             "| 产物 | 责任 | 来源 | 拥有任务 | 消费者 |\n"
             "| --- | --- | --- | --- | --- |\n"
@@ -3219,15 +3678,15 @@ def self_test() -> int:
             "### 实施任务派发信封\n\n"
             "实施任务：TASK-base\n"
             "当前开发任务图：[当前任务图](开发任务图.md)\n"
-            "当前开发基线：[当前基线](../../开发基线.md)\n"
-            "当前工程编码规范及版本：[当前规范](../../工程编码规范.md) v1\n"
+            "当前开发基线：[当前基线](../../../coding/开发基线.md)\n"
+            "当前工程编码规范及版本：[当前规范](../../../coding/工程编码规范.md) v1\n"
             "共同起始 Commit：base000\n"
             "已合并前置任务：无\n"
             "授权写入范围：src/example\n"
             "本节点实施上下文：TASK-base 实施上下文合同\n"
             "待处理用户反馈：无\n"
-            "任务进度：[任务进度](实施任务/TASK-base/任务进度.md)\n"
-            "实现记录：[实现记录](实施任务/TASK-base/实现记录.md)\n"
+            "任务进度：[任务进度](../tasks/TASK-base/任务进度.md)\n"
+            "实现记录：[实现记录](../tasks/TASK-base/实现记录.md)\n"
             "完成回执：输出 Commit、实际产物和偏离\n\n"
             "## 开发任务\n\n"
             "### TASK-base：建立示例生产代码\n\n"
@@ -3248,8 +3707,8 @@ def self_test() -> int:
             "编码完成边界：生产代码提交并登记产物\n"
             "发现问题时返回：开发规划 Agent\n\n"
             "#### 实施上下文合同\n\n"
-            "必须读取：[架构设计](../../架构设计.md#总体架构)\n"
-            "不得重新决定：示例系统采用当前架构\n"
+            "必须读取：[架构设计](../../../design/架构设计.md#总体架构)\n"
+            "不得重新决定：example-system采用当前架构\n"
             "允许自主决定：局部类型和方法组织\n"
             "前置代码产物与 Commit：无；base000\n"
             "共享事务、不变量与失败语义：不适用；工程基础不承载业务事务\n"
@@ -3260,11 +3719,11 @@ def self_test() -> int:
             "## 尚未确定的问题\n\n"
             "无\n"
         )
-        task_graph = batch_root / "开发任务图.md"
+        task_graph = batch_root / "plan" / "开发任务图.md"
         task_graph.write_text(task_graph_text, encoding="utf-8")
         progress_text = (
             "# 任务进度：TASK-base\n\n"
-            "开发任务图：[当前任务图](../../开发任务图.md)\n"
+            "开发任务图：[当前任务图](../../plan/开发任务图.md)\n"
             "实施任务：TASK-base\n"
             "计划状态：已合并\n"
             "最近一次 Agent 事件：已结束\n"
@@ -3286,10 +3745,10 @@ def self_test() -> int:
         progress_record.write_text(progress_text, encoding="utf-8")
         implementation_text = (
             "# 实现记录：TASK-base\n\n"
-            "开发任务图：[当前任务图](../../开发任务图.md)\n"
+            "开发任务图：[当前任务图](../../plan/开发任务图.md)\n"
             "实施任务：TASK-base\n"
-            "开发基线：[当前基线](../../../../开发基线.md)\n"
-            "工程编码规范：[当前规范](../../../../工程编码规范.md)\n"
+            "开发基线：[当前基线](../../../../coding/开发基线.md)\n"
+            "工程编码规范：[当前规范](../../../../coding/工程编码规范.md)\n"
             "worktree 起始快照：base000\n"
             "输出代码快照：task111\n"
             "实现范围：示例生产代码\n"
@@ -3311,7 +3770,7 @@ def self_test() -> int:
         implementation_record.write_text(implementation_text, encoding="utf-8")
         integration_text = (
             "# 集成记录\n\n"
-            "开发任务图：[当前任务图](开发任务图.md)\n"
+            "开发任务图：[当前任务图](../plan/开发任务图.md)\n"
             "起始代码快照：base000\n"
             "已合并任务及 Commit：TASK-base task111\n"
             "合并顺序：TASK-base\n"
@@ -3322,7 +3781,7 @@ def self_test() -> int:
             "工程改进状态：完成\n"
             "最终待审核快照：final456\n"
         )
-        integration_record = batch_root / "集成记录.md"
+        integration_record = batch_root / "integration" / "集成记录.md"
         integration_record.write_text(integration_text, encoding="utf-8")
         test_feedback_text = (
             "# 测试反馈：系统集成\n\n"
@@ -3350,7 +3809,7 @@ def self_test() -> int:
             "# 测试结论\n\n"
             "生产代码快照：prod123\n"
             "测试代码快照：test789\n"
-            "各测试反馈：[系统集成](测试反馈/系统集成.md)\n"
+            "各测试反馈：[系统集成](feedback/系统集成.md)\n"
             "失败与责任：无\n"
             "测试分歧：无\n"
             "修正任务：无\n"
@@ -3358,7 +3817,7 @@ def self_test() -> int:
             "未覆盖风险：无\n"
             "当前结论：可进入工程改进\n"
         )
-        test_conclusion = batch_root / "测试结论.md"
+        test_conclusion = batch_root / "testing" / "测试结论.md"
         test_conclusion.write_text(test_conclusion_text, encoding="utf-8")
         improvement_text = (
             "# 工程改进：重复与抽象\n\n"
@@ -3369,7 +3828,7 @@ def self_test() -> int:
             "依据的开发基线：当前基线\n"
             "依据的工程编码规范：v1\n"
             "依据的测试结论：可进入工程改进\n"
-            "分析范围：示例批次\n"
+            "分析范围：example-delivery\n"
             "发现的问题：无\n"
             "决定修改或保留的理由：当前实现清楚\n"
             "实际修改：无\n"
@@ -3385,44 +3844,90 @@ def self_test() -> int:
             "审核测试代码快照：test789\n"
             "依据的开发基线：当前基线\n"
             "依据的工程编码规范：v1\n"
-            "审核范围：示例批次\n"
+            "审核范围：example-delivery\n"
             "未覆盖范围：无\n"
             "审核结论：通过\n"
         )
         for name in CORE_REVIEW_FILES:
             (review_root / name).write_text(review_text, encoding="utf-8")
-        review_summary = batch_root / "审核结论.md"
+        review_summary = review_root / "审核结论.md"
         review_summary.write_text(
             "# 审核结论\n\n"
             "生产代码快照：final456\n"
             "测试代码快照：test789\n"
             "工程编码规范：v1\n"
             "当前结论：通过\n\n"
-            "- [实现符合性](审核/实现符合性.md)\n"
-            "- [工程质量](审核/工程质量.md)\n",
+            "- [实现符合性](实现符合性.md)\n"
+            "- [工程质量](工程质量.md)\n",
             encoding="utf-8",
         )
 
-        errors, _ = validate(repo_root, coding_system="示例系统")
+        sync(repo_root)
+        errors, _ = validate(repo_root, coding_system="example-system")
         if not any("不是 Git 版本管理仓库" in error for error in errors):
             print("自检失败：Coding 检查未拒绝非 Git 目录。")
             return 1
 
-        errors, _ = validate(repo_root, recovery_task="示例任务")
+        errors, _ = validate(repo_root, recovery_task="example-work")
         if errors:
             print("自检失败：有效任务恢复样例未通过。")
             for error in errors:
                 print(f"ERROR: {error}")
             return 1
 
+        (validation_item / "src").rmdir()
+        errors, _ = validate(repo_root)
+        if not any("原型验证缺少 src/" in error for error in errors):
+            print("自检失败：系统验证检查未识别原型源码目录缺失。")
+            return 1
+        (validation_item / "src").mkdir()
+
+        validation_index_file = validation_item / "index.md"
+        validation_index_text = validation_index_file.read_text(
+            encoding="utf-8"
+        )
+        validation_run_record = validation_run / "运行记录.md"
+        validation_run_text = validation_run_record.read_text(
+            encoding="utf-8"
+        )
+        validation_index_file.write_text(
+            validation_index_text.replace(
+                "验证状态：已运行",
+                "验证状态：已确认",
+            ),
+            encoding="utf-8",
+        )
+        validation_run_record.write_text(
+            validation_run_text.replace(
+                "用户确认状态：待确认",
+                "用户确认状态：已确认",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(repo_root)
+        if not any(
+            "已确认验证运行必须记录有效" in error
+            for error in errors
+        ):
+            print("自检失败：原型确认未拒绝缺失的确认绑定。")
+            return 1
+        validation_index_file.write_text(
+            validation_index_text,
+            encoding="utf-8",
+        )
+        validation_run_record.write_text(
+            validation_run_text,
+            encoding="utf-8",
+        )
+
         controller_state.unlink()
-        errors, _ = validate(repo_root, recovery_task="示例任务")
+        errors, _ = validate(repo_root, recovery_task="example-work")
         if not any("缺少主控状态" in error for error in errors):
             print("自检失败：未识别缺少短主控状态的旧任务。")
             return 1
         controller_state.write_text(controller_text, encoding="utf-8")
 
-        system_split = system_root / "系统拆分.md"
+        system_split = design_root / "系统拆分.md"
         valid_system_split_text = system_split.read_text(encoding="utf-8")
         system_split.write_text(
             valid_system_split_text.replace(
@@ -3431,7 +3936,7 @@ def self_test() -> int:
             ),
             encoding="utf-8",
         )
-        errors, _ = validate(repo_root, coding_system="示例系统")
+        errors, _ = validate(repo_root, coding_system="example-system")
         if not any("业务主体确认：已确认" in error for error in errors):
             print("自检失败：Coding 检查未拒绝待确认的业务主体。")
             return 1
@@ -3444,7 +3949,7 @@ def self_test() -> int:
             ),
             encoding="utf-8",
         )
-        errors, _ = validate(repo_root, coding_system="示例系统")
+        errors, _ = validate(repo_root, coding_system="example-system")
         if not any("Domain 设计确认：已确认" in error for error in errors):
             print("自检失败：Coding 检查未拒绝待确认的 Domain 设计。")
             return 1
@@ -3457,13 +3962,13 @@ def self_test() -> int:
             ),
             encoding="utf-8",
         )
-        errors, _ = validate(repo_root, coding_system="示例系统")
+        errors, _ = validate(repo_root, coding_system="example-system")
         if not any("核心命名确认：已确认" in error for error in errors):
             print("自检失败：Coding 检查未拒绝待确认的核心命名。")
             return 1
         system_split.write_text(valid_system_split_text, encoding="utf-8")
 
-        architecture_file = system_root / "架构设计.md"
+        architecture_file = design_root / "架构设计.md"
         valid_architecture_text = architecture_file.read_text(
             encoding="utf-8"
         )
@@ -3474,7 +3979,7 @@ def self_test() -> int:
             ),
             encoding="utf-8",
         )
-        errors, _ = validate(repo_root, coding_system="示例系统")
+        errors, _ = validate(repo_root, coding_system="example-system")
         if not any("架构设计尚未确认" in error for error in errors):
             print("自检失败：Coding 检查未拒绝待确认的架构设计。")
             return 1
@@ -3483,7 +3988,7 @@ def self_test() -> int:
             encoding="utf-8",
         )
 
-        module_file = system_root / "模块拆分.md"
+        module_file = design_root / "模块拆分.md"
         valid_module_text = module_file.read_text(encoding="utf-8")
         module_file.write_text(
             valid_module_text.replace(
@@ -3492,7 +3997,7 @@ def self_test() -> int:
             ),
             encoding="utf-8",
         )
-        errors, _ = validate(repo_root, coding_system="示例系统")
+        errors, _ = validate(repo_root, coding_system="example-system")
         if not any("模块拆分尚未确认" in error for error in errors):
             print("自检失败：Coding 检查未拒绝待确认的模块拆分。")
             return 1
@@ -3505,7 +4010,7 @@ def self_test() -> int:
             ),
             encoding="utf-8",
         )
-        errors, _ = validate(repo_root, coding_system="示例系统")
+        errors, _ = validate(repo_root, coding_system="example-system")
         if not any("规范确认：已确认" in error for error in errors):
             print("自检失败：Coding 检查未拒绝待确认的工程编码规范。")
             return 1
@@ -3514,7 +4019,7 @@ def self_test() -> int:
             encoding="utf-8",
         )
 
-        api_design = system_root / "API设计.md"
+        api_design = design_root / "API设计.md"
         valid_api_design_text = api_design.read_text(encoding="utf-8")
         api_design.write_text(
             valid_api_design_text.replace(
@@ -3523,13 +4028,13 @@ def self_test() -> int:
             ),
             encoding="utf-8",
         )
-        errors, _ = validate(repo_root, coding_system="示例系统")
+        errors, _ = validate(repo_root, coding_system="example-system")
         if not any("API 设计确认：已确认" in error for error in errors):
             print("自检失败：Coding 检查未拒绝待确认的 API 设计。")
             return 1
         api_design.write_text(valid_api_design_text, encoding="utf-8")
 
-        internal_orchestration = system_root / "核心接口内部编排.md"
+        internal_orchestration = design_root / "核心接口内部编排.md"
         valid_internal_orchestration_text = internal_orchestration.read_text(
             encoding="utf-8"
         )
@@ -3542,14 +4047,14 @@ def self_test() -> int:
         )
         errors, _ = validate(
             repo_root,
-            orchestration_system="示例系统",
+            orchestration_system="example-system",
         )
         if errors:
             print("自检失败：合法的待确认编排候选未通过生成阶段检查。")
             for error in errors:
                 print(f"ERROR: {error}")
             return 1
-        errors, _ = validate(repo_root, coding_system="示例系统")
+        errors, _ = validate(repo_root, coding_system="example-system")
         if not any(
             "核心接口内部编排确认：已确认" in error for error in errors
         ):
@@ -3569,7 +4074,7 @@ def self_test() -> int:
         )
         errors, _ = validate(
             repo_root,
-            orchestration_system="示例系统",
+            orchestration_system="example-system",
         )
         if not any(
             "六个三级标题" in error and "API-create-example" in error
@@ -3591,7 +4096,7 @@ def self_test() -> int:
         )
         errors, _ = validate(
             repo_root,
-            orchestration_system="示例系统",
+            orchestration_system="example-system",
         )
         if not any("每个二级标题必须只对应一个" in error for error in errors):
             print("自检失败：编排检查未拒绝接口组标题。")
@@ -3601,7 +4106,7 @@ def self_test() -> int:
             encoding="utf-8",
         )
 
-        database_design = system_root / "数据库设计.md"
+        database_design = design_root / "数据库设计.md"
         valid_database_design_text = database_design.read_text(encoding="utf-8")
         database_design.write_text(
             valid_database_design_text
@@ -3610,21 +4115,21 @@ def self_test() -> int:
                 "数据库设计确认：待确认",
             )
             .replace(
-                "数据库设计确认依据：示例任务中的用户确认",
+                "数据库设计确认依据：example-work中的用户确认",
                 "数据库设计确认依据：无",
             ),
             encoding="utf-8",
         )
         errors, _ = validate(
             repo_root,
-            database_system="示例系统",
+            database_system="example-system",
         )
         if errors:
             print("自检失败：合法的待确认数据库候选未通过生成阶段检查。")
             for error in errors:
                 print(f"ERROR: {error}")
             return 1
-        errors, _ = validate(repo_root, coding_system="示例系统")
+        errors, _ = validate(repo_root, coding_system="example-system")
         if not any("数据库设计确认：已确认" in error for error in errors):
             print("自检失败：Coding 检查未拒绝待确认的数据库设计。")
             return 1
@@ -3642,7 +4147,7 @@ def self_test() -> int:
         )
         errors, _ = validate(
             repo_root,
-            database_system="示例系统",
+            database_system="example-system",
         )
         if not any(
             "十个三级标题" in error and "DBT-example" in error
@@ -3662,7 +4167,7 @@ def self_test() -> int:
         )
         errors, _ = validate(
             repo_root,
-            database_system="示例系统",
+            database_system="example-system",
         )
         if not any("禁止 SQL 代码块" in error for error in errors):
             print("自检失败：数据库检查未拒绝 SQL 代码块。")
@@ -3682,7 +4187,7 @@ def self_test() -> int:
             ),
             encoding="utf-8",
         )
-        errors, _ = validate(repo_root, recovery_task="示例任务")
+        errors, _ = validate(repo_root, recovery_task="example-work")
         if not any("角色 reference" in error for error in errors):
             print("自检失败：未识别缺失的角色 reference。")
             return 1
@@ -3695,7 +4200,7 @@ def self_test() -> int:
             ),
             encoding="utf-8",
         )
-        errors, _ = validate(repo_root, recovery_task="示例任务")
+        errors, _ = validate(repo_root, recovery_task="example-work")
         if not any("主控状态" in error and "下一步" in error for error in errors):
             print("自检失败：未识别主控状态缺失的下一步。")
             return 1
@@ -3712,7 +4217,7 @@ def self_test() -> int:
             capture_output=True,
         )
 
-        errors, _ = validate(repo_root, coding_system="示例系统")
+        errors, _ = validate(repo_root, coding_system="example-system")
         if errors:
             print("自检失败：有效样例未通过。")
             for error in errors:
@@ -3721,8 +4226,8 @@ def self_test() -> int:
 
         errors, _ = validate(
             repo_root,
-            implementation_system="示例系统",
-            development_batch="示例批次",
+            implementation_system="example-system",
+            development_batch="example-delivery",
         )
         if errors:
             print("自检失败：有效开发任务图样例未通过。")
@@ -3732,8 +4237,8 @@ def self_test() -> int:
 
         errors, _ = validate(
             repo_root,
-            coding_system="示例系统",
-            development_batch="示例批次",
+            coding_system="example-system",
+            development_batch="example-delivery",
         )
         if errors:
             print("自检失败：有效 Coding 执行准入样例未通过。")
@@ -3743,14 +4248,27 @@ def self_test() -> int:
 
         errors, _ = validate(
             repo_root,
-            coding_system="示例系统",
-            review_batch="示例批次",
+            coding_system="example-system",
+            review_batch="example-delivery",
         )
         if errors:
             print("自检失败：有效开发批次与审核样例未通过。")
             for error in errors:
                 print(f"ERROR: {error}")
             return 1
+
+        stage_record = stage_root / "阶段记录.md"
+        stage_record_text = stage_record.read_text(encoding="utf-8")
+        stage_record.unlink()
+        errors, _ = validate(
+            repo_root,
+            coding_system="example-system",
+            review_batch="example-delivery",
+        )
+        if not any("至少需要一个阶段记录" in error for error in errors):
+            print("自检失败：最终审核未识别缺失阶段记录。")
+            return 1
+        stage_record.write_text(stage_record_text, encoding="utf-8")
 
         task_graph.write_text(
             task_graph_text.replace(
@@ -3761,8 +4279,8 @@ def self_test() -> int:
         )
         errors, _ = validate(
             repo_root,
-            implementation_system="示例系统",
-            development_batch="示例批次",
+            implementation_system="example-system",
+            development_batch="example-delivery",
         )
         if not any(
             "编码完成边界不得包含测试" in error for error in errors
@@ -3780,8 +4298,8 @@ def self_test() -> int:
         )
         errors, _ = validate(
             repo_root,
-            implementation_system="示例系统",
-            development_batch="示例批次",
+            implementation_system="example-system",
+            development_batch="example-delivery",
         )
         if not any(
             "任务类型不在固定分类" in error for error in errors
@@ -3792,15 +4310,15 @@ def self_test() -> int:
 
         task_graph.write_text(
             task_graph_text.replace(
-                "不得重新决定：示例系统采用当前架构\n",
+                "不得重新决定：example-system采用当前架构\n",
                 "",
             ),
             encoding="utf-8",
         )
         errors, _ = validate(
             repo_root,
-            implementation_system="示例系统",
-            development_batch="示例批次",
+            implementation_system="example-system",
+            development_batch="example-delivery",
         )
         if not any(
             "实施上下文合同" in error and "不得重新决定" in error
@@ -3813,8 +4331,8 @@ def self_test() -> int:
         progress_record.unlink()
         errors, _ = validate(
             repo_root,
-            coding_system="示例系统",
-            development_batch="示例批次",
+            coding_system="example-system",
+            development_batch="example-delivery",
         )
         if not any("缺少任务进度" in error for error in errors):
             print("自检失败：Coding 执行准入未识别缺失任务进度。")
@@ -3833,8 +4351,8 @@ def self_test() -> int:
         )
         errors, _ = validate(
             repo_root,
-            implementation_system="示例系统",
-            development_batch="示例批次",
+            implementation_system="example-system",
+            development_batch="example-delivery",
         )
         if not any(
             "任务图候选必须保持“状态：待确认”" in error
@@ -3860,8 +4378,8 @@ def self_test() -> int:
         task_graph.write_text(pending_task_graph_text, encoding="utf-8")
         errors, _ = validate(
             repo_root,
-            implementation_system="示例系统",
-            development_batch="示例批次",
+            implementation_system="example-system",
+            development_batch="example-delivery",
         )
         if errors:
             print("自检失败：工程规范待确认时任务图候选不应被阻塞。")
@@ -3870,8 +4388,8 @@ def self_test() -> int:
             return 1
         errors, _ = validate(
             repo_root,
-            coding_system="示例系统",
-            development_batch="示例批次",
+            coding_system="example-system",
+            development_batch="example-delivery",
         )
         if not any(
             "工程编码规范" in error and "状态：当前" in error
@@ -3894,8 +4412,8 @@ def self_test() -> int:
         )
         errors, _ = validate(
             repo_root,
-            implementation_system="示例系统",
-            development_batch="示例批次",
+            implementation_system="example-system",
+            development_batch="example-delivery",
         )
         if not any(
             "不能依赖自身" in error or "循环依赖" in error
@@ -3908,8 +4426,8 @@ def self_test() -> int:
         test_feedback_file.unlink()
         errors, _ = validate(
             repo_root,
-            coding_system="示例系统",
-            review_batch="示例批次",
+            coding_system="example-system",
+            review_batch="example-delivery",
         )
         if not any("至少需要一份统一测试反馈" in error for error in errors):
             print("自检失败：未识别缺少统一测试反馈。")
@@ -3919,8 +4437,7 @@ def self_test() -> int:
             encoding="utf-8",
         )
 
-        design_feedback_root = batch_root / "设计反馈"
-        design_feedback_root.mkdir()
+        design_feedback_root = batch_root / "feedback" / "design"
         feedback_file = design_feedback_root / "01-数据库设计.md"
         feedback_text = (
             "# 设计反馈：数据库设计\n\n"
@@ -3944,8 +4461,8 @@ def self_test() -> int:
         feedback_file.write_text(feedback_text, encoding="utf-8")
         errors, _ = validate(
             repo_root,
-            coding_system="示例系统",
-            review_batch="示例批次",
+            coding_system="example-system",
+            review_batch="example-delivery",
         )
         if not any(
             "设计反馈必须已经不采纳或完成重新确认" in error
@@ -3957,7 +4474,7 @@ def self_test() -> int:
         design_feedback_root.rmdir()
 
         engineering_standard.unlink()
-        errors, _ = validate(repo_root, coding_system="示例系统")
+        errors, _ = validate(repo_root, coding_system="example-system")
         if not any(
             "缺少固定实现输入" in error
             and "工程编码规范.md" in error
@@ -3979,8 +4496,8 @@ def self_test() -> int:
         )
         errors, _ = validate(
             repo_root,
-            coding_system="示例系统",
-            review_batch="示例批次",
+            coding_system="example-system",
+            review_batch="example-delivery",
         )
         if not any("工程改进状态" in error for error in errors):
             print("自检失败：未拒绝工程改进尚未完成的正式审核。")
@@ -3990,8 +4507,8 @@ def self_test() -> int:
         improvement_record.unlink()
         errors, _ = validate(
             repo_root,
-            coding_system="示例系统",
-            review_batch="示例批次",
+            coding_system="example-system",
+            review_batch="example-delivery",
         )
         if not any("至少需要一份工程改进记录" in error for error in errors):
             print("自检失败：未识别缺少工程改进记录。")
@@ -4010,8 +4527,8 @@ def self_test() -> int:
         )
         errors, _ = validate(
             repo_root,
-            coding_system="示例系统",
-            review_batch="示例批次",
+            coding_system="example-system",
+            review_batch="example-delivery",
         )
         if not any(
             "最终待审核快照必须由工程改进记录输出" in error
@@ -4028,8 +4545,8 @@ def self_test() -> int:
         missing_review.unlink()
         errors, _ = validate(
             repo_root,
-            coding_system="示例系统",
-            review_batch="示例批次",
+            coding_system="example-system",
+            review_batch="example-delivery",
         )
         if not any(
             "缺少测试或审核记录" in error
@@ -4040,7 +4557,7 @@ def self_test() -> int:
             return 1
         missing_review.write_text(review_text, encoding="utf-8")
 
-        (system_root / "开发基线.md").write_text(
+        (coding_root / "开发基线.md").write_text(
             "# 开发基线\n\n"
             "状态：当前\n\n"
             "## Domain\n\n"
@@ -4048,7 +4565,7 @@ def self_test() -> int:
             "## 数据库设计\n",
             encoding="utf-8",
         )
-        errors, _ = validate(repo_root, coding_system="示例系统")
+        errors, _ = validate(repo_root, coding_system="example-system")
         if not any("适用范围" in error for error in errors):
             print("自检失败：未识别缺失的基线适用范围。")
             return 1
@@ -4056,36 +4573,36 @@ def self_test() -> int:
             print("自检失败：未识别缺失的基线来源。")
             return 1
 
-        (system_root / "开发基线.md").write_text(
+        (coding_root / "开发基线.md").write_text(
             baseline_text + "\n状态：当前\n", encoding="utf-8"
         )
-        errors, _ = validate(repo_root, coding_system="示例系统")
+        errors, _ = validate(repo_root, coding_system="example-system")
         if not any("只能有一个独立状态行" in error for error in errors):
             print("自检失败：未识别重复的基线状态。")
             return 1
 
-        (system_root / "开发基线.md").write_text(
+        (coding_root / "开发基线.md").write_text(
             baseline_text, encoding="utf-8"
         )
-        (system_root / "API设计.md").unlink()
-        errors, _ = validate(repo_root, coding_system="示例系统")
+        (design_root / "API设计.md").unlink()
+        errors, _ = validate(repo_root, coding_system="example-system")
         if not any(
             "缺少固定实现输入" in error and "API设计.md" in error
             for error in errors
         ):
             print("自检失败：Coding 检查未识别缺失 API 设计。")
             return 1
-        (system_root / "API设计.md").write_text(
+        (design_root / "API设计.md").write_text(
             "# API设计\n", encoding="utf-8"
         )
 
         (system_root / "index.md").write_text(
-            "[系统拆分](系统拆分.md)\n"
-            "[架构设计](架构设计.md)\n"
-            "[模块拆分](模块拆分.md)\n"
-            "[API设计](API设计.md)\n"
-            "[核心接口内部编排](核心接口内部编排.md)\n"
-            "[数据库设计](数据库设计.md)\n",
+            "[系统拆分](design/系统拆分.md)\n"
+            "[架构设计](design/架构设计.md)\n"
+            "[模块拆分](design/模块拆分.md)\n"
+            "[API设计](design/API设计.md)\n"
+            "[核心接口内部编排](design/核心接口内部编排.md)\n"
+            "[数据库设计](design/数据库设计.md)\n",
             encoding="utf-8",
         )
         errors, _ = validate(repo_root)
@@ -4094,19 +4611,19 @@ def self_test() -> int:
             return 1
 
         (system_root / "index.md").write_text(
-            "[系统拆分](系统拆分.md)\n"
-            "[架构设计](架构设计.md)\n"
-            "[模块拆分](模块拆分.md)\n"
-            "[API设计](API设计.md)\n"
-            "[核心接口内部编排](核心接口内部编排.md)\n"
-            "[数据库设计](数据库设计.md)\n"
-            "[开发基线](开发基线.md)\n"
-            "[工程编码规范](工程编码规范.md)\n"
-            "[开发记录](开发记录/index.md)\n",
+            "[系统拆分](design/系统拆分.md)\n"
+            "[架构设计](design/架构设计.md)\n"
+            "[模块拆分](design/模块拆分.md)\n"
+            "[API设计](design/API设计.md)\n"
+            "[核心接口内部编排](design/核心接口内部编排.md)\n"
+            "[数据库设计](design/数据库设计.md)\n"
+            "[开发基线](coding/开发基线.md)\n"
+            "[工程编码规范](coding/工程编码规范.md)\n"
+            "[交付](delivery/index.md)\n",
             encoding="utf-8",
         )
-        (system_root / "开发基线.md").unlink()
-        errors, _ = validate(repo_root, coding_system="示例系统")
+        (coding_root / "开发基线.md").unlink()
+        errors, _ = validate(repo_root, coding_system="example-system")
         if not any("缺少固定实现输入" in error for error in errors):
             print("自检失败：Coding 检查未识别缺失开发基线。")
             return 1
@@ -4132,42 +4649,42 @@ def main() -> int:
     )
     parser.add_argument(
         "--coding-system",
-        metavar="中文系统名",
+        metavar="system-id",
         help="准备进入 Coding 的系统；要求设计、开发基线和工程编码规范均为当前。与 --development-batch 同用时还检查当前任务图、工程规范影响复核和逐任务进度准入。",
     )
     parser.add_argument(
         "--architecture-system",
-        metavar="中文系统名",
+        metavar="system-id",
         help="检查指定系统的架构设计与模块拆分固定模板；候选交给用户确认前运行。",
     )
     parser.add_argument(
         "--orchestration-system",
-        metavar="中文系统名",
+        metavar="system-id",
         help="检查指定系统的 API 标识和逐 API 核心接口内部编排固定模板；候选交给用户确认前运行。",
     )
     parser.add_argument(
         "--database-system",
-        metavar="中文系统名",
+        metavar="system-id",
         help="检查指定系统以表和字段意义为核心的数据库设计固定模板，并拒绝 DDL；候选交给用户确认前运行。",
     )
     parser.add_argument(
         "--implementation-system",
-        metavar="中文系统名",
+        metavar="system-id",
         help="检查指定系统当前开发批次的任务图候选；工程编码规范可以仍在形成，但设计与开发基线必须为当前，并必须指定 --development-batch。",
     )
     parser.add_argument(
         "--development-batch",
-        metavar="中文开发批次",
+        metavar="delivery-id",
         help="与 --implementation-system、--coding-system 或 --review-batch 一起指定开发批次。",
     )
     parser.add_argument(
         "--review-batch",
-        metavar="中文开发批次",
+        metavar="delivery-id",
         help="检查指定开发批次的任务图、实施记录、统一测试、工程改进和审核；必须同时指定 --coding-system。",
     )
     parser.add_argument(
         "--recovery-task",
-        metavar="中文任务名",
+        metavar="work-id",
         help="检查指定任务的短主控状态、七段式完整恢复合同、必填字段和工作入口链接。",
     )
     args = parser.parse_args()

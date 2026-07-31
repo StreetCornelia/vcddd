@@ -68,7 +68,7 @@
 每个测试任务维护：
 
 ```text
-docs/vcddd/systems/<系统>/开发记录/<开发批次>/测试反馈/<测试角度>.md
+vcddd/systems/<system-id>/delivery/<delivery-id>/testing/feedback/<测试角度>.md
 ```
 
 固定包含：
@@ -100,7 +100,7 @@ docs/vcddd/systems/<系统>/开发记录/<开发批次>/测试反馈/<测试角�
 所有独立测试完成后，新的测试结论 Agent 只读取各测试反馈，建立：
 
 ```text
-docs/vcddd/systems/<系统>/开发记录/<开发批次>/测试结论.md
+vcddd/systems/<system-id>/delivery/<delivery-id>/testing/测试结论.md
 ```
 
 固定说明：

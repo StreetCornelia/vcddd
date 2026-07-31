@@ -494,7 +494,7 @@ Agent 必须给出完整推荐设计和依据，不能要求用户从空白开�
 ## 固定事实文档
 
 ```text
-docs/vcddd/systems/<中文系统名>/
+vcddd/systems/<system-id>/design/
 ├── index.md
 ├── 系统拆分.md
 ├── 架构设计.md
@@ -564,7 +564,7 @@ Domain 设计确认后，完整读取并严格使用[架构设计与模块拆分
 候选交给用户前运行：
 
 ```text
-python3 <本 Skill 目录>/scripts/validate_project.py <目标仓库根目录> --architecture-system <中文系统名>
+python3 <本 Skill 目录>/scripts/validate_project.py <目标仓库根目录> --architecture-system <system-id>
 ```
 
 形成完整推荐后，把当前总体架构、选择理由、主要组件、依赖边界、现有代码继承或建议改变的内容、替代项和 Coding 自主空间交给用户。只有用户明确确认当前版本后标记 `架构设计确认：已确认` 并记录依据。
@@ -633,7 +633,7 @@ API 确认后，完整读取并严格使用[核心接口内部编排固定模板
 候选形成后，在交给用户前运行：
 
 ```text
-python3 <本 Skill 目录>/scripts/validate_project.py <目标仓库根目录> --orchestration-system <中文系统名>
+python3 <本 Skill 目录>/scripts/validate_project.py <目标仓库根目录> --orchestration-system <system-id>
 ```
 
 结构不通过时不能请求用户确认。系统设计 Agent 完成全部 API 章节后，按相同 API 顺序把业务结果、主流程、主要失败、事务和外部影响交给用户审核，不另写脱离正文的替代总结。写完候选时标记 `核心接口内部编排确认：待确认`，确认依据写“无”；只有用户明确确认当前版本后才能标记 `已确认` 并记录可恢复依据。
@@ -672,7 +672,7 @@ Domain 表是当前 Domain 的投影；非 Domain 表必须有明确的业务、
 系统设计 Agent 先独立完成全套推荐数据库设计，把表、字段、事务、流程状态和业务证据逐项追溯到 Domain、API、已确认核心接口内部编排、非 Domain 用途和业务场景。候选形成后先运行：
 
 ```text
-python3 <本 Skill 目录>/scripts/validate_project.py <目标仓库根目录> --database-system <中文系统名>
+python3 <本 Skill 目录>/scripts/validate_project.py <目标仓库根目录> --database-system <system-id>
 ```
 
 结构通过后才交给用户审核。完整规则见 [用户交互协议](interaction-protocol.md#数据库设计审核)。

@@ -110,7 +110,7 @@
 每个实施任务固定维护：
 
 ```text
-docs/vcddd/systems/<系统>/开发记录/<开发批次>/实施任务/<TASK-标识>/任务进度.md
+vcddd/systems/<system-id>/delivery/<delivery-id>/tasks/<TASK-ID>/任务进度.md
 ```
 
 固定字段：
@@ -158,14 +158,14 @@ worktree 必须从已提交的派发 Commit 建立。开发基线、设计、工
 - 任务边界、依赖或共享写入判断错误：开发规划 Agent 更新任务图候选；
 - 只是实现缺陷：当前实施 Agent 修正。
 
-在当前实施任务的 `设计反馈/` 中记录问题位置、权威设计、代码或 SQL 证据、影响、推荐修改、替代方案、可继续范围和事实拥有者。没有 Domain 的任务不使用 Domain 术语解释非 Domain 问题。
+在当前交付单元的 `feedback/design/` 中建立与实施任务关联的记录，写明问题位置、权威设计、代码或 SQL 证据、影响、推荐修改、替代方案、可继续范围和事实拥有者。没有 Domain 的任务不使用 Domain 术语解释非 Domain 问题。
 
 ## 实现记录
 
 每个任务维护：
 
 ```text
-docs/vcddd/systems/<系统>/开发记录/<开发批次>/实施任务/<TASK-标识>/实现记录.md
+vcddd/systems/<system-id>/delivery/<delivery-id>/tasks/<TASK-ID>/实现记录.md
 ```
 
 固定包含：

@@ -31,9 +31,9 @@ Domain 分析开始以后，把结构、关系、生命周期、调用顺序、�
 
 ## 恢复
 
-1. 读取目标仓库的 `docs/vcddd/index.md`、`work/index.md` 和当前任务。
+1. 读取目标仓库的 `vcddd/index.md`、`work/index.md` 和当前任务。
 2. 从当前任务恢复角色 reference、读写合同、主要权威文档、已经形成的认识、待处理用户反馈和可直接执行的下一步。
-3. 未选择任务时，根据用户请求只读取直接相关入口；明确的构建、修改或设计请求可以透明建立中文任务。
+3. 未选择任务时，根据用户请求只读取直接相关入口；明确的构建、修改或设计请求可以透明建立工作任务，目录使用稳定 `work-id`，中文名称保存在标题中。
 4. 阶段性业务目标仍由用户决定建立、选择、合并、暂停、完成和取消。
 5. 不默认加载全部项目历史。入口或任务不能说明下一步时，先修复恢复信息。
 
@@ -44,7 +44,7 @@ Domain 分析开始以后，把结构、关系、生命周期、调用顺序、�
 
 主控不重新完成专业工作。它负责：
 
-- 判断请求属于业务设计、系统与开发设计、开发规划、生产代码实现、统一测试、工程改进、代码审核、原型投影或报告投影；
+- 判断请求属于业务设计、系统与开发设计、系统验证、开发规划、生产代码实现、统一测试、工程改进、代码审核或报告投影；
 - 为当前任务维护短 `主控状态.md`，给专业 Agent 提供角色 reference 和该文件路径；
 - 启动或续用真正独立的专业子 Agent；子 Agent 不可用时明确说明，不能静默退化为主控亲自完成；
 - 只从 `主控状态.md` 原样转交专业 Agent 的用户交互包，以及已经由主控限定到该任务的用户反馈片段；
@@ -63,7 +63,7 @@ Domain 分析开始以后，把结构、关系、生命周期、调用顺序、�
 业务设计 Agent 从用户材料、原型、现有系统和运行事实中形成：
 
 ```text
-docs/vcddd/business/<阶段性业务目标>/业务设计.md
+vcddd/business/<goal-id>/业务设计.md
 ```
 
 正文固定回答：
@@ -83,15 +83,20 @@ docs/vcddd/business/<阶段性业务目标>/业务设计.md
 一次只设计一个系统，固定维护：
 
 ```text
-docs/vcddd/systems/<中文系统名>/
+vcddd/systems/<system-id>/
 ├── index.md
-├── 系统拆分.md
-├── 架构设计.md
-├── 模块拆分.md
-├── API设计.md
-├── 核心接口内部编排.md
-├── 数据库设计.md
-└── 开发基线.md
+├── design/
+│   ├── 系统拆分.md
+│   ├── 架构设计.md
+│   ├── 模块拆分.md
+│   ├── API设计.md
+│   ├── 核心接口内部编排.md
+│   └── 数据库设计.md
+├── coding/
+│   ├── 开发基线.md
+│   └── 工程编码规范.md
+├── validation/
+└── delivery/
 ```
 
 - `系统拆分.md`：Domain、对象、行为、规则和 Domain 协作；
@@ -123,7 +128,7 @@ Agent 新引入的核心业务名称，Domain、核心对象、关系和业务�
 每个进入 Coding 的系统先由开发 Agent 读取并严格使用 [references/engineering-coding-standard-template.md](references/engineering-coding-standard-template.md)，建立并持续维护：
 
 ```text
-docs/vcddd/systems/<中文系统名>/工程编码规范.md
+vcddd/systems/<system-id>/coding/工程编码规范.md
 ```
 
 它是本系统全部 Coding 共同遵守的工程事实。架构设计和模块拆分未确认时先返回系统设计，不能用工程规范代替，也不能先提交依赖这些边界的工程规范候选。已有代码时按固定模板逐项实际调查代码和配置，缺失或冲突项再根据当前语言和框架最佳实践提出方案；没有代码时为全部模板项提出推荐、真实替代项和权衡。抽象选择涉及语言习惯、资源生命周期、事务、并发、数据映射、错误传播或封装时，必须给当前语言或框架的最小正确示例、反例、适用边界和对任务图的影响；分轮选择持续写入决策表，但只有用户明确确认完整候选后规范才成为 `当前`。不同系统不默认共享；纯工程认识形成候选并经用户确认后补充，会改变业务或设计时返回上游。
@@ -168,7 +173,7 @@ docs/vcddd/systems/<中文系统名>/工程编码规范.md
 工程分析可以并行，代码修改只在路径与责任不重叠时并行；同一文件、公共接口或相互依赖行为必须串行处理。工程改进 Agent 可以修改授权生产代码并运行已经形成的受影响测试，不能为了通过而降低断言，也不能改变业务、Domain、API、已确认事务、数据或失败语义。每轮固定输入与输出快照，记录到：
 
 ```text
-systems/<系统>/开发记录/<开发批次>/工程改进/<轮次>-<角度>.md
+systems/<system-id>/delivery/<delivery-id>/improvement/<轮次>-<角度>.md
 ```
 
 系统级认识写入 `工程编码规范.md`，只服务当前批次的选择保留在改进记录。完整角色合同见 [references/engineering-improvement-agent.md](references/engineering-improvement-agent.md)。
@@ -186,17 +191,17 @@ systems/<系统>/开发记录/<开发批次>/工程改进/<轮次>-<角度>.md
 
 审核任务使用共同认知协议、[references/diagramming.md](references/diagramming.md) 和 [references/code-review-agent.md](references/code-review-agent.md)。安全、性能、前端体验或平台专项只在风险触发时增加。
 
-## 按需调用原型 Agent
+## 调用系统验证 Agent
 
-原型不是固定阶段或固定产物：
+验证属于被验证系统，固定写入：
 
-- 已确认原型是确认范围内的功能事实来源；
-- 业务认识不足且交互能暴露功能时，可以先做快速网页原型；
-- 业务设计形成后，可以按需用原型呈现系统设计和业务线；
-- 用户指定位置时写到指定位置，否则遵循目标项目既有约定；
-- 原型发现新事实后，交给事实拥有者更新文档，不让原型暗中定义业务或系统。
+```text
+vcddd/systems/<system-id>/validation/<VAL-ID>-<slug>/
+```
 
-需要读取或制作原型时使用 [references/prototype-projection.md](references/prototype-projection.md) 和 [references/evidence.md](references/evidence.md)。
+原型是 `prototype` 验证方法，不是独立产物类型。验证目录同时保存验证入口、计划、结论、`src/` 实现、夹具、脚本和不可变运行记录；原型源码也写入自己的 `src/`。生产代码不能导入验证代码。验证发现新事实后交给事实拥有者更新并重新确认权威文档，不能让验证或原型暗中成为系统事实。
+
+需要读取或执行验证时使用 [references/prototype-projection.md](references/prototype-projection.md) 和 [references/evidence.md](references/evidence.md)。
 
 ## 按需调用报告 Agent
 
@@ -222,6 +227,18 @@ systems/<系统>/开发记录/<开发批次>/工程改进/<轮次>-<角度>.md
 
 ## 检查而不代替语义
 
+修改任何状态拥有者以后，先同步受控索引区：
+
+```text
+python3 <本Skill目录>/scripts/sync_indexes.py <目标仓库根目录> --write
+```
+
+提交前用只读模式确认索引没有漂移：
+
+```text
+python3 <本Skill目录>/scripts/sync_indexes.py <目标仓库根目录> --check
+```
+
 运行：
 
 ```text
@@ -231,49 +248,49 @@ python3 <本Skill目录>/scripts/validate_project.py <目标仓库根目录>
 核心接口内部编排候选交给用户前追加：
 
 ```text
---orchestration-system <中文系统名>
+--orchestration-system <system-id>
 ```
 
 数据库设计候选交给用户前追加：
 
 ```text
---database-system <中文系统名>
+--database-system <system-id>
 ```
 
 架构设计和模块拆分候选交给用户前追加：
 
 ```text
---architecture-system <中文系统名>
+--architecture-system <system-id>
 ```
 
 准备 Coding 时追加：
 
 ```text
---coding-system <中文系统名>
+--coding-system <system-id>
 ```
 
 检查开发任务图候选时追加：
 
 ```text
---implementation-system <中文系统名> --development-batch <中文开发批次>
+--implementation-system <system-id> --development-batch <delivery-id>
 ```
 
 工程规范和任务图已经确认，准备创建实施 worktree 时追加：
 
 ```text
---coding-system <中文系统名> --development-batch <中文开发批次>
+--coding-system <system-id> --development-batch <delivery-id>
 ```
 
 检查一个开发批次的实施、测试、工程改进和审核结构时追加：
 
 ```text
---coding-system <中文系统名> --review-batch <中文开发批次>
+--coding-system <system-id> --review-batch <delivery-id>
 ```
 
 检查当前任务能否被新会话恢复时追加：
 
 ```text
---recovery-task <中文任务名>
+--recovery-task <work-id>
 ```
 
-脚本只检查入口、链接、恢复合同、固定事实文档、开发基线来源、工程编码规范、开发任务图、实施、统一测试、工程改进与审核记录结构和版本状态，不判断业务、设计、代码、测试或审核是否正确。
+脚本只检查入口、链接、索引同步、恢复合同、固定事实文档、系统验证、开发基线来源、工程编码规范、开发任务图、阶段、实施、统一测试、工程改进与审核记录结构和版本状态，不判断业务、设计、验证命题、代码、测试或审核是否正确。

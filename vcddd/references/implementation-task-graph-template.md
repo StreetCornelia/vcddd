@@ -105,7 +105,7 @@ worktree 只从已经提交且可恢复的 Commit 建立，不能从另一个脏
 每个开发批次建立：
 
 ```text
-docs/vcddd/systems/<中文系统名>/开发记录/<开发批次>/开发任务图.md
+vcddd/systems/<system-id>/delivery/<delivery-id>/plan/开发任务图.md
 ```
 
 正文必须按顺序包含：
@@ -205,7 +205,7 @@ worktree 起始快照：
 每个实施任务在派发前建立：
 
 ```text
-开发记录/<开发批次>/实施任务/<TASK-标识>/任务进度.md
+delivery/<delivery-id>/tasks/<TASK-ID>/任务进度.md
 ```
 
 任务进度只在等待条件变化、Agent 启停、形成代码产物、发生阻塞、提交或合并时更新。它记录计划状态、最近一次 Agent 事件、worktree 与 Commit、已完成产物、当前处理对象、剩余事项、阻塞、下一步和输出/合并 Commit；不记录思考过程、终端流水或无状态变化的“仍在工作”。

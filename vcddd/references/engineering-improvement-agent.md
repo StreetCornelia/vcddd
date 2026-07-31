@@ -107,7 +107,7 @@
 维护：
 
 ```text
-docs/vcddd/systems/<系统>/开发记录/<开发批次>/工程改进/<轮次>-<角度>.md
+vcddd/systems/<system-id>/delivery/<delivery-id>/improvement/<轮次>-<角度>.md
 ```
 
 固定写：

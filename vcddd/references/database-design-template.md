@@ -1,6 +1,6 @@
 # 数据库设计固定模板
 
-本模板约束 `docs/vcddd/systems/<中文系统名>/数据库设计.md`。它的读者首先是审核业务和数据事实的人，其次才是实现数据库的人。正文必须让读者不阅读 SQL，也能回答：
+本模板约束 `vcddd/systems/<system-id>/design/数据库设计.md`。它的读者首先是审核业务和数据事实的人，其次才是实现数据库的人。正文必须让读者不阅读 SQL，也能回答：
 
 - 为什么需要这张表；
 - 一行记录究竟代表什么；
@@ -263,7 +263,7 @@ DDL、ORM 映射、迁移、回填、回退和数据库注释的实际落地由 
 候选完成后运行：
 
 ```text
-python3 <本 Skill 目录>/scripts/validate_project.py <目标仓库根目录> --database-system <中文系统名>
+python3 <本 Skill 目录>/scripts/validate_project.py <目标仓库根目录> --database-system <system-id>
 ```
 
 验证通过只说明结构完整，不表示数据设计正确。系统设计 Agent 按“数据承载全景 → 表目录 → 逐表意义与字段 → 跨表事务和安全 → 实现交接”的顺序提交用户审核，并把完整 `数据库设计.md` 作为权威正文。
