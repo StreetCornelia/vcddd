@@ -1,4 +1,4 @@
 interface:
   display_name: "VCDDD"
-  short_description: "从业务设计、系统验证推进到可审核代码"
-  default_prompt: "使用 $vcddd 从仓库根目录的 vcddd 工作空间恢复任务；任何阶段先按 references/model-routing.md 检查目标项目自己的 vcddd/config/agent-models.json，缺失或失效时本机发现 Codex/Claude 可用模型并让用户确认，显式使用满足任务的最低成本模型而不继承主对话。以业务和系统设计为权威，确认后形成工程规范和代码任务图；每个任务提交后立即独立验证与审查，每个阶段汇合后形成真实运行证据与阶段审查，全部阶段闭合后再统一测试、工程改进与最终审核。严格按 references/script-usage.md 执行工具命令；普通任务不读取 scripts 源码。"
+  short_description: "以三阶段专业 Agent 协作，将业务目标持续推进到可验证代码"
+  default_prompt: "请使用 $vcddd 恢复项目状态，把当前大阶段路由到对应的独立专业对话，并且只依据已记录、经用户确认的结果推进流程。"
