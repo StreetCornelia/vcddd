@@ -11,6 +11,8 @@
 
 项目文档合同是权威，脚本只是执行实现。普通业务、设计、验证、迁移、开发、测试和审核 Agent 只读取本协议、执行命令并处理输出。只有任务本身是维护脚本、脚本异常无法由输出定位，或脚本行为与文档合同冲突时，才搜索并读取与问题直接相关的最小源码区段。
 
+任何正常校验都要求目标项目已经按 [Agent 模型发现与路由协议](model-routing.md)建立并确认 `vcddd/config/agent-models.json`。校验脚本不发现模型、不替用户选择模型，也不生成该配置。
+
 ## 工具边界
 
 ### `sync_indexes.py`
@@ -53,10 +55,22 @@
 | `<system-id>` | `vcddd/systems/` 下的稳定 ASCII 系统目录名 |
 | `<delivery-id>` | 当前系统 `delivery/` 下的稳定 ASCII 交付目录名 |
 | `<work-id>` | `vcddd/work/` 下的稳定 ASCII 工作目录名 |
+| `<task-id>` | 当前开发任务图中的稳定 `TASK-` 标识 |
+| `<stage-id>` | 当前交付 `stages/` 下的稳定 ASCII 阶段目录名 |
 
 不要把 `<skill-root>`、`<repo-root>/vcddd`、生产代码根目录或 worktree 子目录相互替代。
 
 ## 场景与完整命令
+
+### 任何阶段开始前
+
+先检查 `vcddd/config/agent-models.json` 是否记录项目初始化时本机可访问的 Codex/Claude 环境，并包含当前环境的真实可用模型、五个能力档位和用户确认。缺失时不要先运行校验或进入专业工作；按模型路由协议完成本机发现和用户确认，再运行基础校验：
+
+```text
+python3 <skill-root>/scripts/validate_project.py <repo-root>
+```
+
+目标：拒绝没有项目级模型配置、会静默继承主对话模型的任务。
 
 ### 状态拥有者发生变化
 
@@ -145,6 +159,32 @@ python3 <skill-root>/scripts/validate_project.py <repo-root> \
 
 目标：在任务图和工程规范均为当前后检查 Coding 准入，以及已经实际派发任务的进度合同。
 
+### 单个任务准备合并前
+
+任务代码提交，独立任务验证和任务审查都已形成后执行：
+
+```text
+python3 <skill-root>/scripts/validate_project.py <repo-root> \
+  --coding-system <system-id> \
+  --development-batch <delivery-id> \
+  --task-check <task-id>
+```
+
+目标：检查实现、验证和审查指向同一任务 Commit，运行层级达到任务合同，三个 Agent 独立且结论允许合并。失败时保持任务未合并。
+
+### 阶段准备交给用户或继续下阶段前
+
+阶段 Commit、阶段运行验证和阶段审查都已形成后执行：
+
+```text
+python3 <skill-root>/scripts/validate_project.py <repo-root> \
+  --coding-system <system-id> \
+  --development-batch <delivery-id> \
+  --stage-check <stage-id>
+```
+
+目标：检查阶段记录直接链接同一 Commit 的运行与审查证据，达到声明运行层级且结论允许继续。失败时不得请求阶段确认或派发依赖阶段。
+
 ### 完成交付、测试、改进和审核记录前
 
 ```text
@@ -191,6 +231,8 @@ python3 <skill-root>/scripts/validate_project.py <repo-root>
 | 架构、模块、API、内部编排或数据库候选 | 当前系统设计 Agent | 把候选交给用户确认或传播为当前事实 |
 | 开发任务图候选 | 开发规划 Agent；上游事实错误返回其事实拥有者 | 用户确认任务图 |
 | Coding 准入 | 错误所指向的设计、工程规范、任务图或任务进度拥有者 | 创建 Coding worktree 或派发实施 Agent |
+| 任务增量检查 | 实施、任务验证、任务审查或上游事实中对应记录的拥有者 | 合并任务或解除后续依赖 |
+| 阶段增量检查 | 阶段集成、阶段验证、阶段审查或上游事实拥有者 | 请求阶段确认或派发依赖阶段 |
 | 交付记录检查 | 开发规划、集成、测试、工程改进、审核中对应记录的拥有者 | 把交付标记为完成 |
 | 任务恢复 | 迁移或恢复 Agent；专业内容缺失返回原事实拥有者 | 让新会话依据不完整入口继续 |
 | 系统验证或原型记录 | 系统验证 Agent；源码快照问题返回产生该代码的角色 | 把验证结论传播为当前证据 |

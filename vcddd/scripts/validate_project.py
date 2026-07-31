@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 import sys
@@ -38,6 +39,12 @@ HELP_EPILOG = """\
   创建 Coding worktree 前：
     python3 validate_project.py <repo-root> --coding-system <system-id> \\
       --development-batch <delivery-id>
+  任务提交、验证和审查后：
+    python3 validate_project.py <repo-root> --coding-system <system-id> \\
+      --development-batch <delivery-id> --task-check <task-id>
+  阶段运行验证和审查后：
+    python3 validate_project.py <repo-root> --coding-system <system-id> \\
+      --development-batch <delivery-id> --stage-check <stage-id>
   完整交付记录形成后：
     python3 validate_project.py <repo-root> --coding-system <system-id> \\
       --review-batch <delivery-id>
@@ -45,6 +52,8 @@ HELP_EPILOG = """\
     python3 validate_project.py <repo-root> --recovery-task <work-id>
 
 <repo-root> 是包含现有 vcddd/ 的目标仓库根目录。
+任何正常检查都要求项目已经存在经用户确认的
+vcddd/config/agent-models.json。
 普通项目 Agent 执行脚本，不读取源码；完整协议见 references/script-usage.md。
 """
 
@@ -353,6 +362,11 @@ CONTROLLER_STATE_FIELDS = [
     "任务文档",
     "当前负责角色",
     "角色 reference",
+    "模型配置",
+    "请求档位",
+    "实际模型",
+    "推理强度",
+    "选择依据",
     "通信状态",
     "当前讨论对象",
     "专业结果位置",
@@ -402,6 +416,14 @@ TASK_DETAIL_FIELDS = [
     "禁止并行的任务及原因",
     "worktree 起始快照",
     "编码完成边界",
+    "最低运行层级",
+    "验证环境与依赖",
+    "准备命令",
+    "构建或静态检查",
+    "启动命令",
+    "关键路径命令",
+    "成功观察",
+    "审查重点",
     "发现问题时返回",
 ]
 TASK_CONTEXT_FIELDS = [
@@ -425,6 +447,8 @@ IMPLEMENTATION_DISPATCH_FIELDS = [
     "待处理用户反馈",
     "任务进度",
     "实现记录",
+    "任务验证",
+    "任务审查",
     "完成回执",
 ]
 TASK_TYPES = {
@@ -460,6 +484,10 @@ TASK_PROGRESS_FIELDS = [
     "最近一次 Agent 事件",
     "Agent 事件依据",
     "负责 Agent",
+    "模型配置",
+    "请求档位",
+    "实际模型",
+    "推理强度",
     "worktree",
     "起始 Commit",
     "当前 Commit",
@@ -474,7 +502,8 @@ TASK_PROGRESS_FIELDS = [
 ]
 TASK_PROGRESS_STATUS_RE = re.compile(
     r"^计划状态[ \t]*[：:][ \t]*"
-    r"(等待前置|可开始|进行中|阻塞|代码已提交|已合并)[ \t]*$",
+    r"(等待前置|可开始|进行中|阻塞|代码已提交|验证中|需修正|可合并|已合并)"
+    r"[ \t]*$",
     re.MULTILINE,
 )
 TASK_AGENT_EVENT_RE = re.compile(
@@ -541,6 +570,14 @@ STAGE_FIELDS = [
     "包含任务及输出 Commit",
     "阶段 Commit",
     "阶段核对",
+    "阶段集成 Agent",
+    "模型配置",
+    "请求档位",
+    "实际模型",
+    "推理强度",
+    "最低运行层级",
+    "阶段运行验证",
+    "阶段审查",
     "用户确认状态",
     "用户确认依据",
     "下一阶段",
@@ -555,10 +592,99 @@ STAGE_CONFIRMATION_RE = re.compile(
     r"^用户确认状态[ \t]*[：:][ \t]*(待确认|已确认)[ \t]*$",
     re.MULTILINE,
 )
+RUN_LEVELS = ("可构建", "可启动", "可运行", "可用")
+MODEL_TIERS = {"deep", "planning", "review", "execution", "mechanical"}
+MODEL_CONFIG_RELATIVE = Path("vcddd/config/agent-models.json")
+TASK_VERIFICATION_FIELDS = [
+    "验证任务",
+    "输入代码快照",
+    "依据的验证合同",
+    "最低运行层级",
+    "实际达到层级",
+    "运行环境与依赖",
+    "准备命令及结果",
+    "构建或静态检查及结果",
+    "启动命令及结果",
+    "关键路径命令及结果",
+    "成功观察",
+    "证据",
+    "未覆盖范围",
+    "问题责任",
+    "验证结论",
+    "验证 Agent",
+    "模型配置",
+    "请求档位",
+    "实际模型",
+    "推理强度",
+]
+TASK_REVIEW_FIELDS = [
+    "审查任务",
+    "审查代码快照",
+    "依据的开发基线",
+    "依据的工程编码规范",
+    "审查范围",
+    "未覆盖范围",
+    "实现符合性",
+    "局部工程质量",
+    "发现的问题",
+    "要求达到的修正结果",
+    "问题责任",
+    "审查结论",
+    "审查 Agent",
+    "模型配置",
+    "请求档位",
+    "实际模型",
+    "推理强度",
+]
+STAGE_VERIFICATION_FIELDS = [
+    "验证阶段",
+    "输入阶段快照",
+    "最低运行层级",
+    "实际达到层级",
+    "运行环境与依赖",
+    "累计测试及结果",
+    "构建或打包及结果",
+    "启动与就绪及结果",
+    "关键路径及结果",
+    "失败与恢复路径及结果",
+    "成功观察",
+    "证据",
+    "未覆盖范围",
+    "问题责任",
+    "验证结论",
+    "验证 Agent",
+    "模型配置",
+    "请求档位",
+    "实际模型",
+    "推理强度",
+]
+STAGE_REVIEW_FIELDS = [
+    "审查阶段",
+    "审查阶段快照",
+    "包含任务及 Commit",
+    "依据的开发基线",
+    "依据的工程编码规范",
+    "审查范围",
+    "未覆盖范围",
+    "任务汇合与共享写入",
+    "依赖接线与迁移",
+    "错误传播与恢复",
+    "阶段范围符合性",
+    "发现的问题",
+    "要求达到的修正结果",
+    "问题责任",
+    "审查结论",
+    "审查 Agent",
+    "模型配置",
+    "请求档位",
+    "实际模型",
+    "推理强度",
+]
 INTEGRATION_FIELDS = [
     "开发任务图",
     "起始代码快照",
     "已合并任务及 Commit",
+    "阶段 Commit 与增量验证/审查",
     "合并顺序",
     "共享写入处理",
     "未合并或未实现事项",
@@ -1539,13 +1665,15 @@ def validate_implementation_task_graph(
                 f"{task_graph}"
             )
 
-        if re.search(
-            r"^(测试用例|验证方式|验收条件|运行证据)[ \t]*[：:]",
+        minimum_levels = re.findall(
+            r"^最低运行层级[ \t]*[：:][ \t]*(\S.*)$",
             section,
             re.MULTILINE,
-        ):
+        )
+        if len(minimum_levels) == 1 and minimum_levels[0] not in RUN_LEVELS:
             errors.append(
-                f"{task_id} 不得在生产代码任务中建立测试或验证字段："
+                f"{task_id} 的最低运行层级必须是"
+                f"“{' / '.join(RUN_LEVELS)}”之一："
                 f"{task_graph}"
             )
 
@@ -1708,6 +1836,356 @@ def validate_task_progress(
             errors.append(
                 f"已派发任务的 TASK- 标识不在开发任务图中：{task_dir}"
             )
+
+    return errors, warnings
+
+
+def validate_model_config(
+    repo_root: Path,
+) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    config_path = repo_root / MODEL_CONFIG_RELATIVE
+
+    if not config_path.exists():
+        errors.append(
+            "缺少项目级 Agent 模型配置；任何阶段开始前必须先在当前"
+            f"环境发现模型并由用户确认：{config_path}"
+        )
+        return errors, warnings
+
+    try:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        errors.append(f"Agent 模型配置不是有效 JSON：{config_path}（{exc}）")
+        return errors, warnings
+
+    if not isinstance(config, dict):
+        errors.append(f"Agent 模型配置根节点必须是对象：{config_path}")
+        return errors, warnings
+    if config.get("schema_version") != 1:
+        errors.append(f"Agent 模型配置 schema_version 必须为 1：{config_path}")
+    if config.get("status") != "confirmed":
+        errors.append(f"Agent 模型配置必须经过用户确认：{config_path}")
+    for field_name in ("confirmed_at", "confirmation_evidence"):
+        value = config.get(field_name)
+        if not isinstance(value, str) or not value.strip() or value in {
+            "待确认",
+            "无",
+        }:
+            errors.append(
+                f"Agent 模型配置缺少有效 {field_name}：{config_path}"
+            )
+
+    active_environment = config.get("active_environment")
+    environments = config.get("environments")
+    if not isinstance(active_environment, str) or not active_environment:
+        errors.append(f"Agent 模型配置缺少 active_environment：{config_path}")
+        return errors, warnings
+    if not isinstance(environments, dict):
+        errors.append(f"Agent 模型配置 environments 必须是对象：{config_path}")
+        return errors, warnings
+    environment = environments.get(active_environment)
+    if not isinstance(environment, dict):
+        errors.append(
+            f"当前环境 {active_environment} 尚未发现和确认：{config_path}"
+        )
+        return errors, warnings
+
+    for field_name in ("runtime_version", "detected_at", "detection_source"):
+        value = environment.get(field_name)
+        if not isinstance(value, str) or not value.strip():
+            errors.append(
+                f"当前环境缺少有效 {field_name}：{config_path}"
+            )
+
+    available_models = environment.get("available_models")
+    if not isinstance(available_models, list) or not available_models:
+        errors.append(f"当前环境没有真实可用模型列表：{config_path}")
+        return errors, warnings
+
+    efforts_by_model: dict[str, set[str] | None] = {}
+    for item in available_models:
+        if not isinstance(item, dict):
+            errors.append(f"available_models 每项必须是对象：{config_path}")
+            continue
+        model_id = item.get("id")
+        efforts = item.get("reasoning_efforts")
+        if not isinstance(model_id, str) or not model_id.strip():
+            errors.append(f"available_models 存在空模型标识：{config_path}")
+            continue
+        if model_id in efforts_by_model:
+            errors.append(f"available_models 模型标识重复：{model_id}")
+            continue
+        if efforts is None:
+            efforts_by_model[model_id] = None
+        elif isinstance(efforts, list) and all(
+            isinstance(effort, str) and effort for effort in efforts
+        ):
+            efforts_by_model[model_id] = set(efforts)
+        else:
+            errors.append(
+                f"{model_id} 的 reasoning_efforts 必须为字符串数组或 null："
+                f"{config_path}"
+            )
+
+    tiers = environment.get("tiers")
+    if not isinstance(tiers, dict):
+        errors.append(f"当前环境缺少 tiers 映射：{config_path}")
+        return errors, warnings
+    for tier in sorted(MODEL_TIERS):
+        mapping = tiers.get(tier)
+        if not isinstance(mapping, dict):
+            errors.append(f"当前环境缺少 {tier} 档位：{config_path}")
+            continue
+        model_id = mapping.get("model")
+        effort = mapping.get("reasoning_effort")
+        if model_id not in efforts_by_model:
+            errors.append(
+                f"{tier} 档位模型不在当前可用列表中：{model_id}（{config_path}）"
+            )
+            continue
+        supported_efforts = efforts_by_model[model_id]
+        if supported_efforts is None:
+            if effort is not None:
+                errors.append(
+                    f"{tier} 档位模型 {model_id} 不支持推理强度，"
+                    f"reasoning_effort 必须为 null：{config_path}"
+                )
+        elif effort not in supported_efforts:
+            errors.append(
+                f"{tier} 档位推理强度 {effort} 不受模型 {model_id} 支持："
+                f"{config_path}"
+            )
+
+    return errors, warnings
+
+
+def active_tier_mappings(
+    repo_root: Path,
+) -> dict[str, tuple[str, str | None]]:
+    config_path = repo_root / MODEL_CONFIG_RELATIVE
+    try:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        active_environment = config["active_environment"]
+        tiers = config["environments"][active_environment]["tiers"]
+    except (OSError, json.JSONDecodeError, KeyError, TypeError):
+        return {}
+
+    mappings: dict[str, tuple[str, str | None]] = {}
+    for tier, mapping in tiers.items():
+        if (
+            isinstance(tier, str)
+            and isinstance(mapping, dict)
+            and isinstance(mapping.get("model"), str)
+            and (
+                mapping.get("reasoning_effort") is None
+                or isinstance(mapping.get("reasoning_effort"), str)
+            )
+        ):
+            mappings[tier] = (
+                mapping["model"],
+                mapping.get("reasoning_effort"),
+            )
+    return mappings
+
+
+def _required_record_fields(
+    path: Path,
+    fields: list[str],
+    label: str,
+) -> tuple[list[str], str | None]:
+    errors: list[str] = []
+    if not path.exists():
+        return [f"缺少{label}：{path}"], None
+    text = path.read_text(encoding="utf-8")
+    for field_name in fields:
+        values = re.findall(
+            rf"^{re.escape(field_name)}[ \t]*[：:][ \t]*(\S.*)$",
+            text,
+            re.MULTILINE,
+        )
+        if len(values) != 1:
+            errors.append(
+                f"{label}必须且只能声明一个非空“{field_name}”：{path}"
+            )
+    return errors, text
+
+
+def _single_value(text: str, field_name: str) -> str | None:
+    values = re.findall(
+        rf"^{re.escape(field_name)}[ \t]*[：:][ \t]*(\S.*)$",
+        text,
+        re.MULTILINE,
+    )
+    return values[0] if len(values) == 1 else None
+
+
+def _record_model_errors(
+    text: str,
+    expected_tier: str,
+    tier_mappings: dict[str, tuple[str, str | None]],
+    label: str,
+    path: Path,
+) -> list[str]:
+    expected = tier_mappings.get(expected_tier)
+    if expected is None:
+        return []
+
+    errors: list[str] = []
+    requested_tier = _single_value(text, "请求档位")
+    actual_model = _single_value(text, "实际模型")
+    actual_effort = _single_value(text, "推理强度")
+    expected_model, expected_effort = expected
+    expected_effort_text = (
+        "null" if expected_effort is None else expected_effort
+    )
+    if requested_tier != expected_tier:
+        errors.append(
+            f"{label}默认必须使用 {expected_tier} 档位：{path}"
+        )
+    if actual_model != expected_model:
+        errors.append(
+            f"{label}实际模型必须匹配项目 {expected_tier} 档位"
+            f"（{expected_model}）：{path}"
+        )
+    if actual_effort != expected_effort_text:
+        errors.append(
+            f"{label}推理强度必须匹配项目 {expected_tier} 档位"
+            f"（{expected_effort_text}）：{path}"
+        )
+    return errors
+
+
+def validate_task_checkpoint(
+    batch_root: Path,
+    task_graph: Path,
+    task_id: str,
+    tier_mappings: dict[str, tuple[str, str | None]],
+) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    task_dir = batch_root / "tasks" / task_id
+    progress = task_dir / "任务进度.md"
+    implementation = task_dir / "实现记录.md"
+    verification = task_dir / "任务验证.md"
+    review = task_dir / "任务审查.md"
+
+    if not STABLE_ID_RE.fullmatch(task_id) or not task_id.startswith("TASK-"):
+        errors.append(f"任务标识必须是稳定 TASK- ASCII 标识：{task_id}")
+        return errors, warnings
+    if not task_graph.exists() or task_id not in {
+        match.group(1) for match in TASK_HEADING_RE.finditer(
+            task_graph.read_text(encoding="utf-8")
+        )
+    }:
+        errors.append(f"任务不在当前开发任务图中：{task_id}")
+        return errors, warnings
+
+    progress_errors, _ = _required_record_fields(
+        progress, TASK_PROGRESS_FIELDS, "任务进度"
+    )
+    implementation_errors, implementation_text = _required_record_fields(
+        implementation,
+        [
+            "开发任务图",
+            "实施任务",
+            "开发基线",
+            "工程编码规范",
+            "worktree 起始快照",
+            "输出代码快照",
+            "实现范围",
+            "未覆盖范围",
+        ],
+        "实现记录",
+    )
+    verification_errors, verification_text = _required_record_fields(
+        verification, TASK_VERIFICATION_FIELDS, "任务验证"
+    )
+    review_errors, review_text = _required_record_fields(
+        review, TASK_REVIEW_FIELDS, "任务审查"
+    )
+    errors.extend(progress_errors)
+    errors.extend(implementation_errors)
+    errors.extend(verification_errors)
+    errors.extend(review_errors)
+    if any(text is None for text in (
+        implementation_text,
+        verification_text,
+        review_text,
+    )) or not progress.exists():
+        return errors, warnings
+
+    progress_text = progress.read_text(encoding="utf-8")
+    status = TASK_PROGRESS_STATUS_RE.findall(progress_text)
+    if status not in (["可合并"], ["已合并"]):
+        errors.append(
+            f"任务检查要求计划状态为“可合并”或“已合并”：{progress}"
+        )
+
+    output_snapshot = _single_value(implementation_text, "输出代码快照")
+    verification_snapshot = _single_value(verification_text, "输入代码快照")
+    review_snapshot = _single_value(review_text, "审查代码快照")
+    if output_snapshot and verification_snapshot != output_snapshot:
+        errors.append(f"任务验证未指向实现输出快照：{verification}")
+    if output_snapshot and review_snapshot != output_snapshot:
+        errors.append(f"任务审查未指向实现输出快照：{review}")
+    if _single_value(verification_text, "验证任务") != task_id:
+        errors.append(f"任务验证标识必须对应 {task_id}：{verification}")
+    if _single_value(review_text, "审查任务") != task_id:
+        errors.append(f"任务审查标识必须对应 {task_id}：{review}")
+
+    minimum_level = _single_value(verification_text, "最低运行层级")
+    actual_level = _single_value(verification_text, "实际达到层级")
+    if minimum_level not in RUN_LEVELS or actual_level not in RUN_LEVELS:
+        errors.append(f"任务验证必须声明有效运行层级：{verification}")
+    elif list(RUN_LEVELS).index(actual_level) < list(RUN_LEVELS).index(
+        minimum_level
+    ):
+        errors.append(f"任务验证实际运行层级低于最低要求：{verification}")
+    if _single_value(verification_text, "验证结论") != "通过":
+        errors.append(f"任务合并前验证结论必须为“通过”：{verification}")
+    if _single_value(review_text, "审查结论") != "通过":
+        errors.append(f"任务合并前审查结论必须为“通过”：{review}")
+    errors.extend(
+        _record_model_errors(
+            progress_text,
+            "execution",
+            tier_mappings,
+            "任务实施",
+            progress,
+        )
+    )
+    errors.extend(
+        _record_model_errors(
+            verification_text,
+            "execution",
+            tier_mappings,
+            "任务验证",
+            verification,
+        )
+    )
+    errors.extend(
+        _record_model_errors(
+            review_text,
+            "review",
+            tier_mappings,
+            "任务审查",
+            review,
+        )
+    )
+
+    implementer = _single_value(progress_text, "负责 Agent")
+    verifier = _single_value(verification_text, "验证 Agent")
+    reviewer = _single_value(review_text, "审查 Agent")
+    if None not in (implementer, verifier, reviewer) and len({
+        implementer,
+        verifier,
+        reviewer,
+    }) != 3:
+        errors.append(
+            f"实施、任务验证和任务审查必须由三个独立 Agent 完成：{task_dir}"
+        )
 
     return errors, warnings
 
@@ -1876,13 +2354,17 @@ def validate_validation_spaces(
 
 def validate_stage_records(
     delivery_root: Path,
+    tier_mappings: dict[str, tuple[str, str | None]],
+    require_closed: bool = False,
 ) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
-
-    for stage_record in sorted(
+    stage_records = sorted(
         (delivery_root / "stages").glob("*/阶段记录.md")
-    ):
+    )
+    has_usable_stage = False
+
+    for stage_record in stage_records:
         if not STABLE_ID_RE.fullmatch(stage_record.parent.name):
             errors.append(
                 f"阶段目录必须使用稳定 ASCII 标识：{stage_record.parent}"
@@ -1899,8 +2381,13 @@ def validate_stage_records(
                     f"阶段记录必须且只能声明一个非空“{field_name}”："
                     f"{stage_record}"
                 )
-        if len(STAGE_STATUS_RE.findall(text)) != 1:
+        statuses = STAGE_STATUS_RE.findall(text)
+        if len(statuses) != 1:
             errors.append(f"阶段记录必须声明有效计划状态：{stage_record}")
+        elif require_closed and statuses != ["已确认"]:
+            errors.append(
+                f"完成开发批次要求阶段计划状态为“已确认”：{stage_record}"
+            )
         confirmations = STAGE_CONFIRMATION_RE.findall(text)
         if len(confirmations) != 1:
             errors.append(f"阶段记录必须声明用户确认状态：{stage_record}")
@@ -1915,6 +2402,121 @@ def validate_stage_records(
                     f"已确认阶段必须记录有效用户确认依据：{stage_record}"
                 )
 
+        requires_incremental_records = require_closed or (
+            statuses and statuses[0] in {"待用户确认", "已确认"}
+        )
+        if not requires_incremental_records:
+            continue
+
+        verification = stage_record.parent / "阶段运行验证.md"
+        review = stage_record.parent / "阶段审查.md"
+        verification_errors, verification_text = _required_record_fields(
+            verification,
+            STAGE_VERIFICATION_FIELDS,
+            "阶段运行验证",
+        )
+        review_errors, review_text = _required_record_fields(
+            review,
+            STAGE_REVIEW_FIELDS,
+            "阶段审查",
+        )
+        errors.extend(verification_errors)
+        errors.extend(review_errors)
+        if verification_text is None or review_text is None:
+            continue
+
+        targets = {
+            local_link_path(stage_record, raw_target)
+            for raw_target in LINK_RE.findall(text)
+        }
+        for path in (verification, review):
+            if path.resolve() not in targets:
+                errors.append(f"阶段记录未直接链接增量记录：{path}")
+
+        stage_id = stage_record.parent.name
+        stage_snapshot = _single_value(text, "阶段 Commit")
+        if _single_value(verification_text, "验证阶段") != stage_id:
+            errors.append(f"阶段运行验证标识必须对应 {stage_id}：{verification}")
+        if _single_value(review_text, "审查阶段") != stage_id:
+            errors.append(f"阶段审查标识必须对应 {stage_id}：{review}")
+        if stage_snapshot and _single_value(
+            verification_text, "输入阶段快照"
+        ) != stage_snapshot:
+            errors.append(f"阶段运行验证未指向阶段 Commit：{verification}")
+        if stage_snapshot and _single_value(
+            review_text, "审查阶段快照"
+        ) != stage_snapshot:
+            errors.append(f"阶段审查未指向阶段 Commit：{review}")
+
+        minimum_level = _single_value(text, "最低运行层级")
+        verification_minimum = _single_value(
+            verification_text, "最低运行层级"
+        )
+        actual_level = _single_value(verification_text, "实际达到层级")
+        if minimum_level not in RUN_LEVELS:
+            errors.append(f"阶段记录必须声明有效最低运行层级：{stage_record}")
+        if verification_minimum != minimum_level:
+            errors.append(
+                f"阶段运行验证最低层级必须与阶段记录一致：{verification}"
+            )
+        if actual_level not in RUN_LEVELS:
+            errors.append(f"阶段运行验证必须声明有效实际层级：{verification}")
+        elif minimum_level in RUN_LEVELS and RUN_LEVELS.index(
+            actual_level
+        ) < RUN_LEVELS.index(minimum_level):
+            errors.append(f"阶段实际运行层级低于最低要求：{verification}")
+        if actual_level == "可用":
+            has_usable_stage = True
+
+        if _single_value(verification_text, "验证结论") != "通过":
+            errors.append(f"阶段继续前验证结论必须为“通过”：{verification}")
+        if _single_value(review_text, "审查结论") != "通过":
+            errors.append(f"阶段继续前审查结论必须为“通过”：{review}")
+        errors.extend(
+            _record_model_errors(
+                text,
+                "execution",
+                tier_mappings,
+                "阶段集成",
+                stage_record,
+            )
+        )
+        errors.extend(
+            _record_model_errors(
+                verification_text,
+                "execution",
+                tier_mappings,
+                "阶段验证",
+                verification,
+            )
+        )
+        errors.extend(
+            _record_model_errors(
+                review_text,
+                "review",
+                tier_mappings,
+                "阶段审查",
+                review,
+            )
+        )
+        integrator = _single_value(text, "阶段集成 Agent")
+        verifier = _single_value(verification_text, "验证 Agent")
+        reviewer = _single_value(review_text, "审查 Agent")
+        if (
+            None not in (integrator, verifier, reviewer)
+            and len({integrator, verifier, reviewer}) != 3
+        ):
+            errors.append(
+                "阶段集成、阶段验证与阶段审查必须由三个独立 Agent 完成："
+                f"{stage_record.parent}"
+            )
+
+    if require_closed and stage_records and not has_usable_stage:
+        errors.append(
+            f"完成开发批次至少需要一个阶段达到“可用”："
+            f"{delivery_root / 'stages'}"
+        )
+
     return errors, warnings
 
 
@@ -1926,6 +2528,8 @@ def validate(
     database_system: str | None = None,
     implementation_system: str | None = None,
     development_batch: str | None = None,
+    task_check: str | None = None,
+    stage_check: str | None = None,
     review_batch: str | None = None,
     recovery_task: str | None = None,
 ) -> tuple[list[str], list[str]]:
@@ -1944,6 +2548,13 @@ def validate(
     target_coding_system = coding_system or implementation_system
     if review_batch and not coding_system:
         errors.append("--review-batch 必须同时指定 --coding-system。")
+    if (task_check or stage_check) and not (
+        coding_system and development_batch
+    ):
+        errors.append(
+            "--task-check 和 --stage-check 必须同时指定"
+            " --coding-system 与 --development-batch。"
+        )
     if review_batch:
         if development_batch and development_batch != review_batch:
             errors.append(
@@ -1965,6 +2576,11 @@ def validate(
     if not vcddd_root.exists():
         errors.append(f"缺少 VCDDD 目录：{vcddd_root}")
         return errors, warnings
+
+    model_errors, model_warnings = validate_model_config(repo_root)
+    errors.extend(model_errors)
+    warnings.extend(model_warnings)
+    tier_mappings = active_tier_mappings(repo_root)
 
     for required in (
         vcddd_root / "index.md",
@@ -2560,7 +3176,11 @@ def validate(
             batch_root = development_root / development_batch
             task_graph = batch_root / "plan" / "开发任务图.md"
 
-            stage_errors, stage_warnings = validate_stage_records(batch_root)
+            stage_errors, stage_warnings = validate_stage_records(
+                batch_root,
+                tier_mappings,
+                require_closed=bool(review_batch),
+            )
             errors.extend(stage_errors)
             warnings.extend(stage_warnings)
 
@@ -2665,6 +3285,29 @@ def validate(
                 errors.extend(progress_errors)
                 warnings.extend(progress_warnings)
 
+            if task_check:
+                checkpoint_errors, checkpoint_warnings = (
+                    validate_task_checkpoint(
+                        batch_root,
+                        task_graph,
+                        task_check,
+                        tier_mappings,
+                    )
+                )
+                errors.extend(checkpoint_errors)
+                warnings.extend(checkpoint_warnings)
+
+            if stage_check:
+                stage_record = (
+                    batch_root / "stages" / stage_check / "阶段记录.md"
+                )
+                if not STABLE_ID_RE.fullmatch(stage_check):
+                    errors.append(
+                        f"阶段标识必须是稳定 ASCII 标识：{stage_check}"
+                    )
+                elif not stage_record.exists():
+                    errors.append(f"缺少目标阶段记录：{stage_record}")
+
             if review_batch:
                 stage_records = sorted(
                     (batch_root / "stages").glob("*/阶段记录.md")
@@ -2686,6 +3329,22 @@ def validate(
                 implementation_records = sorted(
                     implementation_root.glob("TASK-*/实现记录.md")
                 )
+                for task_id in [
+                    match.group(1)
+                    for match in TASK_HEADING_RE.finditer(
+                        task_graph.read_text(encoding="utf-8")
+                    )
+                ]:
+                    checkpoint_errors, checkpoint_warnings = (
+                        validate_task_checkpoint(
+                            batch_root,
+                            task_graph,
+                            task_id,
+                            tier_mappings,
+                        )
+                    )
+                    errors.extend(checkpoint_errors)
+                    warnings.extend(checkpoint_warnings)
                 integration_record = batch_root / "integration" / "集成记录.md"
                 test_feedback_root = batch_root / "testing" / "feedback"
                 test_feedback_files = sorted(test_feedback_root.glob("*.md"))
@@ -3162,9 +3821,24 @@ def validate(
                         )
 
                 if git_probe.returncode == 0:
+                    task_checkpoint_records = sorted(
+                        implementation_root.glob("TASK-*/任务验证.md")
+                    ) + sorted(
+                        implementation_root.glob("TASK-*/任务审查.md")
+                    )
+                    stage_checkpoint_records = sorted(
+                        (batch_root / "stages").glob("*/阶段记录.md")
+                    ) + sorted(
+                        (batch_root / "stages").glob("*/阶段运行验证.md")
+                    ) + sorted(
+                        (batch_root / "stages").glob("*/阶段审查.md")
+                    )
                     tracked_batch_files = [
+                        repo_root / MODEL_CONFIG_RELATIVE,
                         task_graph,
                         *implementation_records,
+                        *task_checkpoint_records,
+                        *stage_checkpoint_records,
                         integration_record,
                         *test_feedback_files,
                         test_conclusion,
@@ -3210,6 +3884,69 @@ def self_test() -> int:
         coding_root.mkdir()
         task_root = vcddd_root / "work" / "example-work"
         task_root.mkdir()
+        model_config = vcddd_root / "config" / "agent-models.json"
+        model_config.parent.mkdir()
+        model_config.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "active_environment": "codex",
+                    "status": "confirmed",
+                    "confirmed_at": "2026-07-31T12:00:00+08:00",
+                    "confirmation_evidence": "example-work 用户确认",
+                    "environments": {
+                        "codex": {
+                            "runtime_version": "example-runtime",
+                            "detected_at": "2026-07-31T11:50:00+08:00",
+                            "detection_source": "runtime model metadata",
+                            "available_models": [
+                                {
+                                    "id": "deep-model",
+                                    "reasoning_efforts": [
+                                        "low",
+                                        "medium",
+                                        "high",
+                                    ],
+                                },
+                                {
+                                    "id": "execution-model",
+                                    "reasoning_efforts": [
+                                        "low",
+                                        "medium",
+                                    ],
+                                },
+                            ],
+                            "tiers": {
+                                "deep": {
+                                    "model": "deep-model",
+                                    "reasoning_effort": "high",
+                                },
+                                "planning": {
+                                    "model": "deep-model",
+                                    "reasoning_effort": "medium",
+                                },
+                                "review": {
+                                    "model": "execution-model",
+                                    "reasoning_effort": "medium",
+                                },
+                                "execution": {
+                                    "model": "execution-model",
+                                    "reasoning_effort": "medium",
+                                },
+                                "mechanical": {
+                                    "model": "execution-model",
+                                    "reasoning_effort": "low",
+                                },
+                            },
+                        }
+                    },
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
 
         (vcddd_root / "index.md").write_text(
             "[业务](business/index.md) [工作](work/index.md) "
@@ -3580,6 +4317,11 @@ def self_test() -> int:
             "任务文档：[完整任务](index.md)\n"
             "当前负责角色：系统与开发设计 Agent\n"
             "角色 reference：system-design-agent.md\n"
+            "模型配置：[项目模型配置](../../config/agent-models.json)\n"
+            "请求档位：deep\n"
+            "实际模型：deep-model\n"
+            "推理强度：high\n"
+            "选择依据：系统设计需要深度推理\n"
             "通信状态：可继续\n"
             "当前讨论对象：example-system\n"
             "专业结果位置：[系统入口](../../systems/example-system/index.md)\n"
@@ -3665,10 +4407,66 @@ def self_test() -> int:
             "包含任务及输出 Commit：TASK-base task111\n"
             "阶段 Commit：prod123\n"
             "阶段核对：TASK-base 产物已经汇合\n"
+            "阶段集成 Agent：示例阶段集成 Agent\n"
+            "模型配置：vcddd/config/agent-models.json\n"
+            "请求档位：execution\n"
+            "实际模型：execution-model\n"
+            "推理强度：medium\n"
+            "最低运行层级：可用\n"
+            "阶段运行验证：[阶段运行验证](阶段运行验证.md)\n"
+            "阶段审查：[阶段审查](阶段审查.md)\n"
             "用户确认状态：已确认\n"
             "用户确认依据：example-work中的用户确认\n"
             "下一阶段：最终集成\n"
             "最近更新时间：2026-07-30T12:30:00+08:00\n",
+            encoding="utf-8",
+        )
+        (stage_root / "阶段运行验证.md").write_text(
+            "# 阶段运行验证：stage-01\n\n"
+            "验证阶段：stage-01\n"
+            "输入阶段快照：prod123\n"
+            "最低运行层级：可用\n"
+            "实际达到层级：可用\n"
+            "运行环境与依赖：示例本地环境\n"
+            "累计测试及结果：示例测试通过\n"
+            "构建或打包及结果：构建命令退出 0\n"
+            "启动与就绪及结果：启动并就绪\n"
+            "关键路径及结果：示例路径返回预期结果\n"
+            "失败与恢复路径及结果：示例失败可恢复\n"
+            "成功观察：示例消费者取得目标结果\n"
+            "证据：示例运行日志\n"
+            "未覆盖范围：无\n"
+            "问题责任：无\n"
+            "验证结论：通过\n"
+            "验证 Agent：示例阶段验证 Agent\n"
+            "模型配置：vcddd/config/agent-models.json\n"
+            "请求档位：execution\n"
+            "实际模型：execution-model\n"
+            "推理强度：medium\n",
+            encoding="utf-8",
+        )
+        (stage_root / "阶段审查.md").write_text(
+            "# 阶段审查：stage-01\n\n"
+            "审查阶段：stage-01\n"
+            "审查阶段快照：prod123\n"
+            "包含任务及 Commit：TASK-base task111\n"
+            "依据的开发基线：当前基线\n"
+            "依据的工程编码规范：v1\n"
+            "审查范围：阶段全部汇合代码\n"
+            "未覆盖范围：无\n"
+            "任务汇合与共享写入：符合任务图\n"
+            "依赖接线与迁移：接线完整\n"
+            "错误传播与恢复：符合基线\n"
+            "阶段范围符合性：完整\n"
+            "发现的问题：无\n"
+            "要求达到的修正结果：无\n"
+            "问题责任：无\n"
+            "审查结论：通过\n"
+            "审查 Agent：示例阶段审查 Agent\n"
+            "模型配置：vcddd/config/agent-models.json\n"
+            "请求档位：review\n"
+            "实际模型：execution-model\n"
+            "推理强度：medium\n",
             encoding="utf-8",
         )
         (development_root / "index.md").write_text(
@@ -3722,6 +4520,8 @@ def self_test() -> int:
             "待处理用户反馈：无\n"
             "任务进度：[任务进度](../tasks/TASK-base/任务进度.md)\n"
             "实现记录：[实现记录](../tasks/TASK-base/实现记录.md)\n"
+            "任务验证：[任务验证](../tasks/TASK-base/任务验证.md)\n"
+            "任务审查：[任务审查](../tasks/TASK-base/任务审查.md)\n"
             "完成回执：输出 Commit、实际产物和偏离\n\n"
             "## 开发任务\n\n"
             "### TASK-base：建立示例生产代码\n\n"
@@ -3740,6 +4540,14 @@ def self_test() -> int:
             "禁止并行的任务及原因：无\n"
             "worktree 起始快照：base000\n"
             "编码完成边界：生产代码提交并登记产物\n"
+            "最低运行层级：可构建\n"
+            "验证环境与依赖：Python 3 示例环境\n"
+            "准备命令：安装示例依赖\n"
+            "构建或静态检查：python -m compileall src/example\n"
+            "启动命令：不适用；工程基础不独立启动；使用测试 harness\n"
+            "关键路径命令：运行示例消费者 harness\n"
+            "成功观察：构建成功且消费者可加载示例模块\n"
+            "审查重点：模块边界、依赖方向和启动装配\n"
             "发现问题时返回：开发规划 Agent\n\n"
             "#### 实施上下文合同\n\n"
             "必须读取：[架构设计](../../../design/架构设计.md#总体架构)\n"
@@ -3764,6 +4572,10 @@ def self_test() -> int:
             "最近一次 Agent 事件：已结束\n"
             "Agent 事件依据：示例 Agent 完成通知\n"
             "负责 Agent：示例开发 Agent\n"
+            "模型配置：vcddd/config/agent-models.json\n"
+            "请求档位：execution\n"
+            "实际模型：execution-model\n"
+            "推理强度：medium\n"
             "worktree：示例 worktree\n"
             "起始 Commit：base000\n"
             "当前 Commit：task111\n"
@@ -3803,11 +4615,59 @@ def self_test() -> int:
         )
         implementation_record = implementation_root / "实现记录.md"
         implementation_record.write_text(implementation_text, encoding="utf-8")
+        task_verification = implementation_root / "任务验证.md"
+        task_verification.write_text(
+            "# 任务验证：TASK-base\n\n"
+            "验证任务：TASK-base\n"
+            "输入代码快照：task111\n"
+            "依据的验证合同：开发任务图 TASK-base\n"
+            "最低运行层级：可构建\n"
+            "实际达到层级：可运行\n"
+            "运行环境与依赖：Python 3 示例环境\n"
+            "准备命令及结果：依赖已准备\n"
+            "构建或静态检查及结果：退出 0\n"
+            "启动命令及结果：不适用；使用 harness\n"
+            "关键路径命令及结果：消费者 harness 退出 0\n"
+            "成功观察：消费者可加载示例模块\n"
+            "证据：示例命令日志\n"
+            "未覆盖范围：阶段装配\n"
+            "问题责任：无\n"
+            "验证结论：通过\n"
+            "验证 Agent：示例任务验证 Agent\n"
+            "模型配置：vcddd/config/agent-models.json\n"
+            "请求档位：execution\n"
+            "实际模型：execution-model\n"
+            "推理强度：medium\n",
+            encoding="utf-8",
+        )
+        task_review = implementation_root / "任务审查.md"
+        task_review.write_text(
+            "# 任务审查：TASK-base\n\n"
+            "审查任务：TASK-base\n"
+            "审查代码快照：task111\n"
+            "依据的开发基线：当前基线\n"
+            "依据的工程编码规范：v1\n"
+            "审查范围：TASK-base 生产代码\n"
+            "未覆盖范围：阶段装配\n"
+            "实现符合性：符合任务责任\n"
+            "局部工程质量：符合当前规范\n"
+            "发现的问题：无\n"
+            "要求达到的修正结果：无\n"
+            "问题责任：无\n"
+            "审查结论：通过\n"
+            "审查 Agent：示例任务审查 Agent\n"
+            "模型配置：vcddd/config/agent-models.json\n"
+            "请求档位：review\n"
+            "实际模型：execution-model\n"
+            "推理强度：medium\n",
+            encoding="utf-8",
+        )
         integration_text = (
             "# 集成记录\n\n"
             "开发任务图：[当前任务图](../plan/开发任务图.md)\n"
             "起始代码快照：base000\n"
             "已合并任务及 Commit：TASK-base task111\n"
+            "阶段 Commit 与增量验证/审查：stage-01 prod123，均通过\n"
             "合并顺序：TASK-base\n"
             "共享写入处理：无\n"
             "未合并或未实现事项：无\n"
@@ -4292,8 +5152,118 @@ def self_test() -> int:
                 print(f"ERROR: {error}")
             return 1
 
+        errors, _ = validate(
+            repo_root,
+            coding_system="example-system",
+            development_batch="example-delivery",
+            task_check="TASK-base",
+        )
+        if errors:
+            print("自检失败：有效任务增量检查样例未通过。")
+            for error in errors:
+                print(f"ERROR: {error}")
+            return 1
+
+        errors, _ = validate(
+            repo_root,
+            coding_system="example-system",
+            development_batch="example-delivery",
+            stage_check="stage-01",
+        )
+        if errors:
+            print("自检失败：有效阶段增量检查样例未通过。")
+            for error in errors:
+                print(f"ERROR: {error}")
+            return 1
+
+        model_config_text = model_config.read_text(encoding="utf-8")
+        model_config.unlink()
+        errors, _ = validate(repo_root)
+        if not any("缺少项目级 Agent 模型配置" in error for error in errors):
+            print("自检失败：未拒绝缺失的项目模型配置。")
+            return 1
+        model_config.write_text(model_config_text, encoding="utf-8")
+
+        task_verification_text = task_verification.read_text(encoding="utf-8")
+        task_verification.unlink()
+        errors, _ = validate(
+            repo_root,
+            coding_system="example-system",
+            development_batch="example-delivery",
+            task_check="TASK-base",
+        )
+        if not any("缺少任务验证" in error for error in errors):
+            print("自检失败：任务检查未拒绝缺失任务验证。")
+            return 1
+        task_verification.write_text(
+            task_verification_text,
+            encoding="utf-8",
+        )
+
+        task_review_text = task_review.read_text(encoding="utf-8")
+        task_review.write_text(
+            task_review_text.replace(
+                "实际模型：execution-model",
+                "实际模型：unconfigured-model",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(
+            repo_root,
+            coding_system="example-system",
+            development_batch="example-delivery",
+            task_check="TASK-base",
+        )
+        if not any("实际模型必须匹配项目 review 档位" in error for error in errors):
+            print("自检失败：任务检查未拒绝未配置的审查模型。")
+            return 1
+        task_review.write_text(task_review_text, encoding="utf-8")
+
+        stage_verification = stage_root / "阶段运行验证.md"
+        stage_verification_text = stage_verification.read_text(
+            encoding="utf-8"
+        )
+        stage_verification.write_text(
+            stage_verification_text.replace(
+                "验证结论：通过",
+                "验证结论：失败",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(
+            repo_root,
+            coding_system="example-system",
+            development_batch="example-delivery",
+            stage_check="stage-01",
+        )
+        if not any("验证结论必须为“通过”" in error for error in errors):
+            print("自检失败：阶段检查未拒绝失败的运行验证。")
+            return 1
+        stage_verification.write_text(
+            stage_verification_text,
+            encoding="utf-8",
+        )
+
         stage_record = stage_root / "阶段记录.md"
         stage_record_text = stage_record.read_text(encoding="utf-8")
+        stage_record.write_text(
+            stage_record_text.replace(
+                "阶段集成 Agent：示例阶段集成 Agent",
+                "阶段集成 Agent：示例阶段验证 Agent",
+            ),
+            encoding="utf-8",
+        )
+        errors, _ = validate(
+            repo_root,
+            coding_system="example-system",
+            development_batch="example-delivery",
+            stage_check="stage-01",
+        )
+        if not any("必须由三个独立 Agent 完成" in error for error in errors):
+            print("自检失败：阶段检查未拒绝角色不独立。")
+            return 1
+        stage_record.write_text(stage_record_text, encoding="utf-8")
+
         stage_record.unlink()
         errors, _ = validate(
             repo_root,
@@ -4717,6 +5687,16 @@ def main() -> int:
         help="与 --implementation-system、--coding-system 或 --review-batch 一起指定开发批次。",
     )
     parser.add_argument(
+        "--task-check",
+        metavar="task-id",
+        help="检查固定任务 Commit 的实现记录、独立任务验证、独立任务审查和合并准入。",
+    )
+    parser.add_argument(
+        "--stage-check",
+        metavar="stage-id",
+        help="检查固定阶段 Commit 的运行验证、阶段审查和用户确认准入。",
+    )
+    parser.add_argument(
         "--review-batch",
         metavar="delivery-id",
         help="检查指定开发批次的任务图、实施记录、统一测试、工程改进和审核；必须同时指定 --coding-system。",
@@ -4740,6 +5720,8 @@ def main() -> int:
         database_system=args.database_system,
         implementation_system=args.implementation_system,
         development_batch=args.development_batch,
+        task_check=args.task_check,
+        stage_check=args.stage_check,
         review_batch=args.review_batch,
         recovery_task=args.recovery_task,
     )
