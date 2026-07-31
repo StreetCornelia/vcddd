@@ -55,7 +55,14 @@ Coding 可以在不改变设计语义的范围内选择数据库产品细节和�
 
 系统设计 Agent 只有在开始数据库阶段时才读取数据库固定模板。它先从已确认的业务、Domain、API 和逐 API 编排抽取需要持久化的事实，再形成表和字段，不从已有技术习惯反推业务模型。
 
-候选交给用户前运行 `--database-system <系统>`。验证器只做确定性结构检查：
+候选交给用户前运行完整命令：
+
+```text
+python3 <skill-root>/scripts/validate_project.py <repo-root> \
+  --database-system <system-id>
+```
+
+`<skill-root>` 是当前 VCDDD Skill 根目录，`<repo-root>` 是已经包含 `vcddd/` 的目标仓库根目录，`<system-id>` 是 `vcddd/systems/` 下的稳定 ASCII 系统目录名。目标是检查数据库设计的固定结构、字段、链接和候选状态；失败时数据库设计 Agent 修正文档合同，不能通过读取或改写脚本规避。验证器只做确定性结构检查：
 
 - 文档是否以数据承载全景和表目录开场；
 - 每张表是否有稳定标识和固定章节；

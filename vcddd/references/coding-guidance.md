@@ -120,7 +120,23 @@ delivery/<delivery-id>/plan/开发任务图.md
 - 为未来复用建立没有当前消费者的基础任务；
 - 把测试与正确性验证塞进实施节点。
 
-任务图只有状态为 `当前`、用户确认且结构校验通过后才能创建编码 worktree。
+任务图候选交给用户前执行：
+
+```text
+python3 <skill-root>/scripts/validate_project.py <repo-root> \
+  --implementation-system <system-id> \
+  --development-batch <delivery-id>
+```
+
+目标是检查候选任务图、代码产物、依赖、派发信封和实施上下文。任务图状态为 `当前`、用户已经确认且工程规范影响复核完成后，实际创建编码 worktree 前执行：
+
+```text
+python3 <skill-root>/scripts/validate_project.py <repo-root> \
+  --coding-system <system-id> \
+  --development-batch <delivery-id>
+```
+
+目标是检查 Coding 准入和已派发任务的进度合同。参数与失败处理按[脚本执行协议](script-usage.md#开发任务图候选交给用户前)执行；任何一条失败都不创建 worktree。
 
 每个任务节点除代码责任外，必须固定实施上下文：精确必读来源、不得重新决定的结论、允许自主决定的空间、前置代码产物与 Commit、共享事务/不变量/失败语义、输入失效条件和问题返回所有者。主控按固定短任务信封派发，不发送全部聊天或项目历史，也不能只给任务名称让 Agent 自行补上下文。
 
@@ -197,6 +213,16 @@ delivery/<delivery-id>/integration/集成记录.md
 - 系统级规则变化形成工程规范候选并由用户确认。
 
 工程改进完成并复测以后，固定最终生产代码与测试快照，再启动只读的实现符合性、工程质量和风险专项审核。审核只判断固定目标，不在审核中修改代码。
+
+全部任务、阶段、集成、测试、工程改进和审核记录形成后，主控执行：
+
+```text
+python3 <skill-root>/scripts/validate_project.py <repo-root> \
+  --coding-system <system-id> \
+  --review-batch <delivery-id>
+```
+
+目标是检查交付记录共同指向固定快照，再由事实拥有者决定是否标记完成。参数和失败路由按[脚本执行协议](script-usage.md#完成交付测试改进和审核记录前)执行；脚本不替代测试或审核。
 
 ## 设计反馈闭环
 

@@ -40,6 +40,19 @@ Domain 分析开始以后，把结构、关系、生命周期、调用顺序、�
 完整恢复、事实权威、任务状态和目录规则见 [references/project-context.md](references/project-context.md)。
 建立或维护项目入口、任务恢复点和角色交接时必须使用 [references/project-document-contracts.md](references/project-document-contracts.md)；这些模板是跨会话恢复合同，不是可选写作建议。
 
+恢复或迁移单个任务完成后，按 [脚本执行协议](references/script-usage.md#恢复或迁移一个工作任务)执行完整的 `--recovery-task <work-id>` 命令。目标是确认新会话能够从工作入口、短主控状态和完整任务继续，不是审核任务内容是否正确。
+
+## 脚本执行边界
+
+需要同步或校验时必须读取并严格使用 [references/script-usage.md](references/script-usage.md)。`<skill-root>` 是本文件所在目录，`<repo-root>` 是包含现有 `vcddd/` 的目标仓库根目录。
+
+普通业务、设计、验证、迁移、开发、测试和审核 Agent 只执行脚本，不读取 `scripts/*.py`。只有任务本身是维护脚本、脚本异常无法由输出定位，或脚本行为与文档合同冲突时，才读取与问题直接相关的最小源码区段。文档合同高于脚本实现。
+
+- `sync_indexes.py` 只生成或检查受控索引，不迁移文件、不改变状态拥有者、不操作 Git；
+- `validate_project.py` 正常模式只读，只拒绝可机械判断的错误，不修复问题或判断语义正确性；
+- 每个流程节点使用协议中给出的完整命令，不把分散参数自行拼接；
+- `--self-test` 只供维护本 Skill 的脚本时使用。
+
 ## 作为主控调度
 
 主控不重新完成专业工作。它负责：
@@ -113,9 +126,30 @@ vcddd/systems/<system-id>/
 
 Domain 分析先把业务恢复成“核心事物—拥有的信息与关系—自身行为—产生的影响”，由用户确认核心事物、所有权、关系和行为归属。系统设计 Agent 再围绕每个核心事物形成完整的 Domain，并继续完成实体、值对象、聚合、不变量、生命周期、行为和协作方式；用户审核的是这一整套 Domain 设计，不能只确认业务轮廓后由 AI 静默补完内部设计。核心业务名称的含义另行确认后再扩散到 API、表和代码。
 
-Domain 确认后读取并严格使用 [references/architecture-and-module-template.md](references/architecture-and-module-template.md)。架构设计只固定一个层级及以上的技术骨架、主要组件、统一机制和依赖边界；模块拆分只固定模块为什么存在、负责与不负责什么、承载什么以及怎样依赖。不能在 Coding 前把逐 API 实现翻译成类、文件、方法或模块内部调用。已有代码时必须实际读取明确规范、构建配置和代表性稳定实现，再恢复现状并区分继承项、冲突、历史例外和建议调整；没有代码入口时先请求访问，不能凭用户概述推断完整架构。全新系统根据已确认设计、语言、框架和当前权威实践提出最小推荐方案。两份完整候选通过 `--architecture-system` 检查后交给用户确认。
+Domain 确认后读取并严格使用 [references/architecture-and-module-template.md](references/architecture-and-module-template.md)。架构设计只固定一个层级及以上的技术骨架、主要组件、统一机制和依赖边界；模块拆分只固定模块为什么存在、负责与不负责什么、承载什么以及怎样依赖。不能在 Coding 前把逐 API 实现翻译成类、文件、方法或模块内部调用。已有代码时必须实际读取明确规范、构建配置和代表性稳定实现，再恢复现状并区分继承项、冲突、历史例外和建议调整；没有代码入口时先请求访问，不能凭用户概述推断完整架构。全新系统根据已确认设计、语言、框架和当前权威实践提出最小推荐方案。两份完整候选交给用户前执行：
 
-API、核心接口内部编排和数据库也必须先形成可独立阅读的完整候选，再分别交给用户审核。每个 API 在 `API设计.md` 中取得稳定 `API 标识`；API 确认后，系统设计 Agent 必须读取并严格使用 [references/internal-orchestration-template.md](references/internal-orchestration-template.md)。编排正文除接口目录外只按单个 API 建立二级章节，每个接口固定先写业务结果和连续“谁做什么、得到什么、下一步是什么”的主流程，再写分支失败、事务与外部影响、Domain 调用和业务证据。不能把多个接口合成接口组，不能再建立并列的 Domain 方法内部编排；Domain 行为、规则、不变量和内部对象协作仍由 `系统拆分.md` 拥有。候选通过 `--orchestration-system` 结构检查后才能交给用户确认，确认后再形成数据库设计。数据库设计必须读取并严格使用 [references/database-design-template.md](references/database-design-template.md)，以表为章节完整解释表的意义、单行语义和全部字段，禁止用 DDL 或迁移脚本代替设计正文；候选通过 `--database-system` 结构检查后才能交给用户确认。任何一项未确认时，都不能把候选当作后续确定输入；数据库未确认时，不能生成状态为 `当前` 的开发基线或进入 Coding。用户明确要求并行时可以继续准备下游或其他系统候选，但必须清楚标记假设和待确认状态，不能绕过当前应展示的审核。只为当前已确认目标建立最小充分模型；未来可能性不能作为新增实体、版本、聚合、Domain 或基础设施的依据。
+```text
+python3 <skill-root>/scripts/validate_project.py <repo-root> \
+  --architecture-system <system-id>
+```
+
+目标是检查架构与模块固定结构、字段、链接和候选状态，不判断方案是否合理。
+
+API、核心接口内部编排和数据库也必须先形成可独立阅读的完整候选，再分别交给用户审核。每个 API 在 `API设计.md` 中取得稳定 `API 标识`；API 确认后，系统设计 Agent 必须读取并严格使用 [references/internal-orchestration-template.md](references/internal-orchestration-template.md)。编排正文除接口目录外只按单个 API 建立二级章节，每个接口固定先写业务结果和连续“谁做什么、得到什么、下一步是什么”的主流程，再写分支失败、事务与外部影响、Domain 调用和业务证据。不能把多个接口合成接口组，不能再建立并列的 Domain 方法内部编排；Domain 行为、规则、不变量和内部对象协作仍由 `系统拆分.md` 拥有。编排候选交给用户前执行：
+
+```text
+python3 <skill-root>/scripts/validate_project.py <repo-root> \
+  --orchestration-system <system-id>
+```
+
+数据库设计必须读取并严格使用 [references/database-design-template.md](references/database-design-template.md)，以表为章节完整解释表的意义、单行语义和全部字段，禁止用 DDL 或迁移脚本代替设计正文。数据库候选交给用户前执行：
+
+```text
+python3 <skill-root>/scripts/validate_project.py <repo-root> \
+  --database-system <system-id>
+```
+
+前一命令检查 API 标识、接口目录和逐 API 编排结构；后一命令检查逐表、逐字段合同并拒绝 DDL。通过只表示机械合同完整。任何一项未确认时，都不能把候选当作后续确定输入；数据库未确认时，不能生成状态为 `当前` 的开发基线或进入 Coding。用户明确要求并行时可以继续准备下游或其他系统候选，但必须清楚标记假设和待确认状态，不能绕过当前应展示的审核。只为当前已确认目标建立最小充分模型；未来可能性不能作为新增实体、版本、聚合、Domain 或基础设施的依据。
 
 ## 调用语言验证 Agent
 
@@ -145,6 +179,24 @@ vcddd/systems/<system-id>/coding/工程编码规范.md
 ```
 
 任务图覆盖工程基础、模块、数据迁移、接口、业务实现、查询、外部集成、后台任务、系统能力、装配和存量改造，只使用真实存在的类型。一个任务不必有独立业务结果，也不必涉及 API 或 Domain；不能为了套模板强行建立 Domain。Agent 不能按 Controller、Service、Repository 等技术层机械拆分，也不能按想启动的子 Agent 数量拆分。完整任务图交给用户确认后才能成为 `当前`。
+
+任务图候选交给用户前执行：
+
+```text
+python3 <skill-root>/scripts/validate_project.py <repo-root> \
+  --implementation-system <system-id> \
+  --development-batch <delivery-id>
+```
+
+工程规范、任务图和影响复核都成为当前以后，创建任何 Coding worktree 前执行：
+
+```text
+python3 <skill-root>/scripts/validate_project.py <repo-root> \
+  --coding-system <system-id> \
+  --development-batch <delivery-id>
+```
+
+前一命令允许工程规范仍在形成，只检查候选任务图；后一命令是实际 Coding 准入，并检查已经派发任务的进度合同。
 
 每个任务节点必须固定实施上下文：精确必读章节、不得重新决定的结论、允许自主决定的实现空间、前置代码产物与 Commit、共享事务/不变量/失败语义、输入失效条件和问题返回所有者。主控用固定短任务信封派发当前任务图、开发基线、工程规范版本、共同起始 Commit、已合并前置产物、授权写入、当前反馈、进度与实现记录位置；关键事实不能依赖聊天补充，也不能把全部历史交给 Agent 自行筛选。
 
@@ -191,6 +243,16 @@ systems/<system-id>/delivery/<delivery-id>/improvement/<轮次>-<角度>.md
 
 审核任务使用共同认知协议、[references/diagramming.md](references/diagramming.md) 和 [references/code-review-agent.md](references/code-review-agent.md)。安全、性能、前端体验或平台专项只在风险触发时增加。
 
+全部阶段、任务、集成、测试、改进和审核记录形成，准备把交付标记为完成前执行：
+
+```text
+python3 <skill-root>/scripts/validate_project.py <repo-root> \
+  --coding-system <system-id> \
+  --review-batch <delivery-id>
+```
+
+目标是确认全部记录共同指向固定快照；它不是开始统一测试前的准入命令。
+
 ## 调用系统验证 Agent
 
 验证属于被验证系统，固定写入：
@@ -202,6 +264,15 @@ vcddd/systems/<system-id>/validation/<VAL-ID>-<slug>/
 原型是 `prototype` 验证方法，不是独立产物类型。验证目录同时保存验证入口、计划、结论、`src/` 实现、夹具、脚本和不可变运行记录；原型源码也写入自己的 `src/`。生产代码不能导入验证代码。验证发现新事实后交给事实拥有者更新并重新确认权威文档，不能让验证或原型暗中成为系统事实。
 
 需要读取或执行验证时使用 [references/prototype-projection.md](references/prototype-projection.md) 和 [references/evidence.md](references/evidence.md)。
+
+验证项、运行记录、用户确认状态或 `prototype` 源码更新后执行：
+
+```text
+python3 <skill-root>/scripts/sync_indexes.py <repo-root> --write
+python3 <skill-root>/scripts/validate_project.py <repo-root>
+```
+
+目标是同步验证索引，并检查验证位置、运行记录、源码 Commit 与用户确认绑定。系统验证使用基础校验，没有 `--validation-system` 参数。
 
 ## 按需调用报告 Agent
 
@@ -225,72 +296,13 @@ vcddd/systems/<system-id>/validation/<VAL-ID>-<slug>/
 
 主控先让事实拥有者修正源文档，再让受影响 Agent 重新读取和局部推导。只标记真正受影响的内容，不因一个问题废弃全部下游。
 
-## 检查而不代替语义
+## 提交和交接前检查
 
-修改任何状态拥有者以后，先同步受控索引区：
-
-```text
-python3 <本Skill目录>/scripts/sync_indexes.py <目标仓库根目录> --write
-```
-
-提交前用只读模式确认索引没有漂移：
+任何状态拥有者发生变化后先执行 `sync_indexes.py --write`。提交、交接或结束任务前固定执行：
 
 ```text
-python3 <本Skill目录>/scripts/sync_indexes.py <目标仓库根目录> --check
+python3 <skill-root>/scripts/sync_indexes.py <repo-root> --check
+python3 <skill-root>/scripts/validate_project.py <repo-root>
 ```
 
-运行：
-
-```text
-python3 <本Skill目录>/scripts/validate_project.py <目标仓库根目录>
-```
-
-核心接口内部编排候选交给用户前追加：
-
-```text
---orchestration-system <system-id>
-```
-
-数据库设计候选交给用户前追加：
-
-```text
---database-system <system-id>
-```
-
-架构设计和模块拆分候选交给用户前追加：
-
-```text
---architecture-system <system-id>
-```
-
-准备 Coding 时追加：
-
-```text
---coding-system <system-id>
-```
-
-检查开发任务图候选时追加：
-
-```text
---implementation-system <system-id> --development-batch <delivery-id>
-```
-
-工程规范和任务图已经确认，准备创建实施 worktree 时追加：
-
-```text
---coding-system <system-id> --development-batch <delivery-id>
-```
-
-检查一个开发批次的实施、测试、工程改进和审核结构时追加：
-
-```text
---coding-system <system-id> --review-batch <delivery-id>
-```
-
-检查当前任务能否被新会话恢复时追加：
-
-```text
---recovery-task <work-id>
-```
-
-脚本只检查入口、链接、索引同步、恢复合同、固定事实文档、系统验证、开发基线来源、工程编码规范、开发任务图、阶段、实施、统一测试、工程改进与审核记录结构和版本状态，不判断业务、设计、验证命题、代码、测试或审核是否正确。
+完整场景、参数、写入边界、退出码和失败处理以 [脚本执行协议](references/script-usage.md) 为准。脚本通过只表示声明范围内没有机械错误，不表示语义已经审核或确认。

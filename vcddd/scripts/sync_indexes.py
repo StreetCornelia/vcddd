@@ -19,6 +19,21 @@ GENERATED_RE = re.compile(
     re.DOTALL,
 )
 TITLE_RE = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
+HELP_EPILOG = """\
+执行边界：
+  --write 只创建/更新 VCDDD 固定索引及受控生成区，不迁移旧文件，
+  不修改状态拥有者、Git 分支或生产代码。
+  --check 是默认只读模式。
+
+常用场景：
+  状态拥有者变化后：
+    python3 sync_indexes.py <repo-root> --write
+  提交或交接前：
+    python3 sync_indexes.py <repo-root> --check
+
+<repo-root> 必须是已经包含 vcddd/ 的目标仓库根目录。
+普通项目 Agent 执行脚本，不读取源码；完整协议见 references/script-usage.md。
+"""
 
 
 @dataclass(frozen=True)
@@ -333,7 +348,9 @@ def self_test() -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="从 VCDDD 单一状态源同步受控索引区。"
+        description="从 VCDDD 单一状态源同步受控索引区。",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=HELP_EPILOG,
     )
     parser.add_argument(
         "repo",
@@ -355,7 +372,7 @@ def main() -> int:
     mode.add_argument(
         "--self-test",
         action="store_true",
-        help="运行内置索引同步自检。",
+        help="仅供维护本 Skill 时运行内置自检。",
     )
     args = parser.parse_args()
 
@@ -364,6 +381,17 @@ def main() -> int:
 
     repo_root = Path(args.repo).expanduser().resolve()
     if args.write:
+        vcddd_root = repo_root / "vcddd"
+        if not vcddd_root.is_dir():
+            print(
+                "ERROR: --write 要求目标仓库已经存在 VCDDD 工作空间："
+                f"{vcddd_root}"
+            )
+            print(
+                "脚本不会初始化或迁移工作空间；"
+                "先按目录合同建立 vcddd/，再重新执行。"
+            )
+            return 2
         changed = sync(repo_root)
         for path in changed:
             print(f"UPDATED: {path}")

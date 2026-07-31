@@ -263,7 +263,8 @@ DDL、ORM 映射、迁移、回填、回退和数据库注释的实际落地由 
 候选完成后运行：
 
 ```text
-python3 <本 Skill 目录>/scripts/validate_project.py <目标仓库根目录> --database-system <system-id>
+python3 <skill-root>/scripts/validate_project.py <repo-root> \
+  --database-system <system-id>
 ```
 
 验证通过只说明结构完整，不表示数据设计正确。系统设计 Agent 按“数据承载全景 → 表目录 → 逐表意义与字段 → 跨表事务和安全 → 实现交接”的顺序提交用户审核，并把完整 `数据库设计.md` 作为权威正文。

@@ -1,4 +1,4 @@
 interface:
   display_name: "VCDDD"
   short_description: "从业务设计、系统验证推进到可审核代码"
-  default_prompt: "使用 $vcddd 从仓库根目录的 vcddd 工作空间恢复任务；以业务和系统设计为权威，把原型作为 system 内的 prototype 验证方法保存源码与运行证据，确认设计后形成系统工程规范和全部代码任务图；按阶段与任务记录 Commit、等价性和用户确认，全部生产代码形成唯一集成快照后再统一测试、工程改进与独立审核，并用同步脚本保持各级索引一致。"
+  default_prompt: "使用 $vcddd 从仓库根目录的 vcddd 工作空间恢复任务；以业务和系统设计为权威，把原型作为 system 内的 prototype 验证方法保存源码与运行证据，确认设计后形成系统工程规范和全部代码任务图；按阶段与任务记录 Commit、等价性和用户确认，全部生产代码形成唯一集成快照后再统一测试、工程改进与独立审核。严格按 references/script-usage.md 在对应节点执行完整工具命令；普通任务不读取 scripts 源码。"

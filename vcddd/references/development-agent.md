@@ -68,6 +68,24 @@
 
 任务图候选可以在工程编码规范形成期间先完成。工程规范成为 `当前` 后，开发规划 Agent 必须复核会影响代码产物、物理路径、生成物、共享写入、依赖和装配的规则并记录依据；复核前任务图不能成为 `当前`，也不能创建实施 worktree。
 
+任务图候选交给用户前，开发规划 Agent 执行：
+
+```text
+python3 <skill-root>/scripts/validate_project.py <repo-root> \
+  --implementation-system <system-id> \
+  --development-batch <delivery-id>
+```
+
+目标是检查候选任务图、代码产物、依赖、派发信封和实施上下文。用户确认、任务图成为 `当前`、工程规范影响复核完成以后，主控创建任何 Coding worktree 前执行：
+
+```text
+python3 <skill-root>/scripts/validate_project.py <repo-root> \
+  --coding-system <system-id> \
+  --development-batch <delivery-id>
+```
+
+目标是检查实际 Coding 准入和已经派发任务的进度合同。参数定义与错误处理见[脚本执行协议](script-usage.md#开发任务图候选交给用户前)；候选检查失败由开发规划 Agent 修正任务图，Coding 准入失败由错误所指向的设计、工程规范、任务图或任务进度拥有者修正，主控不得先创建 worktree。
+
 ## 执行实施任务
 
 实施 Agent 只完成任务节点的代码责任：
@@ -210,6 +228,14 @@ worktree 起始快照：
 5. 全部计划任务合并后建立 `集成记录.md`，记录任务 Commit、合并顺序、未实现项和统一生产代码快照；
 6. 把全部任务进度标记为 `已合并`；
 7. 把任务图状态标记为 `已完成`。
+
+以上任务、集成或交付状态写回以后，负责本次写回的开发规划或集成角色执行：
+
+```text
+python3 <skill-root>/scripts/sync_indexes.py <repo-root> --write
+```
+
+目标是同步交付与工作索引，不是证明代码正确。命令失败时由当前写回角色修正自己改变的状态拥有者；若错误属于其他事实源，保持当前交付未闭合并返回其拥有者。
 
 集成不编写测试，也不宣布正确。统一生产代码快照形成后，主控按 [统一测试 Agent](testing-agent.md) 启动多个独立测试任务。测试反馈中的生产代码问题返回对应实施任务修正，形成新快照后按影响范围复测。
 

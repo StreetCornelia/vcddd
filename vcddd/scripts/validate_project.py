@@ -11,7 +11,42 @@ import tempfile
 from pathlib import Path
 from urllib.parse import unquote
 
+sys.dont_write_bytecode = True
+
 from sync_indexes import find_drift, sync
+
+HELP_EPILOG = """\
+执行边界：
+  正常模式只读目标仓库；Coding 检查只额外读取 Git 元数据。
+  脚本不修复文件，不判断业务、设计、验证、代码、测试或审核是否正确。
+  专项参数在基础检查之上增加当前节点检查。
+
+常用场景：
+  基础结构 / 系统验证：
+    python3 validate_project.py <repo-root>
+  架构候选：
+    python3 validate_project.py <repo-root> --architecture-system <system-id>
+  编排候选：
+    python3 validate_project.py <repo-root> --orchestration-system <system-id>
+  数据库候选：
+    python3 validate_project.py <repo-root> --database-system <system-id>
+  系统 Coding 准备：
+    python3 validate_project.py <repo-root> --coding-system <system-id>
+  任务图候选：
+    python3 validate_project.py <repo-root> --implementation-system <system-id> \\
+      --development-batch <delivery-id>
+  创建 Coding worktree 前：
+    python3 validate_project.py <repo-root> --coding-system <system-id> \\
+      --development-batch <delivery-id>
+  完整交付记录形成后：
+    python3 validate_project.py <repo-root> --coding-system <system-id> \\
+      --review-batch <delivery-id>
+  任务恢复：
+    python3 validate_project.py <repo-root> --recovery-task <work-id>
+
+<repo-root> 是包含现有 vcddd/ 的目标仓库根目录。
+普通项目 Agent 执行脚本，不读取源码；完整协议见 references/script-usage.md。
+"""
 
 LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 STABLE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
@@ -4634,7 +4669,11 @@ def self_test() -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="检查 VCDDD 入口、固定设计模板、Coding 输入和审核结构。"
+        description=(
+            "只读检查 VCDDD 入口、固定设计模板、Coding 输入和审核结构。"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=HELP_EPILOG,
     )
     parser.add_argument(
         "repo",
@@ -4645,7 +4684,7 @@ def main() -> int:
     parser.add_argument(
         "--self-test",
         action="store_true",
-        help="运行内置有效/失效结构样例。",
+        help="仅供维护本 Skill 时运行内置有效/失效结构样例。",
     )
     parser.add_argument(
         "--coding-system",

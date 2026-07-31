@@ -48,6 +48,15 @@ vcddd/systems/<system-id>/validation/<VAL-ID>-<slug>/
 
 验证方法包括 `prototype`、`executable-poc`、`contract-check`、`inspection`、`benchmark`、`simulation` 和 `minimal-e2e`。验证代码、原型代码、夹具和运行证据都保存在同一验证项中；生产代码不得导入 `validation/`。
 
+验证项、运行记录、用户确认状态或验证代码更新后，执行：
+
+```text
+python3 <skill-root>/scripts/sync_indexes.py <repo-root> --write
+python3 <skill-root>/scripts/validate_project.py <repo-root>
+```
+
+第一条命令同步验证索引；第二条使用基础检查验证目录、运行记录、源码 Commit 和用户确认绑定。系统验证没有专项参数。完整参数与失败处理见 [脚本执行协议](script-usage.md#系统验证或原型运行记录更新后)。
+
 ## 原型验证
 
 原型是 `prototype` 验证方法，不是独立目录类型或系统事实源。记录：
