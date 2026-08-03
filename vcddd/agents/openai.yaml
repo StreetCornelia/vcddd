@@ -1,4 +1,4 @@
 interface:
   display_name: "VCDDD"
-  short_description: "编排业务挖掘、业务确立与 Coding 能力及上下文"
-  default_prompt: "请使用 $vcddd 根据我当前目标选择并连接最相关的专业能力，说明已有产出成熟度、具体缺口和推荐顺序，但不要把推荐顺序当作强制前置。"
+  short_description: "编排业务挖掘、业务确立、Pre-Coding 与 Coding"
+  default_prompt: "请使用 $vcddd 根据我当前目标连接业务挖掘、业务确立、Pre-Coding 或 Coding 中最相关的专业角色，并说明使用的事实成熟度、假设和能力连接。"

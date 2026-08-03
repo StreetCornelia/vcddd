@@ -57,17 +57,30 @@
 
 - “本结果由 [[执行记录]] 追踪。”
 - “User Story `US-003` 来源于 [[候选场景池#SCN-007]]。”
-- “能力 `CAP-004` 的视觉证据见 [[原型能力证据#EVD-012]]。”
+- “业务线 `BL-004` 采用的原型观察见 [[原型观察证据#EVD-012]]。”
 
 不要仅在文末堆积“相关链接”而不解释关系。
 
 ## ID 约定
 
 - 工作：`WORK-YYYYMMDD-NNN`
+- 原始来源：`SRC-NNN`
 - 候选场景：`SCN-NNN`
 - User Story：`US-NNN`
-- 原型证据：`EVD-NNN`
-- 宏观能力：`CAP-NNN`
+- 文档素材证据：`MAT-NNN`
+- 原型观察证据：`EVD-NNN`
+- 业务参与者：`ACT-NNN`
+- 业务中的人、事、物或关系：`OBJ-NNN`
+- 业务规则：`BR-NNN`
+- 业务线：`BL-NNN`
+- Domain：`DOM-NNN`
+- Domain 拥有的事实：`DF-NNN`
+- Domain 关系：`REL-NNN`
+- Domain 行为：`BEH-NNN`
+- Domain 不变量：`INV-NNN`
+- 业务组合：`CMP-NNN`
+- 语言验证：`LNG-NNN`
+- 事实证据：`FACT-NNN`
 - 决定：`DEC-NNN`
 - 进度事件：使用路线规定的稳定进度点代码
 

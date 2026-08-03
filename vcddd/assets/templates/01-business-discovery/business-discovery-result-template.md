@@ -8,12 +8,11 @@ vcddd_type: "business-discovery-result"
 vcddd_version: "2.0"
 work_id: "{{WORK-YYYYMMDD-NNN}}"
 stage: "business-discovery"
-route: "{{interactive-discovery | prototype-capability-extraction}}"
+route: "business-discovery"
 status: "draft"
-owner_role: "{{business-discovery-agent | prototype-capability-agent}}"
+owner_role: "business-discovery-agent"
 execution_record: "[[{{执行记录笔记}}]]"
 candidate_scenarios: ""
-prototype_evidence: ""
 user_confirmed: false
 confirmation_evidence: ""
 recommended_capabilities:
@@ -25,7 +24,7 @@ updated: "{{YYYY-MM-DD}}"
 # {{工作名称}} - 业务挖掘结果
 
 > [!abstract] 主写身份
-> 你是本路线的主专业 Agent。由你根据与用户的直接协作维护本文；主控只登记成熟度和能力连接，不参与内容设计。
+> 你是本阶段的主专业 Agent。由你根据与用户的直接协作维护本文；主控只登记成熟度和能力连接，不参与内容设计。
 
 本结果由 [[{{执行记录笔记}}]] 追踪。它通常是“业务确立”能力的主要参考，也可以被其他能力按当前成熟度直接使用；它不是阶段准入凭证。
 
@@ -44,9 +43,9 @@ updated: "{{YYYY-MM-DD}}"
 > [!important]
 > 只放用户已经选择的宏观能力。详细规则和系统设计留给后续阶段。
 
-| Story ID | 角色 | 情境 | 能做的事情 | 结果或价值 | 来源场景/能力 | 证据 |
+| Story ID | 角色 | 情境 | 能做的事情 | 结果或价值 | 来源场景 | 证据 |
 |---|---|---|---|---|---|---|
-| `US-001` |  |  |  |  | `SCN-___` 或 `CAP-___` | [[{{来源笔记}}]] |
+| `US-001` |  |  |  |  | `SCN-___` | [[{{来源笔记}}]] |
 
 ## Story 关系与边界
 
@@ -74,18 +73,16 @@ updated: "{{YYYY-MM-DD}}"
 
 - 
 
-## 来源与证据
-
-### 交互式业务挖掘路线
+## 来源与素材交接
 
 - 候选场景池：[[{{候选场景池}}]]
 
-### 原型能力提取路线
+| 来源 ID | 原始素材 | 类型 | 固定版本、日期或快照 | 本阶段实际读取范围 | 用于确认的宏观判断 | 建议业务确立深读的位置与理由 |
+|---|---|---|---|---|---|---|
+| `SRC-001` | [[{{原始素材}}]] | `conversation | document | prototype | screenshot | existing-system | other` |  |  |  |  |
 
-- 原型能力证据：[[{{原型能力证据}}]]
-- 原型固定版本或快照：
-
-删除不适用路线的小节。
+> [!info]
+> 本表只提供来源导航和读取边界，不把简要转述变成新的事实源。业务线、业务规则和 Domain 由业务确立基于原始素材及可追溯证据另行形成。
 
 ## 用户确认
 

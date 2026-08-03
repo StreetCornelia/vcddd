@@ -49,7 +49,8 @@ updated: "{{YYYY-MM-DD}}"
 | 能力域 | 当前状态 | 可用产出及成熟度 | 活动执行记录 | 推荐衔接 |
 |---|---|---|---|---|
 | 业务挖掘 | `not-started` |  |  | 通常用于打开目标空间 |
-| 业务确立 | `protocol-design-pending` |  |  | 可按已有材料直接进入；记录缺口与假设 |
+| 业务确立 | `not-started` |  |  | 确立业务、Domain 及其组合关系 |
+| Pre-Coding | `protocol-design-pending` |  |  | 把业务与 Domain 投影为 Coding 设计事实 |
 | Coding | `protocol-design-pending` |  |  | 可按当前工程目标直接进入；记录返工风险 |
 
 ## 当前参与角色

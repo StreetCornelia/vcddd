@@ -1,6 +1,6 @@
 ---
 name: vcddd
-description: "编排业务挖掘、业务确立与 Coding 三类专业能力的 VCDDD 主控 Skill。用于新项目、原型驱动项目和既有系统演进；提供推荐认知顺序但不把它作为强制前置，允许按当前目标直接进入、并行或回到任一能力。主控只恢复上下文、连接专业对话和登记产出成熟度，不代替业务或工程角色进行专业设计。"
+description: "编排业务挖掘、业务确立、Pre-Coding 与 Coding 四类专业能力的 VCDDD 主控 Skill。用于新项目、原型驱动项目和既有系统演进；提供推荐认知顺序但不把它作为强制前置，允许按当前目标直接进入、并行或回到任一能力。主控只恢复上下文、连接专业对话和登记产出成熟度，不代替业务或工程角色进行专业设计。"
 ---
 
 # VCDDD 主控协议
@@ -29,13 +29,14 @@ description: "编排业务挖掘、业务确立与 Coding 三类专业能力的 
 
 如果运行环境不能创建或恢复同级专业对话，明确报告当前请求能力的运行限制及所缺能力，等待用户选择；不要静默降级成另一种交互模型，也不要把局部限制扩张成整个项目停滞。
 
-## 三个能力域与推荐顺序
+## 四个能力域与推荐顺序
 
 通常推荐按以下认知顺序工作，但它不是固定流程或准入门槛：
 
 1. **业务挖掘**：明确想做的事情在宏观层面能达到什么效果；由 AI 扩展候选场景，用户选择本次目标，形成宏观目标、已选 User Stories、范围和非目标。
-2. **业务确立**：把宏观能力确立为可设计、可验收的完整业务。角色和模板尚待共同设计；这表示该能力的新版协议尚未实现，不表示项目必须停在前一阶段。
-3. **Coding**：完成工程设计、实现和验证。角色和模板尚待共同设计；这表示该能力的新版协议尚未实现，不表示代码工作必须等待其他阶段被宣告完成。
+2. **业务确立**：说清业务是什么、哪些核心事物是真正自治自洽的 Domain，以及业务怎样组合多个 Domain 完成。
+3. **Pre-Coding**：把业务与 Domain 投影成面向 Coding 的架构、模块、API、逐 API 内部编排、数据库和开发基线。
+4. **Coding**：形成工程规范与任务规划，完成实现、验证、改进和审核。
 
 阶段名称只用于组织能力、角色和文档，不表示层级准入。用户可以：
 
@@ -49,8 +50,9 @@ description: "编排业务挖掘、业务确立与 Coding 三类专业能力的 
 读取：
 
 - [业务挖掘阶段合同](instructions/stages/01-business-discovery/stage.md)
-- [业务确立阶段边界](instructions/stages/02-business-establishment/stage.md)
-- [Coding 阶段边界](instructions/stages/03-coding/stage.md)
+- [业务确立能力合同](instructions/stages/02-business-establishment/stage.md)
+- [Pre-Coding 能力边界](instructions/stages/03-pre-coding/stage.md)
+- [Coding 能力边界](instructions/stages/04-coding/stage.md)
 
 ## 启动与恢复
 
@@ -89,7 +91,7 @@ description: "编排业务挖掘、业务确立与 Coding 三类专业能力的 
 
 1. **识别当前目标**：先判断用户现在需要哪一种专业能力，不从阶段编号推断。
 2. **说明上下文条件**：列出已有产出、成熟度、假设、缺口及其影响，给出推荐但不设置强制前置。
-3. **选择能力与路线**：读取对应能力合同，依据可验证条件选择路线。
+3. **选择能力与角色**：读取对应能力合同，依据当前专业目标连接角色。
 4. **建立工作单元**：在 `VCDDD 工作区/<work_id>/` 创建工作 ID、主控执行记录、结果笔记和主专业 Agent 执行记录。
 5. **创建或恢复专业对话**：同一职责的继续讨论、修正和确认优先复用原对话。
 6. **用户直接协作**：专业 Agent 负责互动和专业文档；主控停止专业推理。
@@ -107,21 +109,45 @@ description: "编排业务挖掘、业务确立与 Coding 三类专业能力的 
 
 专业对话开始工作后，主控可把自己的执行记录标记为 `waiting`；完成本次调度或结果登记后标记为 `completed`。主控记录的状态不等于专业结果已经确认，也不控制其他能力是否可启动。
 
-## 业务挖掘路线
+## 业务挖掘角色
 
-业务挖掘有且只有两条入口路线，输出同一种阶段结果：
+业务挖掘只有一个主专业角色：[业务挖掘 Agent](instructions/stages/01-business-discovery/01-interactive-discovery/business-discovery-agent.md)。无论输入是初步想法、文档还是原型，它都快速形成宏观目标、AI 扩展的候选场景、用户选择的多个简要 User Stories、范围和非目标。
 
-| 路线 | 适用条件 | 主专业 Agent |
-|---|---|---|
-| 交互式业务挖掘 | 没有已经代表确认宏观能力的可运行原型 | [业务挖掘 Agent](instructions/stages/01-business-discovery/01-interactive-discovery/business-discovery-agent.md) |
-| 原型能力提取 | 用户确认已有原型代表宏观目标，且可运行或可提供可靠视觉材料 | [原型能力提取 Agent](instructions/stages/01-business-discovery/02-prototype-capability-extraction/prototype-capability-agent.md) |
+用户描述足以确认宏观目标时，第一阶段不打开已有素材，只登记入口；仅在宏观目标仍不清楚时做最小范围查看。素材中业务线级别的事实由“业务确立”深入分析。
 
 主控必须知道下列条件角色的存在和触发条件，但链接只用于触发后的路由定位；条件未触发时不得打开、预读或摘要其合同：
 
 - [场景扩展 Agent](instructions/stages/01-business-discovery/01-interactive-discovery/scenario-expansion-agent.md)
 - [事实调研 Agent](instructions/stages/01-business-discovery/01-interactive-discovery/fact-research-agent.md)
 
-业务挖掘阶段不使用语言验证 Agent。语言和模型验证属于“业务确立”阶段的后续设计范围。
+业务挖掘阶段不使用语言验证 Agent。重要业务、Domain 和确认表达的语言验证属于“业务确立”能力。
+
+## 业务确立角色
+
+业务确立形成业务、Domain 和业务组合事实。读取 [业务确立能力合同](instructions/stages/02-business-establishment/stage.md)，再根据当前目标只打开一个核心角色合同：
+
+| 当前目标 | 专业角色 |
+|---|---|
+| 把宏观目标展开为完整业务事实 | [业务定义 Agent](instructions/stages/02-business-establishment/01-business-definition/business-definition-agent.md) |
+| 从业务中寻找 Domain 候选与所有权边界 | [Domain 发现 Agent](instructions/stages/02-business-establishment/02-domain-discovery/domain-discovery-agent.md) |
+| 站在一个 Domain 内部完成自治、自洽建模 | [Domain 建模 Agent](instructions/stages/02-business-establishment/03-domain-modeling/domain-modeling-agent.md) |
+| 说明业务怎样组合各 Domain 行为完成 | [业务组合 Agent](instructions/stages/02-business-establishment/04-business-composition/business-composition-agent.md) |
+
+主控知道以下条件角色的路由名称与触发条件，但未触发时不得读取其合同：
+
+- 文档素材分析 Agent：文档数量大、篇幅长、需要交叉比对或限定章节证据提取，已经明显稀释业务定义 Agent 的当前上下文；
+- 原型观察 Agent：业务线设计需要实际运行原型或以可靠视觉材料观察动作、状态变化和结果；
+- 语言验证 Agent：重要名称或文案需要按实际场景隔离验证；
+- 事实调研 Agent：一个会影响当前判断的明确事实问题无法从已有来源确定。
+
+对应合同只在触发后打开：
+
+- [文档素材分析 Agent](instructions/stages/02-business-establishment/conditions/document-material-analysis-agent.md)
+- [原型观察 Agent](instructions/stages/02-business-establishment/conditions/prototype-observation-agent.md)
+- [语言验证 Agent](instructions/stages/02-business-establishment/conditions/language-validation-agent.md)
+- [事实调研 Agent](instructions/stages/02-business-establishment/conditions/fact-research-agent.md)
+
+不同 `DOM-*` 使用独立 Domain 建模对话；同一 Domain 的后续修正优先续用原对话。主控不能建立一个重新完成全部专业工作的“业务确立总 Agent”。
 
 ## 结果登记检查
 
@@ -134,7 +160,7 @@ description: "编排业务挖掘、业务确立与 Coding 三类专业能力的 
 - 至少存在一个本次已选 User Story；
 - 本次范围、非目标、延后项或开放项被清楚区分；
 - 结果指明推荐给其他能力使用的输入、假设和开放问题；
-- 用于确认本结果的路线进度点均为完成或明确不适用。
+- 业务挖掘进度点均为完成或明确不适用。
 
 任一项缺失时，不得把结果登记为 `confirmed`，也不要自己补写；应记录当前成熟度并把缺项原样交回专业对话。用户仍可选择启动其他能力，接收方必须把这份结果作为草稿或带假设输入，并明确可能的返工范围。
 
@@ -170,7 +196,16 @@ description: "编排业务挖掘、业务确立与 Coding 三类专业能力的 
 - [统一执行记录模板](assets/templates/shared/execution-record-template.md)
 - [业务挖掘结果模板](assets/templates/01-business-discovery/business-discovery-result-template.md)
 - [候选场景池模板](assets/templates/01-business-discovery/candidate-scenarios-template.md)
-- [原型能力证据模板](assets/templates/01-business-discovery/prototype-capability-evidence-template.md)
+- [业务确立入口模板](assets/templates/02-business-establishment/business-establishment-index-template.md)
+- [业务定义模板](assets/templates/02-business-establishment/business-definition-template.md)
+- [业务线模板](assets/templates/02-business-establishment/business-line-template.md)
+- [领域地图模板](assets/templates/02-business-establishment/domain-map-template.md)
+- [Domain 模板](assets/templates/02-business-establishment/domain-template.md)
+- [业务组合模板](assets/templates/02-business-establishment/business-composition-template.md)
+- [文档素材证据模板](assets/templates/02-business-establishment/document-material-evidence-template.md)
+- [原型观察证据模板](assets/templates/02-business-establishment/prototype-observation-evidence-template.md)
+- [语言验证记录模板](assets/templates/02-business-establishment/language-validation-template.md)
+- [事实证据模板](assets/templates/02-business-establishment/fact-evidence-template.md)
 
 ## 上下文纪律
 
