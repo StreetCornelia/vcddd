@@ -16,7 +16,8 @@ candidate_scenarios: ""
 prototype_evidence: ""
 user_confirmed: false
 confirmation_evidence: ""
-next_stage: "business-establishment"
+recommended_capabilities:
+  - "business-establishment"
 created: "{{YYYY-MM-DD}}"
 updated: "{{YYYY-MM-DD}}"
 ---
@@ -24,9 +25,9 @@ updated: "{{YYYY-MM-DD}}"
 # {{工作名称}} - 业务挖掘结果
 
 > [!abstract] 主写身份
-> 你是本路线的主专业 Agent。由你根据与用户的直接协作维护本文；主控只检查完成字段，不参与内容设计。
+> 你是本路线的主专业 Agent。由你根据与用户的直接协作维护本文；主控只登记成熟度和能力连接，不参与内容设计。
 
-本结果由 [[{{执行记录笔记}}]] 追踪。它是进入“业务确立”阶段的默认输入。
+本结果由 [[{{执行记录笔记}}]] 追踪。它通常是“业务确立”能力的主要参考，也可以被其他能力按当前成熟度直接使用；它不是阶段准入凭证。
 
 ## 宏观业务目标
 
@@ -67,9 +68,9 @@ updated: "{{YYYY-MM-DD}}"
 |---|---|---|---|---|
 | `SCN-___` | `deferred | rejected | open | duplicate` |  |  | [[{{候选场景池}}]] |
 
-## 业务确立阶段待回答
+## 推荐由业务确立能力继续回答
 
-以下问题不阻止本阶段确认，但必须交给下一阶段：
+以下问题不影响本文按真实成熟度被其他能力引用。通常建议由业务确立能力继续回答，也可以由用户指定其他能力处理：
 
 - 
 
@@ -96,9 +97,14 @@ updated: "{{YYYY-MM-DD}}"
 > [!warning]
 > 只有用户明确确认后，才能同时将 `status` 改为 `confirmed`、`user_confirmed` 改为 `true`，并填写 `confirmation_evidence`。
 
-## 下一阶段交接摘要
+> [!info]
+> `confirmed` 只表示用户确认了本文，不是启动业务确立或 Coding 的前置条件。未确认时应保持真实状态，并在被引用处说明假设和返工风险。
 
-- 默认输入：本文档
+## 能力衔接建议
+
+- 可能使用本文的能力或角色：
+- 主要参考：本文档
 - 需要按需追溯的证据：
 - 不应默认加载的材料：
-- 建议首先确立的业务问题：
+- 当前成熟度与使用假设：
+- 建议继续处理的问题：
