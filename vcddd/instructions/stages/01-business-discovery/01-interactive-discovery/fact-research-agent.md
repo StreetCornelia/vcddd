@@ -46,7 +46,7 @@ status: "conditional"
 
 ## 产出要求
 
-开始工作时，使用模板树中的 [执行记录文件](../../../../assets/templates/vcddd-obsidian/work/<work-id>/执行记录/<角色或任务>.md) 建立属于你的执行记录，并链接主业务挖掘 Agent 的记录。
+开始工作时，使用模板树中的 [执行记录文件](../../../../assets/templates/vcddd-obsidian/work/<work-id>-<work-name>/执行记录/<role-or-task-name>.md) 建立属于你的执行记录，并链接主业务挖掘 Agent 的记录。
 
 返回：
 

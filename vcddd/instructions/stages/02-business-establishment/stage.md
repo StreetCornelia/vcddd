@@ -71,11 +71,11 @@ status: "active"
 ```text
 vcddd-obsidian/02-business-establishment/
 ├── business/
-│   └── <goal-id>/
+│   └── <goal-id>-<goal-name>/
 │       ├── 业务确立.md
 │       ├── 业务定义.md
 │       ├── 业务线/
-│       │   └── BL-NNN-<名称>.md
+│       │   └── BL-NNN-<business-line-name>.md
 │       ├── 领域地图.md
 │       ├── 业务组合.md
 │       └── 证据/
@@ -84,24 +84,24 @@ vcddd-obsidian/02-business-establishment/
 │           ├── 语言验证/
 │           └── 事实调研/
 └── domains/
-    └── <domain-id>/
+    └── <domain-id>-<domain-name>/
         └── Domain.md
 ```
 
 `业务确立.md` 只导航、登记成熟度和链接，不复制专业事实。使用以下模板：
 
-- [业务确立.md](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>/业务确立.md)
-- [业务定义.md](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>/业务定义.md)
-- [业务线文件](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>/业务线/<business-line-id>-<名称>.md)
-- [领域地图.md](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>/领域地图.md)
-- [Domain.md](../../../assets/templates/vcddd-obsidian/02-business-establishment/domains/<domain-id>/Domain.md)
-- [业务组合.md](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>/业务组合.md)
-- [文档素材证据](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>/证据/文档素材/<material-evidence-id>.md)
-- [原型观察证据](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>/证据/原型观察/<observation-evidence-id>.md)
-- [语言验证记录](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>/证据/语言验证/<language-validation-id>.md)
-- [事实证据](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>/证据/事实调研/<fact-id>.md)
+- [业务确立.md](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>-<goal-name>/业务确立.md)
+- [业务定义.md](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>-<goal-name>/业务定义.md)
+- [业务线文件](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>-<goal-name>/业务线/<business-line-id>-<business-line-name>.md)
+- [领域地图.md](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>-<goal-name>/领域地图.md)
+- [Domain.md](../../../assets/templates/vcddd-obsidian/02-business-establishment/domains/<domain-id>-<domain-name>/Domain.md)
+- [业务组合.md](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>-<goal-name>/业务组合.md)
+- [文档素材证据](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>-<goal-name>/证据/文档素材/<material-evidence-id>-<material-question>.md)
+- [原型观察证据](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>-<goal-name>/证据/原型观察/<observation-evidence-id>-<observation-question>.md)
+- [语言验证记录](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>-<goal-name>/证据/语言验证/<language-validation-id>-<validated-item>.md)
+- [事实证据](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>-<goal-name>/证据/事实调研/<fact-id>-<research-question>.md)
 
-每个实际参与角色还使用统一执行记录模板，在 `vcddd-obsidian/work/<work-id>/执行记录/` 维护自己的行为与上下文记录。正式事实不记录 `work_id`，也不反向链接本地执行记录。
+每个实际参与角色还使用统一执行记录模板，在 `vcddd-obsidian/work/<work-id>-<work-name>/执行记录/` 维护自己的行为与上下文记录。正式事实不记录 `work_id`，也不反向链接本地执行记录。
 
 ## 结果成熟度
 

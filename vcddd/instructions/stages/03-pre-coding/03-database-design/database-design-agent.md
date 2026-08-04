@@ -26,7 +26,7 @@ status: "active"
 只读取本次任务清单中的固定版本和精确范围。由主控连接时使用主控提供的清单；用户直接调用时，根据正式入口、目标系统和本工作说明建立同样的清单：
 
 1. [Pre-Coding 说明](../stage.md)；
-2. 模板树中的 [数据库设计.md](../../../../assets/templates/vcddd-obsidian/03-pre-coding/systems/<system-id>/数据库设计.md)；
+2. 模板树中的 [数据库设计.md](../../../../assets/templates/vcddd-obsidian/03-pre-coding/systems/<system-id>-<system-name>/数据库设计.md)；
 3. `系统与模块设计.md` 中当前系统的职责、边界和与外部系统的数据责任；
 4. 当前系统必须保存的 Domain 事实、非 Domain 数据、关系和生命周期；
 5. `API 与 Domain 编排.md` 中会读取或改变数据、要求共同成功、处理并发或面对外部失败的具体步骤；

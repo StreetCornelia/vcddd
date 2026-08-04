@@ -35,9 +35,9 @@ status: "active"
 - 本 Agent 工作说明；
 - [业务挖掘说明](../stage.md)；
 - 用户的原始想法或业务背景；
-- [业务挖掘.md 模板](../../../../assets/templates/vcddd-obsidian/01-business-discovery/<goal-id>/业务挖掘.md)；
-- [候选场景池.md 模板](../../../../assets/templates/vcddd-obsidian/01-business-discovery/<goal-id>/候选场景池.md)；
-- [执行记录模板](../../../../assets/templates/vcddd-obsidian/work/<work-id>/执行记录/<角色或任务>.md)。
+- [业务挖掘.md 模板](../../../../assets/templates/vcddd-obsidian/01-business-discovery/<goal-id>-<goal-name>/业务挖掘.md)；
+- [候选场景池.md 模板](../../../../assets/templates/vcddd-obsidian/01-business-discovery/<goal-id>-<goal-name>/候选场景池.md)；
+- [执行记录模板](../../../../assets/templates/vcddd-obsidian/work/<work-id>-<work-name>/执行记录/<role-or-task-name>.md)。
 
 ### `always`
 

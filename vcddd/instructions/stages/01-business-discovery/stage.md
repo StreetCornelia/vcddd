@@ -39,7 +39,7 @@ status: "active"
 
 ## 产出要求
 
-业务挖掘 Agent 必须按照 [业务挖掘.md 模板](../../../assets/templates/vcddd-obsidian/01-business-discovery/<goal-id>/业务挖掘.md) 产生一份由用户确认的业务挖掘结果，包含：
+业务挖掘 Agent 必须按照 [业务挖掘.md 模板](../../../assets/templates/vcddd-obsidian/01-business-discovery/<goal-id>-<goal-name>/业务挖掘.md) 产生一份由用户确认的业务挖掘结果，包含：
 
 - 一段完整的宏观业务目标；
 - 参与者与他们能获得的效果；
@@ -53,12 +53,12 @@ status: "active"
 正式事实固定写入：
 
 ```text
-vcddd-obsidian/01-business-discovery/<goal-id>/
+vcddd-obsidian/01-business-discovery/<goal-id>-<goal-name>/
 ├── 业务挖掘.md
 └── 候选场景池.md
 ```
 
-执行记录写入 `vcddd-obsidian/work/<work-id>/执行记录/`，并从本地记录链接上述正式事实。正式事实不反向链接执行记录。
+执行记录写入 `vcddd-obsidian/work/<work-id>-<work-name>/执行记录/`，并从本地记录链接上述正式事实。正式事实不反向链接执行记录。
 
 候选场景池是用户选择范围的依据，不是其他能力的默认全量上下文。其他能力通常先加载当前结果和素材入口，再按问题读取原始素材或业务确立证据。
 

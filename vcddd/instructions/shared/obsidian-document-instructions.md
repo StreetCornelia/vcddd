@@ -26,12 +26,12 @@ VCDDD 项目文档统一放在项目根目录的 `vcddd-obsidian/`。其中有�
     ├── .gitignore
     ├── VCDDD.md
     ├── 01-business-discovery/
-    │   └── <goal-id>/
+    │   └── <goal-id>-<goal-name>/
     │       ├── 业务挖掘.md
     │       └── 候选场景池.md
     ├── 02-business-establishment/
     │   ├── business/
-    │   │   └── <goal-id>/
+    │   │   └── <goal-id>-<goal-name>/
     │   │       ├── 业务确立.md
     │   │       ├── 业务定义.md
     │   │       ├── 业务线/
@@ -39,43 +39,86 @@ VCDDD 项目文档统一放在项目根目录的 `vcddd-obsidian/`。其中有�
     │   │       ├── 业务组合.md
     │   │       └── 证据/
     │   └── domains/
-    │       └── <domain-id>/
+    │       └── <domain-id>-<domain-name>/
     │           └── Domain.md
     ├── 03-pre-coding/
     │   ├── 系统与模块设计.md
     │   ├── 语言检查/
     │   └── systems/
-    │       └── <system-id>/
+    │       └── <system-id>-<system-name>/
     │           ├── API 与 Domain 编排.md
     │           ├── 数据库设计.md
     │           └── 语言检查/
     ├── 04-coding/
     │   └── systems/
-    │       └── <system-id>/
+    │       └── <system-id>-<system-name>/
+    │           ├── 开发任务图.md
+    │           ├── 编码规范.md
+    │           └── tasks/
+    │               └── <task-id>-<task-name>/
+    │                   └── 任务.md
     └── work/
         ├── 当前工作.md
-        └── <work-id>/
+        └── <work-id>-<work-name>/
             ├── 主控状态.md
+            ├── Coding 状态.md
             ├── 执行记录/
             ├── 临时材料/
             └── 临时投影/
 ```
 
-`VCDDD.md` 是正式知识入口，只导航长期事实。`work/当前工作.md` 是本地工作入口，只恢复当前任务、Agent 和执行记录。Coding 的正式文档类型仍待共同设计；在此之前只保留 `04-coding/systems/<system-id>/` 的稳定归属，不套用旧版模板。
+`VCDDD.md` 是正式知识入口，只导航长期事实。`work/当前工作.md` 是本地工作入口，只恢复当前任务、Agent 和执行记录。`Coding 状态.md` 只在 Coding 工作中创建，用来保存当前集成基线、任务状态、串行集成队列和外部输入请求；其他工作不创建该文件。它不保存队列历史、Agent 推理或敏感值。
 
 ## 模板就是目标结构
 
 完整模板固定在 `assets/templates/vcddd-obsidian/`。模板根目录内部的相对路径与项目中的 `vcddd-obsidian/` 完全一致；模板文件已经使用正式文件名，并包含完整 Properties、正文标题、表格、图和填写位置。
 
+模板目录名本身必须展示目标路径的完整形状。需要 ID 和名称的对象直接写成 `<domain-id>-<domain-name>`，不能把模板目录简化成 `<domain-id>`，再依靠正文提醒 Agent 追加名称。路径占位符统一使用小写英文语义名称，避免同一棵模板树出现多套写法。
+
 使用模板时：
 
 1. 先查看当前阶段对应的模板子树，确认本对象需要的目录和文件。
 2. 将相关模板文件复制到项目中的同一相对路径。
-3. 只替换路径里的 `<goal-id>`、`<domain-id>`、`<system-id>`、`<work-id>`、`<角色或任务>` 等占位符。
+3. 同时替换路径中的 ID 和名称占位符，例如 `<domain-id>-<domain-name>`；不得只填写 ID、留下名称占位符或删去名称部分。
 4. 按模板正文填写或更新，不重新组织章节，不另造文件名。
-5. 一个占位分支只在真实对象存在时实例化；不要把 `<goal-id>` 或示例 ID 原样复制进项目。
+5. 一个占位分支只在真实对象存在时实例化；不要把 `<goal-id>`、`<goal-name>` 或示例内容原样复制进项目。
 
-`<goal-id>`、`<domain-id>` 和 `<system-id>` 是跨工作持续使用的事实 ID。`<work-id>` 只属于本地工作过程。语言检查模板同时出现在阶段级和系统级真实位置，按被检查文档所在位置选择，不在运行时重新推导目录。
+`<goal-id>`、`<domain-id>` 和 `<system-id>` 是跨工作持续使用的事实 ID。`<work-id>` 只属于本地工作过程。名称用于人类浏览，不能代替 Properties 中的稳定 ID。语言检查模板同时出现在阶段级和系统级真实位置，按被检查文档所在位置选择，不在运行时重新推导目录。
+
+## 人类可读的路径名称
+
+包含对象 ID 的目录和文件统一使用 `稳定 ID-简短名称`：
+
+```text
+GOAL-001-企业 AI 用量统一管理/
+DOM-002-访问凭证/
+SYS-001-管理后台/
+TASK-SYS-001-003-完成成员配额管理/
+LNG-004-数据库设计.md
+WORK-20260804-001-管理后台任务拆分/
+```
+
+模板路径占位符与文档内容使用同一个对象名称：
+
+| 模板路径 | 实例化时填写 |
+|---|---|
+| `<goal-id>-<goal-name>` | `GOAL-NNN` 与 `{{目标名称}}` |
+| `<domain-id>-<domain-name>` | `DOM-NNN` 与 `{{Domain名称}}` |
+| `<system-id>-<system-name>` | `SYS-NNN` 与 `{{系统名称}}` |
+| `<task-id>-<task-name>` | `TASK-SYS-NNN-NNN` 与 `{{任务名称}}` |
+| `<work-id>-<work-name>` | `WORK-YYYYMMDD-NNN` 与 `{{工作名称}}` |
+
+证据和语言检查文件同样把问题或对象写在 ID 后，例如 `<fact-id>-<research-question>.md` 和 `<language-check-id>-<document-name>.md`。
+
+名称必须直接说明该对象是什么或当前工作要完成什么。使用业务、Domain、系统、任务或证据在正式文档中的当前名称，不使用只有编号的目录，不使用 `目标一`、`Domain 二`、`系统三` 等重复编号的名称，也不把完整描述句塞进路径。
+
+稳定 ID 与名称分别处理：
+
+- Properties 中的 `goal_id`、`domain_id`、`system_id`、`task_id` 和 `work_id` 只保存稳定 ID；
+- 对象名称变化不改变稳定 ID；名称已经明显错误或用户确认了新的正式名称时，重命名目录并同步更新所有 Wiki Links；
+- 普通措辞润色不频繁重命名目录，路径名称保持简短、可辨认；
+- 名称不得包含 `/`、`\\`、`:`、`*`、`?`、`"`、`<`、`>`、`|`、`#`、`^`、`[` 或 `]`；
+- 阶段目录 `01-business-discovery` 等已经包含编号和含义，不再追加项目名称；`business`、`domains`、`systems`、`tasks` 等分类目录也不追加对象名称。
 
 ## Git 边界
 
@@ -91,11 +134,11 @@ VCDDD 项目文档统一放在项目根目录的 `vcddd-obsidian/`。其中有�
 
 1. 每个正式笔记都以 YAML Properties 开头。
 2. 每个事实对象使用稳定 ID；文件改名不改变 ID。
-3. 内部关系使用 `[[Wiki Links]]`。存在同名文件时必须写 vault 内路径，例如 `[[02-business-establishment/domains/DOM-001/Domain]]`。
+3. 内部关系使用 `[[Wiki Links]]`。存在同名文件时必须写 vault 内路径，例如 `[[02-business-establishment/domains/DOM-001-访问凭证/Domain]]`。
 4. 同一事实只在一个权威笔记中定义。其他笔记只链接并说明使用原因。
 5. 专业结果、证据、候选项和执行记录是不同文档类型。
 6. 链接表达实际关系，不为了构造全连接图而增加链接。
-7. 临时章节投影必须放在 `work/<work-id>/临时投影/`，记录固定来源、版本、章节和哈希；它不是事实源。
+7. 临时章节投影必须放在 `work/<work-id>-<work-name>/临时投影/`，记录固定来源、版本、章节和哈希；它不是事实源。
 
 主控负责 `VCDDD.md` 和 `work/当前工作.md` 的整体结构、跨角色状态与自己的执行记录。用户直接调用的主专业 Agent 可以创建或更新 `work/当前工作.md` 中属于本次工作的内容，并在 `VCDDD.md` 中增加或更新自己正式结果对应的入口行；不得改写其他角色的状态或专业结果。主专业 Agent 拥有对应正式结果。条件 Agent 拥有自己的执行记录；需要被多个后续角色长期引用的证据，按模板写入正式证据目录。
 
@@ -113,6 +156,9 @@ VCDDD 项目文档统一放在项目根目录的 `vcddd-obsidian/`。其中有�
 | `goal_id` | 业务挖掘与某项业务确立事实 | 宏观业务目标 ID |
 | `domain_id` | Domain 事实 | Domain ID |
 | `system_id` | 单一系统的 Pre-Coding/Coding 事实 | 系统 ID |
+| `task_id` | 单项开发任务 | Coding 任务 ID |
+| `task_graph`、`coding_style` | Coding 任务与本地 Coding 状态 | 当前系统的任务图和编码规范链接 |
+| `integration_branch`、`integrated_commit` | 仅本地 `Coding 状态.md` | 当前集成分支和最新集成 Commit |
 | `result_note` | 本地过程记录 | 该过程形成或更新的正式事实链接 |
 | `work_id` | 仅 `work/` | 本轮工作 ID |
 | `execution_record` | 仅 `work/` | 相关本地执行记录链接 |
@@ -141,6 +187,8 @@ VCDDD 项目文档统一放在项目根目录的 `vcddd-obsidian/`。其中有�
 - 模块：`MOD-NNN`
 - API：`API-SYS-NNN-NNN`
 - 数据库表：`DBT-SYS-NNN-NNN`
+- 开发任务：`TASK-SYS-NNN-NNN`
+- Coding Style 规则：`STYLE-SYS-NNN-NNN`
 - 关键业务路径：`PATH-NNN`
 - 语言验证：`LNG-NNN`
 - 事实证据：`FACT-NNN`

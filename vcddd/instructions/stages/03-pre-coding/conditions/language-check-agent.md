@@ -22,7 +22,7 @@ status: "active"
 - 名称或句子的实际章节、表格或图；
 - 读者在该位置同时看到的内容；
 - 当前术语表；
-- 模板树中与被检查文档同级的 `语言检查/` 文件：系统与模块设计使用 [阶段级模板](../../../../assets/templates/vcddd-obsidian/03-pre-coding/语言检查/<language-check-id>.md)，系统文档使用 [系统级模板](../../../../assets/templates/vcddd-obsidian/03-pre-coding/systems/<system-id>/语言检查/<language-check-id>.md)；
+- 模板树中与被检查文档同级的 `语言检查/` 文件：系统与模块设计使用 [阶段级模板](../../../../assets/templates/vcddd-obsidian/03-pre-coding/语言检查/<language-check-id>-<document-name>.md)，系统文档使用 [系统级模板](../../../../assets/templates/vcddd-obsidian/03-pre-coding/systems/<system-id>-<system-name>/语言检查/<language-check-id>-<document-name>.md)；
 - 自己的执行记录。
 
 某个词的预期含义无法从当前文档和术语表确定时，只读取它所引用的权威定义章节。

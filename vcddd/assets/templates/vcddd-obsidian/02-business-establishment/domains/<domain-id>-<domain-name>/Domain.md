@@ -16,7 +16,7 @@ created: "{{YYYY-MM-DD}}"
 updated: "{{YYYY-MM-DD}}"
 ---
 
-# DOM-{{NNN}}：{{Domain 名称}}
+# DOM-{{NNN}}：{{Domain名称}}
 
 > [!abstract] 主写身份
 > 你是本 Domain 的建模 Agent。只从该 Domain 的内部主权建立事实；不要替其他 Domain 判断，也不要写入架构、API、数据库或代码承载。

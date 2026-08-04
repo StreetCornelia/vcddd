@@ -78,7 +78,7 @@ vcddd-obsidian/03-pre-coding/
 ├── 系统与模块设计.md
 ├── 语言检查/
 └── systems/
-    └── <system-id>/
+    └── <system-id>-<system-name>/
         ├── API 与 Domain 编排.md
         ├── 数据库设计.md
         └── 语言检查/
@@ -86,15 +86,15 @@ vcddd-obsidian/03-pre-coding/
 
 系统与模块设计事实只写在 `系统与模块设计.md`。每份 API 与 Domain 编排和数据库设计文档通过 `system_id` 和 Wiki Link 归属一个系统；目录只帮助浏览，不替代文档关系。系统与模块设计的语言检查写入阶段级 `语言检查/`；单个系统文档的语言检查写入该系统的 `语言检查/`。
 
-所有执行记录写入 `vcddd-obsidian/work/<work-id>/执行记录/`。正式设计不记录 `work_id`，也不反向链接执行记录。
+所有执行记录写入 `vcddd-obsidian/work/<work-id>-<work-name>/执行记录/`。正式设计不记录 `work_id`，也不反向链接执行记录。
 
 使用：
 
 - [系统与模块设计.md](../../../assets/templates/vcddd-obsidian/03-pre-coding/系统与模块设计.md)
-- [API 与 Domain 编排.md](../../../assets/templates/vcddd-obsidian/03-pre-coding/systems/<system-id>/API 与 Domain 编排.md)
-- [数据库设计.md](../../../assets/templates/vcddd-obsidian/03-pre-coding/systems/<system-id>/数据库设计.md)
-- [阶段级语言检查](../../../assets/templates/vcddd-obsidian/03-pre-coding/语言检查/<language-check-id>.md)
-- [系统级语言检查](../../../assets/templates/vcddd-obsidian/03-pre-coding/systems/<system-id>/语言检查/<language-check-id>.md)
+- [API 与 Domain 编排.md](../../../assets/templates/vcddd-obsidian/03-pre-coding/systems/<system-id>-<system-name>/API 与 Domain 编排.md)
+- [数据库设计.md](../../../assets/templates/vcddd-obsidian/03-pre-coding/systems/<system-id>-<system-name>/数据库设计.md)
+- [阶段级语言检查](../../../assets/templates/vcddd-obsidian/03-pre-coding/语言检查/<language-check-id>-<document-name>.md)
+- [系统级语言检查](../../../assets/templates/vcddd-obsidian/03-pre-coding/systems/<system-id>-<system-name>/语言检查/<language-check-id>-<document-name>.md)
 
 ## 用户确认
 
