@@ -22,7 +22,7 @@
 - 当前状态、限制、受影响判断和下一步；
 - 能力衔接建议。
 
-使用 [统一执行记录模板](../../assets/templates/shared/execution-record-template.md)。
+使用模板树中的 [执行记录文件](../../assets/templates/vcddd-obsidian/work/<work-id>/执行记录/<角色或任务>.md)。
 
 执行记录固定写入 `vcddd-obsidian/work/<work-id>/执行记录/`，只保存在本地，不进入 Git。执行记录可以链接本轮创建或更新的正式事实；正式事实不得反向链接执行记录，也不得保存 `work_id` 或 Agent 对话 ID。
 

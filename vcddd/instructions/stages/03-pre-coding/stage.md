@@ -89,10 +89,11 @@ vcddd-obsidian/03-pre-coding/
 
 使用：
 
-- [系统与模块设计模板](../../../assets/templates/03-pre-coding/system-and-module-design-template.md)
-- [API 与 Domain 编排模板](../../../assets/templates/03-pre-coding/api-and-domain-orchestration-template.md)
-- [数据库设计模板](../../../assets/templates/03-pre-coding/database-design-template.md)
-- [语言检查记录模板](../../../assets/templates/03-pre-coding/language-check-template.md)
+- [系统与模块设计.md](../../../assets/templates/vcddd-obsidian/03-pre-coding/系统与模块设计.md)
+- [API 与 Domain 编排.md](../../../assets/templates/vcddd-obsidian/03-pre-coding/systems/<system-id>/API 与 Domain 编排.md)
+- [数据库设计.md](../../../assets/templates/vcddd-obsidian/03-pre-coding/systems/<system-id>/数据库设计.md)
+- [阶段级语言检查](../../../assets/templates/vcddd-obsidian/03-pre-coding/语言检查/<language-check-id>.md)
+- [系统级语言检查](../../../assets/templates/vcddd-obsidian/03-pre-coding/systems/<system-id>/语言检查/<language-check-id>.md)
 
 ## 用户确认
 

@@ -60,7 +60,7 @@ status: "conditional"
 
 ## 产出要求
 
-开始工作时，使用 [统一执行记录模板](../../../../assets/templates/shared/execution-record-template.md) 建立属于你的执行记录，并链接主业务挖掘 Agent 的记录。
+开始工作时，使用模板树中的 [执行记录文件](../../../../assets/templates/vcddd-obsidian/work/<work-id>/执行记录/<角色或任务>.md) 建立属于你的执行记录，并链接主业务挖掘 Agent 的记录。
 
 向主业务挖掘 Agent 返回候选列表。每项包含：
 

@@ -56,9 +56,9 @@ description: "编排业务挖掘、业务确立、Pre-Coding 与 Coding 四类�
 
 ## 启动与恢复
 
-先读取项目根目录下 `vcddd-obsidian/VCDDD.md` 的正式知识入口。入口使用 [项目入口模板](assets/templates/shared/project-entry-template.md)，只导航进入 Git 的业务、Domain、Pre-Coding 和 Coding 事实。
+先读取项目根目录下 `vcddd-obsidian/VCDDD.md` 的正式知识入口。入口使用 [模板树中的 VCDDD.md](assets/templates/vcddd-obsidian/VCDDD.md)，只导航进入 Git 的业务、Domain、Pre-Coding 和 Coding 事实。
 
-再读取本地 `vcddd-obsidian/work/当前工作.md`。它使用 [当前工作模板](assets/templates/shared/work-entry-template.md)，保存当前目标、工作 ID、专业对话和执行记录链接。沿这些链接恢复本轮工作；只根据已落盘且可追溯的状态恢复，不依靠会话记忆猜测，也不通过全库 grep 拼凑状态。
+再读取本地 `vcddd-obsidian/work/当前工作.md`。它使用 [模板树中的当前工作.md](assets/templates/vcddd-obsidian/work/当前工作.md)，保存当前目标、工作 ID、专业对话和执行记录链接。沿这些链接恢复本轮工作；只根据已落盘且可追溯的状态恢复，不依靠会话记忆猜测，也不通过全库 grep 拼凑状态。
 
 `VCDDD.md` 不存在时，从项目入口模板创建。`work/当前工作.md` 不存在时，根据用户当前目标和正式知识入口创建新的本地工作。完整布局和 Git 边界由 [Obsidian 文档说明](instructions/shared/obsidian-document-instructions.md) 定义。
 
@@ -200,28 +200,9 @@ description: "编排业务挖掘、业务确立、Pre-Coding 与 Coding 四类�
 - 不为每个角色复制一份容易漂移的完整执行记录模板；
 - 不把所有阶段字段塞入一个巨型表格。
 
-你应把相应模板提供给拥有该文档的角色，不要替它填写：
+所有项目文件模板共同组成 `assets/templates/vcddd-obsidian/`。这棵树与项目中的 `vcddd-obsidian/` 完全同构：目录就是目标目录，文件名就是目标文件名，文件内容就是必须保留并填写的结构。
 
-- [项目入口模板](assets/templates/shared/project-entry-template.md)
-- [当前工作模板](assets/templates/shared/work-entry-template.md)
-- [统一执行记录模板](assets/templates/shared/execution-record-template.md)
-- [Vault Git 忽略模板](assets/templates/shared/vault-gitignore-template)
-- [业务挖掘结果模板](assets/templates/01-business-discovery/business-discovery-result-template.md)
-- [候选场景池模板](assets/templates/01-business-discovery/candidate-scenarios-template.md)
-- [业务确立入口模板](assets/templates/02-business-establishment/business-establishment-index-template.md)
-- [业务定义模板](assets/templates/02-business-establishment/business-definition-template.md)
-- [业务线模板](assets/templates/02-business-establishment/business-line-template.md)
-- [领域地图模板](assets/templates/02-business-establishment/domain-map-template.md)
-- [Domain 模板](assets/templates/02-business-establishment/domain-template.md)
-- [业务组合模板](assets/templates/02-business-establishment/business-composition-template.md)
-- [文档素材证据模板](assets/templates/02-business-establishment/document-material-evidence-template.md)
-- [原型观察证据模板](assets/templates/02-business-establishment/prototype-observation-evidence-template.md)
-- [语言验证记录模板](assets/templates/02-business-establishment/language-validation-template.md)
-- [事实证据模板](assets/templates/02-business-establishment/fact-evidence-template.md)
-- [系统与模块设计模板](assets/templates/03-pre-coding/system-and-module-design-template.md)
-- [API 与 Domain 编排模板](assets/templates/03-pre-coding/api-and-domain-orchestration-template.md)
-- [数据库设计模板](assets/templates/03-pre-coding/database-design-template.md)
-- [Pre-Coding 语言检查记录模板](assets/templates/03-pre-coding/language-check-template.md)
+创建或更新文档时，只打开当前对象对应的模板子树和文件。把模板的相对路径原样用于项目，只替换 `<goal-id>`、`<domain-id>`、`<system-id>`、`<work-id>`、`<角色或任务>` 等路径占位符；不要把模板重新平铺、改名或另建一套目录映射规则。
 
 ## 上下文纪律
 

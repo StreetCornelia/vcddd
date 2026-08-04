@@ -63,34 +63,23 @@ VCDDD 项目文档统一放在项目根目录的 `vcddd-obsidian/`。其中有�
 
 `VCDDD.md` 是正式知识入口，只导航长期事实。`work/当前工作.md` 是本地工作入口，只恢复当前任务、Agent 和执行记录。Coding 的正式文档类型仍待共同设计；在此之前只保留 `04-coding/systems/<system-id>/` 的稳定归属，不套用旧版模板。
 
-## 模板与目标位置
+## 模板就是目标结构
 
-Agent 必须从相应模板创建文件，并写入下列固定位置。`<goal-id>`、`<domain-id>` 和 `<system-id>` 是跨工作持续使用的事实 ID，不是本轮工作 ID。
+完整模板固定在 `assets/templates/vcddd-obsidian/`。模板根目录内部的相对路径与项目中的 `vcddd-obsidian/` 完全一致；模板文件已经使用正式文件名，并包含完整 Properties、正文标题、表格、图和填写位置。
 
-| 模板 | 正式文件位置 |
-|---|---|
-| `shared/project-entry-template.md` | `vcddd-obsidian/VCDDD.md` |
-| `01-business-discovery/business-discovery-result-template.md` | `vcddd-obsidian/01-business-discovery/<goal-id>/业务挖掘.md` |
-| `01-business-discovery/candidate-scenarios-template.md` | `vcddd-obsidian/01-business-discovery/<goal-id>/候选场景池.md` |
-| `02-business-establishment/business-establishment-index-template.md` | `vcddd-obsidian/02-business-establishment/business/<goal-id>/业务确立.md` |
-| `02-business-establishment/business-definition-template.md` | `vcddd-obsidian/02-business-establishment/business/<goal-id>/业务定义.md` |
-| `02-business-establishment/business-line-template.md` | `vcddd-obsidian/02-business-establishment/business/<goal-id>/业务线/<business-line-id>-<名称>.md` |
-| `02-business-establishment/domain-map-template.md` | `vcddd-obsidian/02-business-establishment/business/<goal-id>/领域地图.md` |
-| `02-business-establishment/domain-template.md` | `vcddd-obsidian/02-business-establishment/domains/<domain-id>/Domain.md` |
-| `02-business-establishment/business-composition-template.md` | `vcddd-obsidian/02-business-establishment/business/<goal-id>/业务组合.md` |
-| 业务确立的证据与语言验证模板 | `vcddd-obsidian/02-business-establishment/business/<goal-id>/证据/<类型>/<证据-id>.md` |
-| `03-pre-coding/system-and-module-design-template.md` | `vcddd-obsidian/03-pre-coding/系统与模块设计.md` |
-| `03-pre-coding/api-and-domain-orchestration-template.md` | `vcddd-obsidian/03-pre-coding/systems/<system-id>/API 与 Domain 编排.md` |
-| `03-pre-coding/database-design-template.md` | `vcddd-obsidian/03-pre-coding/systems/<system-id>/数据库设计.md` |
-| `03-pre-coding/language-check-template.md` | 被检查文档所在阶段的 `语言检查/<检查-id>.md` |
-| `shared/work-entry-template.md` | `vcddd-obsidian/work/当前工作.md` |
-| `shared/execution-record-template.md` | `vcddd-obsidian/work/<work-id>/执行记录/<角色或任务>.md` |
+使用模板时：
 
-证据类型目录使用稳定、可读的名称，例如 `文档素材/`、`原型观察/`、`语言验证/`、`事实调研/`。不要用一次性 Agent 名称或对话 ID 作为正式目录名。
+1. 先查看当前阶段对应的模板子树，确认本对象需要的目录和文件。
+2. 将相关模板文件复制到项目中的同一相对路径。
+3. 只替换路径里的 `<goal-id>`、`<domain-id>`、`<system-id>`、`<work-id>`、`<角色或任务>` 等占位符。
+4. 按模板正文填写或更新，不重新组织章节，不另造文件名。
+5. 一个占位分支只在真实对象存在时实例化；不要把 `<goal-id>` 或示例 ID 原样复制进项目。
+
+`<goal-id>`、`<domain-id>` 和 `<system-id>` 是跨工作持续使用的事实 ID。`<work-id>` 只属于本地工作过程。语言检查模板同时出现在阶段级和系统级真实位置，按被检查文档所在位置选择，不在运行时重新推导目录。
 
 ## Git 边界
 
-创建 vault 时，将 [Vault Git 忽略模板](../../assets/templates/shared/vault-gitignore-template) 合并到 `vcddd-obsidian/.gitignore`。必须保证 `work/` 被忽略；已有 `.gitignore` 时只补充缺少的规则，不覆盖其他规则。
+创建 vault 时，将模板树中的 `assets/templates/vcddd-obsidian/.gitignore` 复制或合并到 `vcddd-obsidian/.gitignore`。必须保证 `work/` 被忽略；已有 `.gitignore` 时只补充缺少的规则，不覆盖其他规则。
 
 提交前检查：
 

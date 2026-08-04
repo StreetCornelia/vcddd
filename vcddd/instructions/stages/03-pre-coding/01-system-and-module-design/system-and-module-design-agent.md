@@ -33,7 +33,7 @@ status: "active"
 只读取主控列出的固定版本和精确章节：
 
 1. [Pre-Coding 说明](../stage.md)；
-2. [系统与模块设计模板](../../../../assets/templates/03-pre-coding/system-and-module-design-template.md)；
+2. 模板树中的 [系统与模块设计.md](../../../../assets/templates/vcddd-obsidian/03-pre-coding/系统与模块设计.md)；
 3. 当前宏观业务目标、已选 User Stories 和业务线结果；
 4. 当前业务使用的已确认能力：由哪个 Domain 提供、接收什么、产生什么；
 5. 业务组合中已经确认的能力顺序和结果传递；

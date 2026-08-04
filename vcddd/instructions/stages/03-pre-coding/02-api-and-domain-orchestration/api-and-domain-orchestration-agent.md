@@ -35,7 +35,7 @@ status: "active"
 只读取主控列出的固定版本和精确章节：
 
 1. [Pre-Coding 说明](../stage.md)；
-2. [API 与 Domain 编排模板](../../../../assets/templates/03-pre-coding/api-and-domain-orchestration-template.md)；
+2. 模板树中的 [API 与 Domain 编排.md](../../../../assets/templates/vcddd-obsidian/03-pre-coding/systems/<system-id>/API 与 Domain 编排.md)；
 3. `系统与模块设计.md` 中当前系统的职责、模块、系统交互、部署边界和已确认接口形式；
 4. 经过当前系统的业务路径及其调用者和最终结果；
 5. 当前系统实际使用的 Domain 行为：接收内容、产生结果和业务影响；

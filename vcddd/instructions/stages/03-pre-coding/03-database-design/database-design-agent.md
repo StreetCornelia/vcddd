@@ -26,7 +26,7 @@ status: "active"
 只读取主控列出的固定版本和精确范围：
 
 1. [Pre-Coding 说明](../stage.md)；
-2. [数据库设计模板](../../../../assets/templates/03-pre-coding/database-design-template.md)；
+2. 模板树中的 [数据库设计.md](../../../../assets/templates/vcddd-obsidian/03-pre-coding/systems/<system-id>/数据库设计.md)；
 3. 当前系统的数据库产品、部署方式和已经确认的技术限制；
 4. 当前系统必须保存的 Domain 事实、非 Domain 数据和生命周期；
 5. `API 与 Domain 编排.md` 中会读取或改变数据、要求共同成功或处理并发的具体步骤；

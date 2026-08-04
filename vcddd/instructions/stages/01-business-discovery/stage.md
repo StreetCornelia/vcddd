@@ -39,7 +39,7 @@ status: "active"
 
 ## 产出要求
 
-业务挖掘 Agent 必须产生一份由用户确认的 [业务挖掘结果](../../../assets/templates/01-business-discovery/business-discovery-result-template.md)，包含：
+业务挖掘 Agent 必须按照 [业务挖掘.md 模板](../../../assets/templates/vcddd-obsidian/01-business-discovery/<goal-id>/业务挖掘.md) 产生一份由用户确认的业务挖掘结果，包含：
 
 - 一段完整的宏观业务目标；
 - 参与者与他们能获得的效果；

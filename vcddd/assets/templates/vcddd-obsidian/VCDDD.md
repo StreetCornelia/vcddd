@@ -21,19 +21,19 @@ updated: "{{YYYY-MM-DD}}"
 
 | 目标 ID | 业务挖掘结果 | 候选场景池 | 状态 |
 |---|---|---|---|
-| `GOAL-001` | [[01-business-discovery/GOAL-001/业务挖掘]] | [[01-business-discovery/GOAL-001/候选场景池]] | `draft` |
+| `{{GOAL-NNN}}` | [[01-business-discovery/{{GOAL-NNN}}/业务挖掘]] | [[01-business-discovery/{{GOAL-NNN}}/候选场景池]] | `draft` |
 
 ## 业务确立
 
 | 目标 ID | 业务确立入口 | 业务定义 | 领域地图 | 业务组合 | 状态 |
 |---|---|---|---|---|---|
-| `GOAL-001` | [[02-business-establishment/business/GOAL-001/业务确立]] | [[02-business-establishment/business/GOAL-001/业务定义]] | [[02-business-establishment/business/GOAL-001/领域地图]] | [[02-business-establishment/business/GOAL-001/业务组合]] | `draft` |
+| `{{GOAL-NNN}}` | [[02-business-establishment/business/{{GOAL-NNN}}/业务确立]] | [[02-business-establishment/business/{{GOAL-NNN}}/业务定义]] | [[02-business-establishment/business/{{GOAL-NNN}}/领域地图]] | [[02-business-establishment/business/{{GOAL-NNN}}/业务组合]] | `draft` |
 
 ## Domains
 
 | Domain ID | Domain | 相关业务目标 | 状态 |
 |---|---|---|---|
-| `DOM-001` | [[02-business-establishment/domains/DOM-001/Domain]] | [[02-business-establishment/business/GOAL-001/业务确立]] | `draft` |
+| `{{DOM-NNN}}` | [[02-business-establishment/domains/{{DOM-NNN}}/Domain]] | [[02-business-establishment/business/{{GOAL-NNN}}/业务确立]] | `draft` |
 
 ## Pre-Coding
 
@@ -41,13 +41,13 @@ updated: "{{YYYY-MM-DD}}"
 
 | System ID | API 与 Domain 编排 | 数据库设计 | 状态 |
 |---|---|---|---|
-| `SYS-001` | [[03-pre-coding/systems/SYS-001/API 与 Domain 编排]] | [[03-pre-coding/systems/SYS-001/数据库设计]] | `draft` |
+| `{{SYS-NNN}}` | [[03-pre-coding/systems/{{SYS-NNN}}/API 与 Domain 编排]] | [[03-pre-coding/systems/{{SYS-NNN}}/数据库设计]] | `draft` |
 
 ## Coding
 
 | System ID | 设计与实现事实 | 状态 |
 |---|---|---|
-| `SYS-001` | [[04-coding/systems/SYS-001]] | `design-pending` |
+| `{{SYS-NNN}}` | [[04-coding/systems/{{SYS-NNN}}]] | `design-pending` |
 
 ## 更新规则
 
