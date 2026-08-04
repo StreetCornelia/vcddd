@@ -6,11 +6,10 @@ tags:
   - "vcddd/business-definition"
 vcddd_type: "business-definition"
 vcddd_version: "2.0"
-work_id: "{{WORK-YYYYMMDD-NNN}}"
+goal_id: "{{GOAL-NNN}}"
 stage: "business-establishment"
 status: "draft"
 owner_role: "business-definition-agent"
-execution_record: "[[{{业务定义执行记录}}]]"
 result_note: "[[{{业务确立入口}}]]"
 source_result: "[[{{业务挖掘结果}}]]"
 created: "{{YYYY-MM-DD}}"
@@ -22,7 +21,7 @@ updated: "{{YYYY-MM-DD}}"
 > [!abstract] 主写身份
 > 你是业务定义 Agent。用业务人员能够直接判断真假的现实事实维护本文；不要把业务动作直接分类成 Domain，也不要写入架构、API、数据库或代码设计。
 
-本文由 [[{{业务定义执行记录}}]] 追踪，来源于 [[{{业务挖掘结果}}]]。
+本文来源于 [[{{业务挖掘结果}}]]。
 
 ## 素材与证据导航
 

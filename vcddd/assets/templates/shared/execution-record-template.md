@@ -5,8 +5,9 @@ tags:
   - "vcddd/execution"
 vcddd_type: "execution-record"
 vcddd_version: "2.0"
+git_tracked: false
 work_id: "{{WORK-YYYYMMDD-NNN}}"
-stage: "{{business-discovery | business-establishment | coding}}"
+stage: "{{business-discovery | business-establishment | pre-coding | coding}}"
 route: "{{controller | stage-route | conditional-task}}"
 status: "not-started"
 owner_role: "{{agent-role}}"
@@ -37,13 +38,13 @@ updated: "{{YYYY-MM-DD}}"
 | `core` |  |  |  |  |
 | `always` |  |  |  |  |
 | `when-changed` |  |  |  |  |
-| `on-trigger` | {{只写条件角色或来源名称，不粘贴未触发合同内容}} |  | 未触发不得读取 | {{具体触发条件}} |
+| `on-trigger` | {{只写条件角色或来源名称，不粘贴未触发工作说明内容}} |  | 未触发不得读取 | {{具体触发条件}} |
 | `forbidden` |  | 不适用 | 不得读取 |  |
 
 ## 工作进度点
 
 > [!todo]
-> 从对应身份或路线的 Agent 合同复制进度点。它们用于恢复和判断产出成熟度，不是启动其他能力的前置条件。状态使用 `pending`、`active`、`completed` 或 `limited`；只有合同明确允许时才使用 `not-applicable`。
+> 从对应 Agent 工作说明或路线说明复制进度点。它们用于恢复和判断产出成熟度。状态使用 `pending`、`active`、`completed` 或 `limited`；只有工作说明明确允许时才使用 `not-applicable`。
 
 | 进度点 | 目标 | 状态 | 结果或证据 | 更新时间 |
 |---|---|---|---|---|
@@ -73,7 +74,7 @@ updated: "{{YYYY-MM-DD}}"
 ## 实际上下文使用
 
 > [!warning] `on-trigger` 记录边界
-> 条件未触发时，不得读取对应合同或来源；读取范围写“未读取”或不建立该行。只有先记录具体触发事实，才可登记实际读取范围。
+> 条件未触发时，不得读取对应工作说明或来源；读取范围写“未读取”或不建立该行。只有先记录具体触发事实，才可登记实际读取范围。
 
 | 来源 | 固定版本/哈希 | 策略 | 实际读取范围 | 使用原因 | 读取时间 |
 |---|---|---|---|---|---|

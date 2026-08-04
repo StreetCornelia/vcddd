@@ -1,5 +1,5 @@
 ---
-vcddd_type: "agent-contract"
+vcddd_type: "agent-instructions"
 vcddd_version: "2.0"
 stage: "business-establishment"
 role: "prototype-observation-agent"

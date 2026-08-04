@@ -6,15 +6,13 @@ tags:
   - "vcddd/business-discovery"
 vcddd_type: "business-discovery-result"
 vcddd_version: "2.0"
-work_id: "{{WORK-YYYYMMDD-NNN}}"
+goal_id: "{{GOAL-NNN}}"
 stage: "business-discovery"
 route: "business-discovery"
 status: "draft"
 owner_role: "business-discovery-agent"
-execution_record: "[[{{执行记录笔记}}]]"
 candidate_scenarios: ""
 user_confirmed: false
-confirmation_evidence: ""
 recommended_capabilities:
   - "business-establishment"
 created: "{{YYYY-MM-DD}}"
@@ -26,7 +24,7 @@ updated: "{{YYYY-MM-DD}}"
 > [!abstract] 主写身份
 > 你是本阶段的主专业 Agent。由你根据与用户的直接协作维护本文；主控只登记成熟度和能力连接，不参与内容设计。
 
-本结果由 [[{{执行记录笔记}}]] 追踪。它通常是“业务确立”能力的主要参考，也可以被其他能力按当前成熟度直接使用；它不是阶段准入凭证。
+本结果通常是“业务确立”能力的主要参考，也可以被其他能力按当前成熟度直接使用；它不是阶段准入凭证。
 
 ## 宏观业务目标
 

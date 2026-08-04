@@ -1,5 +1,5 @@
 ---
-vcddd_type: "agent-contract"
+vcddd_type: "agent-instructions"
 vcddd_version: "2.0"
 stage: "business-discovery"
 route: "interactive-discovery"
@@ -44,7 +44,7 @@ status: "conditional"
 - 没有来源的市场判断；
 - 直接修改阶段结果。
 
-## 输出合同
+## 产出要求
 
 开始工作时，使用 [统一执行记录模板](../../../../assets/templates/shared/execution-record-template.md) 建立属于你的执行记录，并链接主业务挖掘 Agent 的记录。
 

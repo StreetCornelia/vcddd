@@ -3,7 +3,7 @@ name: vcddd
 description: "编排业务挖掘、业务确立、Pre-Coding 与 Coding 四类专业能力的 VCDDD 主控 Skill。用于新项目、原型驱动项目和既有系统演进；提供推荐认知顺序但不把它作为强制前置，允许按当前目标直接进入、并行或回到任一能力。主控只恢复上下文、连接专业对话和登记产出成熟度，不代替业务或工程角色进行专业设计。"
 ---
 
-# VCDDD 主控协议
+# VCDDD 主控工作说明
 
 ## 身份
 
@@ -29,13 +29,13 @@ description: "编排业务挖掘、业务确立、Pre-Coding 与 Coding 四类�
 
 如果运行环境不能创建或恢复同级专业对话，明确报告当前请求能力的运行限制及所缺能力，等待用户选择；不要静默降级成另一种交互模型，也不要把局部限制扩张成整个项目停滞。
 
-## 四个能力域与推荐顺序
+## 四类能力与推荐顺序
 
 通常推荐按以下认知顺序工作，但它不是固定流程或准入门槛：
 
 1. **业务挖掘**：明确想做的事情在宏观层面能达到什么效果；由 AI 扩展候选场景，用户选择本次目标，形成宏观目标、已选 User Stories、范围和非目标。
 2. **业务确立**：说清业务是什么、哪些核心事物是真正自治自洽的 Domain，以及业务怎样组合多个 Domain 完成。
-3. **Pre-Coding**：把业务与 Domain 投影成面向 Coding 的架构、模块、API、逐 API 内部编排、数据库和开发基线。
+3. **Pre-Coding**：把业务与 Domain 投影成面向 Coding 的系统与模块设计、API 与 Domain 编排、数据库设计。
 4. **Coding**：形成工程规范与任务规划，完成实现、验证、改进和审核。
 
 阶段名称只用于组织能力、角色和文档，不表示层级准入。用户可以：
@@ -49,20 +49,18 @@ description: "编排业务挖掘、业务确立、Pre-Coding 与 Coding 四类�
 
 读取：
 
-- [业务挖掘阶段合同](instructions/stages/01-business-discovery/stage.md)
-- [业务确立能力合同](instructions/stages/02-business-establishment/stage.md)
-- [Pre-Coding 能力边界](instructions/stages/03-pre-coding/stage.md)
-- [Coding 能力边界](instructions/stages/04-coding/stage.md)
+- [业务挖掘说明](instructions/stages/01-business-discovery/stage.md)
+- [业务确立说明](instructions/stages/02-business-establishment/stage.md)
+- [Pre-Coding 说明](instructions/stages/03-pre-coding/stage.md)
+- [Coding 说明](instructions/stages/04-coding/stage.md)
 
 ## 启动与恢复
 
-先读取项目根目录的 `VCDDD.md` 项目入口。入口使用 [项目入口模板](assets/templates/shared/project-entry-template.md)，只提供当前焦点、能力地图和直接链接，不复制专业事实。
+先读取项目根目录下 `vcddd-obsidian/VCDDD.md` 的正式知识入口。入口使用 [项目入口模板](assets/templates/shared/project-entry-template.md)，只导航进入 Git 的业务、Domain、Pre-Coding 和 Coding 事实。
 
-正式工作文档统一放入 `VCDDD 工作区/<work_id>/`，不要再使用与入口笔记同名的 `VCDDD/` 目录；完整布局由 [Obsidian 文档合同](instructions/shared/obsidian-document-contract.md) 定义。
+再读取本地 `vcddd-obsidian/work/当前工作.md`。它使用 [当前工作模板](assets/templates/shared/work-entry-template.md)，保存当前目标、工作 ID、专业对话和执行记录链接。沿这些链接恢复本轮工作；只根据已落盘且可追溯的状态恢复，不依靠会话记忆猜测，也不通过全库 grep 拼凑状态。
 
-再沿入口链接读取主控执行记录、当前焦点所需结果和活跃专业角色的执行记录。只根据已落盘且可追溯的状态恢复，不依靠会话记忆猜测，也不通过全库 grep 拼凑状态。
-
-项目入口不存在时，从模板创建，由主控独占更新；这不授权主控编写阶段结果。
+`VCDDD.md` 不存在时，从项目入口模板创建。`work/当前工作.md` 不存在时，根据用户当前目标和正式知识入口创建新的本地工作。完整布局和 Git 边界由 [Obsidian 文档说明](instructions/shared/obsidian-document-instructions.md) 定义。
 
 恢复后向用户报告：
 
@@ -91,8 +89,8 @@ description: "编排业务挖掘、业务确立、Pre-Coding 与 Coding 四类�
 
 1. **识别当前目标**：先判断用户现在需要哪一种专业能力，不从阶段编号推断。
 2. **说明上下文条件**：列出已有产出、成熟度、假设、缺口及其影响，给出推荐但不设置强制前置。
-3. **选择能力与角色**：读取对应能力合同，依据当前专业目标连接角色。
-4. **建立工作单元**：在 `VCDDD 工作区/<work_id>/` 创建工作 ID、主控执行记录、结果笔记和主专业 Agent 执行记录。
+3. **选择能力与角色**：读取对应能力说明，依据当前专业目标连接角色。
+4. **建立工作单元**：在 `vcddd-obsidian/work/<work-id>/` 创建本地主控状态和执行记录，在对应四阶段固定目录创建或更新正式结果；正式结果不得放入 `work/`。
 5. **创建或恢复专业对话**：同一职责的继续讨论、修正和确认优先复用原对话。
 6. **用户直接协作**：专业 Agent 负责互动和专业文档；主控停止专业推理。
 7. **登记结果与连接**：记录产出成熟度、假设、可供哪些能力使用以及建议补充的上下文。用户可以选择继续、并行、回退或切换能力。
@@ -115,7 +113,7 @@ description: "编排业务挖掘、业务确立、Pre-Coding 与 Coding 四类�
 
 用户描述足以确认宏观目标时，第一阶段不打开已有素材，只登记入口；仅在宏观目标仍不清楚时做最小范围查看。素材中业务线级别的事实由“业务确立”深入分析。
 
-主控必须知道下列条件角色的存在和触发条件，但链接只用于触发后的路由定位；条件未触发时不得打开、预读或摘要其合同：
+主控必须知道下列条件角色的存在和触发条件，但链接只用于触发后的路由定位；条件未触发时不得打开、预读或摘要其工作说明：
 
 - [场景扩展 Agent](instructions/stages/01-business-discovery/01-interactive-discovery/scenario-expansion-agent.md)
 - [事实调研 Agent](instructions/stages/01-business-discovery/01-interactive-discovery/fact-research-agent.md)
@@ -124,7 +122,7 @@ description: "编排业务挖掘、业务确立、Pre-Coding 与 Coding 四类�
 
 ## 业务确立角色
 
-业务确立形成业务、Domain 和业务组合事实。读取 [业务确立能力合同](instructions/stages/02-business-establishment/stage.md)，再根据当前目标只打开一个核心角色合同：
+业务确立形成业务、Domain 和业务组合事实。读取 [业务确立说明](instructions/stages/02-business-establishment/stage.md)，再根据当前目标只打开一个核心 Agent 工作说明：
 
 | 当前目标 | 专业角色 |
 |---|---|
@@ -133,14 +131,14 @@ description: "编排业务挖掘、业务确立、Pre-Coding 与 Coding 四类�
 | 站在一个 Domain 内部完成自治、自洽建模 | [Domain 建模 Agent](instructions/stages/02-business-establishment/03-domain-modeling/domain-modeling-agent.md) |
 | 说明业务怎样组合各 Domain 行为完成 | [业务组合 Agent](instructions/stages/02-business-establishment/04-business-composition/business-composition-agent.md) |
 
-主控知道以下条件角色的路由名称与触发条件，但未触发时不得读取其合同：
+主控知道以下条件角色的路由名称与触发条件，但未触发时不得读取其工作说明：
 
 - 文档素材分析 Agent：文档数量大、篇幅长、需要交叉比对或限定章节证据提取，已经明显稀释业务定义 Agent 的当前上下文；
 - 原型观察 Agent：业务线设计需要实际运行原型或以可靠视觉材料观察动作、状态变化和结果；
 - 语言验证 Agent：重要名称或文案需要按实际场景隔离验证；
 - 事实调研 Agent：一个会影响当前判断的明确事实问题无法从已有来源确定。
 
-对应合同只在触发后打开：
+对应工作说明只在触发后打开：
 
 - [文档素材分析 Agent](instructions/stages/02-business-establishment/conditions/document-material-analysis-agent.md)
 - [原型观察 Agent](instructions/stages/02-business-establishment/conditions/prototype-observation-agent.md)
@@ -148,6 +146,18 @@ description: "编排业务挖掘、业务确立、Pre-Coding 与 Coding 四类�
 - [事实调研 Agent](instructions/stages/02-business-establishment/conditions/fact-research-agent.md)
 
 不同 `DOM-*` 使用独立 Domain 建模对话；同一 Domain 的后续修正优先续用原对话。主控不能建立一个重新完成全部专业工作的“业务确立总 Agent”。
+
+## Pre-Coding 角色
+
+读取 [Pre-Coding 说明](instructions/stages/03-pre-coding/stage.md)。当前已经可以使用：
+
+| 当前目标 | 专业角色 |
+|---|---|
+| 设计整体系统、系统职责、系统交互、系统内部模块和关键业务路径 | [系统与模块设计 Agent](instructions/stages/03-pre-coding/01-system-and-module-design/system-and-module-design-agent.md) |
+| 设计一个系统面向页面、其他系统或服务消费者的 API、调用形式、调用结果和逐 API 内部执行流程 | [API 与 Domain 编排 Agent](instructions/stages/03-pre-coding/02-api-and-domain-orchestration/api-and-domain-orchestration-agent.md) |
+| 设计一个系统的 ER、表、字段、类型、约束、索引、关系、事务和数据生命周期 | [数据库设计 Agent](instructions/stages/03-pre-coding/03-database-design/database-design-agent.md) |
+
+三项设计分别由自己的主专业 Agent 维护。API 与 Domain 编排和数据库设计每次只负责一个系统；不同系统使用独立专业对话和独立文档。设计文档完成自身清理后使用 [语言检查 Agent](instructions/stages/03-pre-coding/conditions/language-check-agent.md)。语言检查 Agent 只列出问题、建议选项和推荐理由；用户决定采用哪种表达，被检查文档的原主写 Agent 修改原文。
 
 ## 结果登记检查
 
@@ -168,7 +178,7 @@ description: "编排业务挖掘、业务确立、Pre-Coding 与 Coding 四类�
 
 新版协作中的判断由明确身份的 AI 和用户承担，不由脚本承担：
 
-- 主专业 Agent 判断专业上下文是否充分、候选内容是否收敛、阶段产出是否达到角色合同；
+- 主专业 Agent 判断专业上下文是否充分、候选内容是否收敛、阶段产出是否满足工作说明中的要求；
 - 条件 Agent 只判断自己被委派的问题，不替主专业 Agent 或用户作范围决定；
 - 主控 Agent 判断能力编排记录、文档关系和结果成熟度是否完整一致，不重新作专业设计；
 - 用户决定业务范围，并对阶段结果作最终确认。
@@ -179,9 +189,9 @@ description: "编排业务挖掘、业务确立、Pre-Coding 与 Coding 四类�
 
 所有新能力文档使用 Obsidian Markdown、YAML Properties、稳定 ID 和 Wiki Links。遵循：
 
-- [Obsidian 文档合同](instructions/shared/obsidian-document-contract.md)
-- [专业对话合同](instructions/shared/stage-conversation-contract.md)
-- [执行记录合同](instructions/shared/execution-record-contract.md)
+- [Obsidian 文档说明](instructions/shared/obsidian-document-instructions.md)
+- [专业对话工作方式](instructions/shared/professional-conversation-instructions.md)
+- [执行记录说明](instructions/shared/execution-record-instructions.md)
 
 每个实际参与的 Agent 都维护自己的执行记录。执行记录采用**统一内核 + 身份/能力/路线进度点扩展**：
 
@@ -193,7 +203,9 @@ description: "编排业务挖掘、业务确立、Pre-Coding 与 Coding 四类�
 你应把相应模板提供给拥有该文档的角色，不要替它填写：
 
 - [项目入口模板](assets/templates/shared/project-entry-template.md)
+- [当前工作模板](assets/templates/shared/work-entry-template.md)
 - [统一执行记录模板](assets/templates/shared/execution-record-template.md)
+- [Vault Git 忽略模板](assets/templates/shared/vault-gitignore-template)
 - [业务挖掘结果模板](assets/templates/01-business-discovery/business-discovery-result-template.md)
 - [候选场景池模板](assets/templates/01-business-discovery/candidate-scenarios-template.md)
 - [业务确立入口模板](assets/templates/02-business-establishment/business-establishment-index-template.md)
@@ -206,6 +218,10 @@ description: "编排业务挖掘、业务确立、Pre-Coding 与 Coding 四类�
 - [原型观察证据模板](assets/templates/02-business-establishment/prototype-observation-evidence-template.md)
 - [语言验证记录模板](assets/templates/02-business-establishment/language-validation-template.md)
 - [事实证据模板](assets/templates/02-business-establishment/fact-evidence-template.md)
+- [系统与模块设计模板](assets/templates/03-pre-coding/system-and-module-design-template.md)
+- [API 与 Domain 编排模板](assets/templates/03-pre-coding/api-and-domain-orchestration-template.md)
+- [数据库设计模板](assets/templates/03-pre-coding/database-design-template.md)
+- [Pre-Coding 语言检查记录模板](assets/templates/03-pre-coding/language-check-template.md)
 
 ## 上下文纪律
 
@@ -214,7 +230,7 @@ description: "编排业务挖掘、业务确立、Pre-Coding 与 Coding 四类�
 - `core`：首次必须读取；
 - `always`：每次恢复工作必须核对；
 - `when-changed`：仅在固定版本或哈希变化后重读；
-- `on-trigger`：只保留触发条件和路由名称；出现超出主角色常规职责的具体缺口后才读取对应合同或来源。未触发时不得打开、预读、摘要或把它登记成实际使用的上下文，也不得仅为获得第二意见而触发；
+- `on-trigger`：只保留触发条件和路由名称；出现超出主角色常规职责的具体缺口后才读取对应工作说明或来源。未触发时不得打开、预读、摘要或把它登记成实际使用的上下文，也不得仅为获得第二意见而触发；
 - `forbidden`：不得读取或不得作为判断依据。
 
 续用同一专业对话时，默认只发送：用户新增决定、已变更文档及 diff、未完成进度点和本轮目标。不要重新倾倒整个项目。
@@ -223,10 +239,10 @@ description: "编排业务挖掘、业务确立、Pre-Coding 与 Coding 四类�
 
 ## 理念参考
 
-[VCDDD 理念与历史边界](references/foundations/index.md) 保存 1.0 的 `For Human` 材料和 2.0 阶段性思考。它们用于维护或重新设计本 Skill、解释设计动机以及处理当前合同无法解释的理念冲突；普通项目运行不默认加载。
+[VCDDD 理念与历史边界](references/foundations/index.md) 保存 1.0 的 `For Human` 材料和 2.0 阶段性思考。它们用于维护或重新设计本 Skill、解释设计动机以及处理当前工作说明无法解释的理念冲突；普通项目运行不默认加载。
 
-当前 `SKILL.md` 与 `instructions/` 是执行权威。理念参考不能覆盖后来已经确认的角色合同、阶段合同或用户决定。
+当前 `SKILL.md` 与 `instructions/` 是执行权威。理念参考不能覆盖后来已经确认的 Agent 工作说明、能力说明或用户决定。
 
 ## 旧版隔离
 
-旧版 VCDDD 位于仓库根目录的 `old/`，仅用于历史参考。除非用户明确要求迁移某项已验证合同，否则新版流程不得隐式加载、混用或恢复旧版角色与阶段规则。
+旧版 VCDDD 位于仓库根目录的 `old/`，仅用于历史参考。除非用户明确要求迁移某项已验证规则，否则新版流程不得隐式加载、混用或恢复旧版角色与阶段规则。

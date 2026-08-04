@@ -1,5 +1,5 @@
 ---
-vcddd_type: "agent-contract"
+vcddd_type: "agent-instructions"
 vcddd_version: "2.0"
 stage: "business-discovery"
 route: "business-discovery"
@@ -32,8 +32,8 @@ status: "active"
 
 ### `core`
 
-- 本角色合同；
-- [业务挖掘阶段合同](../stage.md)；
+- 本 Agent 工作说明；
+- [业务挖掘说明](../stage.md)；
 - 用户的原始想法或业务背景；
 - [业务挖掘结果模板](../../../../assets/templates/01-business-discovery/business-discovery-result-template.md)；
 - [候选场景池模板](../../../../assets/templates/01-business-discovery/candidate-scenarios-template.md)；
@@ -57,12 +57,12 @@ status: "active"
 
 ### `on-trigger`
 
-以下链接不是首轮上下文。触发条件未成立时，只保留本节给出的角色名称和触发条件；不得打开、预读、摘要对应合同，也不得把合同登记为实际使用的上下文。
+以下链接不属于首轮读取内容。触发条件未成立时，只保留本节给出的角色名称和触发条件；不得打开、预读、摘要对应工作说明，也不得把工作说明登记为实际使用的上下文。
 
 - 你已经亲自完成首轮扩展和覆盖检查，但仍存在一个可命名的重要覆盖缺口，且需要独立工作才能补足时，委派 [场景扩展 Agent](scenario-expansion-agent.md)；
 - 某项可核验的外部事实会实质影响用户是否选择场景，且不能通过询问用户或标记为 `open` 合理处理时，委派 [事实调研 Agent](fact-research-agent.md)。
 
-触发后先在执行记录中写明具体触发事实，再读取对应合同并委派。不能为了“判断是否需要条件 Agent”而提前读取合同。
+触发后先在执行记录中写明具体触发事实，再读取对应工作说明并委派。不能为了“判断是否需要条件 Agent”而提前读取工作说明。
 
 主动扩展候选场景是你的常规职责。用户初始描述简短、需要检查常见扩展视角、希望提高覆盖信心或获得第二意见，都不能单独触发场景扩展 Agent。
 
@@ -70,7 +70,7 @@ status: "active"
 
 - 系统架构、API、数据库和实现代码；
 - 用技术可行性替代业务选择；
-- 旧版 VCDDD 角色合同；
+- 旧版 VCDDD Agent 工作说明；
 - 尚未被本次问题触发的大量项目文档。
 
 对素材的默认读取范围是能回答宏观目标的最小范围。不得因为素材存在，就自动完整阅读全部文档、遍历全部页面或运行所有原型路径。

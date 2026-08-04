@@ -1,11 +1,11 @@
 ---
-vcddd_type: "capability-contract"
+vcddd_type: "stage-instructions"
 vcddd_version: "2.0"
 stage: "business-establishment"
 status: "active"
 ---
 
-# 业务确立能力合同
+# 业务确立说明
 
 **阅读身份：** VCDDD 主控 Agent。使用本文选择专业角色、建立上下文连接和登记产出；不要在主控对话中完成专业工作。
 
@@ -18,7 +18,7 @@ status: "active"
 3. 每个 Domain 拥有什么、能做什么、维护什么并产生什么影响；
 4. 业务怎样组合多个 Domain 的行为与结果完成。
 
-业务不是 Domain 的集合清单，Domain 也不是按功能、页面或流程步骤生成的技术分类。所有专业角色共同遵循 [业务与 Domain 认知合同](business-domain-principles.md)。
+业务说明参与者、行为、判断、变化和结果。Domain 说明自治、自洽的核心事物。所有专业角色共同遵循 [业务与 Domain 判断规则](business-domain-principles.md)。
 
 架构、模块、API、逐 API 内部编排、数据库和开发基线不属于本能力。它们是业务与 Domain 面向 Coding 的投影，由 [Pre-Coding 能力](../03-pre-coding/stage.md) 负责。
 
@@ -31,7 +31,7 @@ status: "active"
 | [Domain 建模 Agent](03-domain-modeling/domain-modeling-agent.md) | 站在一个候选 Domain 内部完成自治、自洽建模 | 一份独立 Domain 文档 |
 | [业务组合 Agent](04-business-composition/business-composition-agent.md) | 说明一条或多条业务线怎样组合 Domain 完成 | 业务与 Domain 组合设计 |
 
-条件角色只在具体触发事实出现后使用；未触发时不得读取其合同：
+条件角色只在具体触发事实出现后使用；未触发时不得读取其工作说明：
 
 - [文档素材分析 Agent](conditions/document-material-analysis-agent.md)：从大量、分散或需要交叉比对的文档中提取与指定业务线问题有关的证据；
 - [原型观察 Agent](conditions/prototype-observation-agent.md)：通过实际运行或可靠视觉材料观察一条候选业务线中的动作、状态变化和结果；
@@ -69,18 +69,23 @@ status: "active"
 业务确立使用一个导航结果和四类事实文档：
 
 ```text
-VCDDD 工作区/<work_id>/
-├── 业务确立.md
-├── 业务定义.md
-├── 业务线/
-│   └── BL-NNN-<名称>.md
-├── 领域地图.md
-├── 领域/
-│   └── DOM-NNN-<名称>.md
-├── 业务组合.md
-├── 素材证据/
-├── 语言验证/
-└── 事实证据/
+vcddd-obsidian/02-business-establishment/
+├── business/
+│   └── <goal-id>/
+│       ├── 业务确立.md
+│       ├── 业务定义.md
+│       ├── 业务线/
+│       │   └── BL-NNN-<名称>.md
+│       ├── 领域地图.md
+│       ├── 业务组合.md
+│       └── 证据/
+│           ├── 文档素材/
+│           ├── 原型观察/
+│           ├── 语言验证/
+│           └── 事实调研/
+└── domains/
+    └── <domain-id>/
+        └── Domain.md
 ```
 
 `业务确立.md` 只导航、登记成熟度和链接，不复制专业事实。使用以下模板：
@@ -96,7 +101,7 @@ VCDDD 工作区/<work_id>/
 - [语言验证记录模板](../../../assets/templates/02-business-establishment/language-validation-template.md)
 - [事实证据模板](../../../assets/templates/02-business-establishment/fact-evidence-template.md)
 
-每个实际参与角色还使用统一执行记录模板维护自己的行为与上下文记录。
+每个实际参与角色还使用统一执行记录模板，在 `vcddd-obsidian/work/<work-id>/执行记录/` 维护自己的行为与上下文记录。正式事实不记录 `work_id`，也不反向链接本地执行记录。
 
 ## 结果成熟度
 
@@ -104,7 +109,7 @@ VCDDD 工作区/<work_id>/
 
 主控登记 `业务确立.md` 时核对：
 
-- 各权威事实有唯一拥有者和执行记录；
+- 各权威事实有唯一拥有者；本地执行记录能够链接到本轮更新的正式事实；
 - Wiki Links 能从业务线追溯到相关 Domain 行为和组合关系；
 - 用户确认能够定位到确切文档或对象；
 - 草稿、假设、冲突和可能返工范围没有被隐藏；

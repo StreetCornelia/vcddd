@@ -6,11 +6,10 @@ tags:
   - "vcddd/business-establishment"
 vcddd_type: "business-establishment-index"
 vcddd_version: "2.0"
-work_id: "{{WORK-YYYYMMDD-NNN}}"
+goal_id: "{{GOAL-NNN}}"
 stage: "business-establishment"
 status: "draft"
 owner_role: "controller-agent"
-execution_record: "[[{{主控执行记录}}]]"
 business_definition: "[[{{业务定义笔记}}]]"
 domain_map: "[[{{领域地图笔记}}]]"
 business_composition: "[[{{业务组合笔记}}]]"
@@ -31,24 +30,18 @@ updated: "{{YYYY-MM-DD}}"
 
 ## 事实地图
 
-| 事实类型 | 权威入口 | 状态 | 拥有角色 | 执行记录 |
-|---|---|---|---|---|
-| 业务定义 | [[{{业务定义笔记}}]] | `draft` | 业务定义 Agent | [[{{业务定义执行记录}}]] |
-| 领域地图 | [[{{领域地图笔记}}]] | `draft` | Domain 发现 Agent | [[{{Domain发现执行记录}}]] |
-| Domain | [[{{领域地图笔记}}]] | `draft` | 各 Domain 建模 Agent | 见各 Domain 文档 |
-| 业务组合 | [[{{业务组合笔记}}]] | `draft` | 业务组合 Agent | [[{{业务组合执行记录}}]] |
+| 事实类型 | 权威入口 | 状态 | 拥有角色 |
+|---|---|---|---|
+| 业务定义 | [[{{业务定义笔记}}]] | `draft` | 业务定义 Agent |
+| 领域地图 | [[{{领域地图笔记}}]] | `draft` | Domain 发现 Agent |
+| Domain | [[{{领域地图笔记}}]] | `draft` | 各 Domain 建模 Agent |
+| 业务组合 | [[{{业务组合笔记}}]] | `draft` | 业务组合 Agent |
 
 ## Domain 导航
 
-| Domain ID | Domain | 状态 | 建模对话 | 执行记录 |
-|---|---|---|---|---|
-| `DOM-001` | [[{{Domain笔记}}]] | `draft` |  | [[{{Domain执行记录}}]] |
-
-## 当前专业对话
-
-| 角色 | 对话 ID | 状态 | 当前目标 | 产出 |
-|---|---|---|---|---|
-|  |  |  |  |  |
+| Domain ID | Domain | 状态 | 相关业务线 |
+|---|---|---|---|
+| `DOM-001` | [[{{Domain笔记}}]] | `draft` | [[{{BL笔记}}]] |
 
 ## 使用当前事实的说明
 
@@ -60,7 +53,7 @@ updated: "{{YYYY-MM-DD}}"
 
 ## 更新规则
 
-- 专业角色只更新自己拥有的事实和执行记录。
+- 专业角色只更新自己拥有的正式事实。
 - 主控沿权威链接登记状态，不在本文制作替代摘要。
 - 某个 Domain 新增、撤销、合并或拆分后，更新 Domain 导航并保留旧 ID 的状态。
 - `confirmed` 只描述对应产出的用户确认状态，不控制 Pre-Coding 或 Coding 能否开始。

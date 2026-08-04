@@ -1,0 +1,87 @@
+---
+title: "系统与模块设计"
+aliases: []
+tags:
+  - "vcddd/pre-coding"
+  - "vcddd/system-module-design"
+vcddd_type: "system-and-module-design"
+vcddd_version: "2.0"
+stage: "pre-coding"
+status: "draft"
+owner_role: "system-and-module-design-agent"
+sources:
+  - "[[{{业务结果或业务线章节}}]]"
+  - "[[{{已确认能力与业务组合章节}}]]"
+created: "{{YYYY-MM-DD}}"
+updated: "{{YYYY-MM-DD}}"
+---
+
+# 系统与模块设计
+
+## 整体系统架构
+
+```mermaid
+flowchart LR
+    ACT["{{参与者}}"]
+    SYS1["SYS-001 {{系统名称}}"]
+    EXT["{{外部系统或组件}}"]
+
+    ACT -->|"{{动作与传递内容}}"| SYS1
+    SYS1 -->|"{{动作与产生结果}}"| EXT
+```
+
+## 系统
+
+| 系统 ID | 系统 | 职责 | 提供的能力 | 可以用它完成什么 |
+|---|---|---|---|---|
+| `SYS-001` |  |  |  |  |
+
+## 系统交互
+
+| 发起方 | 接收方 | 传递内容 | 获得结果 |
+|---|---|---|---|
+|  |  |  |  |
+
+## SYS-001 — {{系统名称}}
+
+### 模块组成
+
+```mermaid
+flowchart TB
+    MOD1["MOD-001 {{模块名称}}"]
+    MOD2["MOD-002 {{模块名称}}"]
+
+    MOD1 -->|"{{动作与传递内容}}"| MOD2
+```
+
+### 模块
+
+| 模块 ID | 模块 | 职责 | 提供的能力 | 被谁使用 |
+|---|---|---|---|---|
+| `MOD-001` |  |  |  |  |
+
+### 模块交互
+
+| 发起模块 | 接收模块 | 传递内容 | 获得结果 |
+|---|---|---|---|
+|  |  |  |  |
+
+## 关键业务路径
+
+| 路径 ID | 业务线 | 参与者 | 系统与模块路径 | 最终结果 |
+|---|---|---|---|---|
+| `PATH-001` | [[{{BL-NNN-业务线}}]] |  |  |  |
+
+### PATH-001 — {{复杂路径名称}}
+
+```mermaid
+sequenceDiagram
+    actor ACT as {{参与者}}
+    participant M1 as {{系统 / 模块}}
+    participant M2 as {{系统 / 模块}}
+
+    ACT->>M1: {{动作与输入}}
+    M1->>M2: {{动作与传递内容}}
+    M2-->>M1: {{产生的结果}}
+    M1-->>ACT: {{最终结果}}
+```

@@ -6,12 +6,11 @@ tags:
   - "vcddd/candidate-scenarios"
 vcddd_type: "candidate-scenario-pool"
 vcddd_version: "2.0"
-work_id: "{{WORK-YYYYMMDD-NNN}}"
+goal_id: "{{GOAL-NNN}}"
 stage: "business-discovery"
 route: "business-discovery"
 status: "active"
 owner_role: "business-discovery-agent"
-execution_record: "[[{{执行记录笔记}}]]"
 result_note: "[[{{业务挖掘结果笔记}}]]"
 created: "{{YYYY-MM-DD}}"
 updated: "{{YYYY-MM-DD}}"
@@ -34,9 +33,9 @@ updated: "{{YYYY-MM-DD}}"
 
 ## 场景总览
 
-| 场景 ID | 简称 | 参与者 | 来源 | 状态 | 对应 Story | 决定 |
-|---|---|---|---|---|---|---|
-| `SCN-001` |  |  | `user | ai-expansion | evidence` | `open` |  | `DEC-___` |
+| 场景 ID | 简称 | 参与者 | 来源 | 状态 | 对应 Story |
+|---|---|---|---|---|---|
+| `SCN-001` |  |  | `user | ai-expansion | evidence` | `open` |  |
 
 ## 场景详情
 
@@ -54,7 +53,6 @@ updated: "{{YYYY-MM-DD}}"
 - Agent 建议：
 - 用户决定状态：`open`
 - 决定原因：
-- 决定证据：`DEC-___`，见 [[{{执行记录笔记}}#用户决定]]
 - 对应 User Story：
 
 ## 覆盖检查

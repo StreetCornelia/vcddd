@@ -1,13 +1,13 @@
 ---
-vcddd_type: "capability-contract"
+vcddd_type: "stage-instructions"
 vcddd_version: "2.0"
 stage: "coding"
-status: "protocol-design-pending"
+status: "design-pending"
 ---
 
-# Coding 能力边界
+# Coding 说明
 
-**阅读身份：** VCDDD 主控 Agent。本文只允许识别能力边界和协议实现状态，不授权你开展本能力的专业工作。
+**阅读身份：** VCDDD 主控 Agent。本文记录已经确定的工作和仍需设计的内容。主控不开展 Coding 专业工作。
 
 ## 已确定边界
 
@@ -29,8 +29,10 @@ Coding 负责：
 
 - Coding 内部的角色、任务和验证结构；
 - 工程规范、任务图、实现、验证、改进和审核模板；
-- worktree、Commit 和 Agent 复用合同；
+- worktree、Commit 和 Agent 复用规则；
 - 面向增量验证的上下文控制；
 - 设计反馈与受影响范围重算。
 
-协议完成前，主控不得调用旧版开发、测试或审核合同冒充新版 Coding 角色。用户仍可使用其他能力或共同设计本能力。
+工作说明完成前，主控不得调用旧版开发、测试或审核 Agent 冒充新版 Coding 角色。用户仍可使用其他能力或共同设计本能力。
+
+Coding 正式事实的稳定归属为 `vcddd-obsidian/04-coding/systems/<system-id>/`；具体文档类型和模板在共同设计后补充。当前工作、Agent 执行记录和临时材料仍只放在 `vcddd-obsidian/work/<work-id>/`，不进入 Git。

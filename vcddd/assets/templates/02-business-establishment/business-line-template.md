@@ -6,12 +6,11 @@ tags:
   - "vcddd/business-line"
 vcddd_type: "business-line"
 vcddd_version: "2.0"
-work_id: "{{WORK-YYYYMMDD-NNN}}"
+goal_id: "{{GOAL-NNN}}"
 stage: "business-establishment"
 status: "draft"
 owner_role: "business-definition-agent"
 business_line_id: "BL-{{NNN}}"
-execution_record: "[[{{业务定义执行记录}}]]"
 result_note: "[[{{业务确立入口}}]]"
 business_definition: "[[{{业务定义笔记}}]]"
 created: "{{YYYY-MM-DD}}"
@@ -20,7 +19,7 @@ updated: "{{YYYY-MM-DD}}"
 
 # BL-{{NNN}}：{{业务线名称}}
 
-本业务线属于 [[{{业务定义笔记}}]]，由 [[{{业务定义执行记录}}]] 追踪。
+本业务线属于 [[{{业务定义笔记}}]]。
 
 ## 业务意图与可观察结果
 
