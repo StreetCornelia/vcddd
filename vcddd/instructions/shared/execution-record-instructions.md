@@ -24,6 +24,8 @@
 
 使用模板树中的 [执行记录文件](../../assets/templates/vcddd-obsidian/work/<work-id>/执行记录/<角色或任务>.md)。
 
+用户直接调用专业角色时，由该角色自行创建或续用执行记录。`thread_id` 写当前对话 ID；没有主控时 `parent_thread_id`、`parent_record` 留空。直接调用不需要补造主控状态，也不降低来源、进度、确认和能力衔接的记录要求。
+
 执行记录固定写入 `vcddd-obsidian/work/<work-id>/执行记录/`，只保存在本地，不进入 Git。执行记录可以链接本轮创建或更新的正式事实；正式事实不得反向链接执行记录，也不得保存 `work_id` 或 Agent 对话 ID。
 
 ## 工作进度点扩展

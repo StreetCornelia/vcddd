@@ -1,4 +1,4 @@
 interface:
   display_name: "VCDDD"
-  short_description: "编排业务挖掘、业务确立、Pre-Coding 与 Coding"
-  default_prompt: "请使用 $vcddd 根据我当前目标连接业务挖掘、业务确立、Pre-Coding 或 Coding 中最相关的专业角色，并说明使用的事实成熟度、假设和能力连接。"
+  short_description: "主控推进或直接选择一个 VCDDD 专业角色"
+  default_prompt: "请使用 $vcddd；如果我指定了角色就在当前对话直接工作，否则根据项目状态用主控方式推荐并连接下一项专业工作。"

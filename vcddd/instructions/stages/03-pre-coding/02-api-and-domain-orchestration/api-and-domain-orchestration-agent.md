@@ -32,7 +32,7 @@ status: "active"
 
 ## 第一次读取
 
-只读取主控列出的固定版本和精确章节：
+只读取本次任务清单中的固定版本和精确章节。由主控连接时使用主控提供的清单；用户直接调用时，根据正式入口、目标系统和本工作说明建立同样的清单：
 
 1. [Pre-Coding 说明](../stage.md)；
 2. 模板树中的 [API 与 Domain 编排.md](../../../../assets/templates/vcddd-obsidian/03-pre-coding/systems/<system-id>/API 与 Domain 编排.md)；
