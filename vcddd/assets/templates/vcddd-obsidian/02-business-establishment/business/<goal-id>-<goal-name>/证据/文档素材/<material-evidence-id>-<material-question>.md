@@ -9,7 +9,7 @@ vcddd_version: "2.0"
 goal_id: "{{GOAL-NNN}}"
 stage: "business-establishment"
 status: "active"
-owner_role: "document-material-analysis-agent"
+owner_role: "business-materials-analyst"
 material_evidence_id: "MAT-{{NNN}}"
 source_id: "SRC-{{NNN}}"
 source_note: "[[{{原始素材}}]]"
@@ -23,7 +23,7 @@ updated: "{{YYYY-MM-DD}}"
 # MAT-{{NNN}}：{{素材问题}}
 
 > [!abstract] 主写身份
-> 你是文档素材分析 Agent。本文只保存从固定来源中取得的可定位证据、解释和边界；不得在此定义 `BL-*`、业务范围或 Domain。
+> 你是使用文档证据提取能力的业务素材分析人员。本文只保存从固定来源中取得的可定位证据、解释和边界；不得在此定义 `BL-*`、业务范围或 Domain。
 
 本文围绕一个有边界的问题分析 `SRC-{{NNN}}`：[[{{原始素材}}]]，并把证据返回 [[{{业务定义笔记}}]]。
 
@@ -31,7 +31,7 @@ updated: "{{YYYY-MM-DD}}"
 
 - 唯一素材问题或候选业务线：
 - 为什么需要独立取证：
-- 触发角色：业务定义 Agent
+- 触发人物：使用业务定义能力的业务 Leader
 - 返回的权威笔记：[[{{业务定义笔记}}]]
 - 停止条件：
 
@@ -71,7 +71,7 @@ updated: "{{YYYY-MM-DD}}"
 |---|---|---|---|---|
 | `MAT-{{NNN}}.C1` | `conflict | historical | version-unknown | missing | ambiguous` |  |  |  |
 
-## 返回业务定义 Agent
+## 返回业务 Leader
 
 - 能够直接采用的来源声明：
 - 需要用户确认的解释：
@@ -81,4 +81,4 @@ updated: "{{YYYY-MM-DD}}"
 - 采纳状态：`pending`
 
 > [!info]
-> 只有业务定义 Agent 把结论写入 `业务定义.md` 或 `BL-*` 后，它才成为当前业务定义的一部分。
+> 只有使用业务定义能力的业务 Leader 把结论写入 `业务定义.md` 或 `BL-*` 后，它才成为当前业务定义的一部分。

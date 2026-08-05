@@ -7,7 +7,7 @@ tags:
 vcddd_type: "project-entry"
 vcddd_version: "2.0"
 status: "active"
-owner_role: "controller-agent"
+owner_role: "project-manager"
 created: "{{YYYY-MM-DD}}"
 updated: "{{YYYY-MM-DD}}"
 ---

@@ -10,7 +10,7 @@ git_tracked: false
 work_id: "{{WORK-YYYYMMDD-NNN}}"
 stage: "coding"
 status: "active"
-owner_role: "{{controller-agent-or-current-professional-role}}"
+owner_role: "{{project-manager-or-current-professional-role}}"
 system_id: "{{SYS-NNN}}"
 system_name: "{{系统名称}}"
 code_repository: "{{仓库路径或 URL}}"

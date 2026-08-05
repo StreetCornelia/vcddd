@@ -7,7 +7,7 @@ vcddd_version: "2.0"
 goal_id: "{{GOAL-NNN}}"
 stage: "business-establishment"
 status: "active"
-owner_role: "fact-research-agent"
+owner_role: "feasibility-verifier"
 fact_id: "FACT-{{NNN}}"
 result_note: "[[{{业务确立入口}}]]"
 created: "{{YYYY-MM-DD}}"
@@ -20,7 +20,7 @@ updated: "{{YYYY-MM-DD}}"
 
 - 问题：
 - 为什么它影响当前判断：
-- 触发角色：
+- 触发人物：
 - 应返回的权威笔记：[[{{事实拥有者笔记}}]]
 
 ## 来源与固定范围
@@ -55,7 +55,7 @@ updated: "{{YYYY-MM-DD}}"
 
 - 受影响的判断：
 - 可能支持或否定什么：
-- 不由本 Agent 决定的事项：
+- 不由可行性验证人员决定的事项：
 
 ## 返回
 

@@ -8,7 +8,7 @@ vcddd_type: "domain"
 vcddd_version: "2.0"
 stage: "business-establishment"
 status: "draft"
-owner_role: "domain-modeling-agent"
+owner_role: "business-leader"
 domain_id: "DOM-{{NNN}}"
 result_note: "[[{{业务确立入口}}]]"
 domain_map: "[[{{领域地图笔记}}]]"
@@ -19,7 +19,7 @@ updated: "{{YYYY-MM-DD}}"
 # DOM-{{NNN}}：{{Domain名称}}
 
 > [!abstract] 主写身份
-> 你是本 Domain 的建模 Agent。只从该 Domain 的内部主权建立事实；不要替其他 Domain 判断，也不要写入架构、API、数据库或代码承载。
+> 你是使用本 Domain 建模能力的业务 Leader。只从该 Domain 的内部主权建立事实；不要替其他 Domain 判断，也不要写入架构、API、数据库或代码承载。
 
 候选任务来自 [[{{领域地图笔记}}]]。
 

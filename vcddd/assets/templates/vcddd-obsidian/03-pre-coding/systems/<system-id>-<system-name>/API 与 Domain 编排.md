@@ -8,7 +8,7 @@ vcddd_type: "api-domain-orchestration"
 vcddd_version: "2.0"
 stage: "pre-coding"
 status: "draft"
-owner_role: "api-and-domain-orchestration-agent"
+owner_role: "development-leader"
 system_id: "{{SYS-NNN}}"
 system_design: "[[系统与模块设计#{{SYS-NNN}} — {{系统名称}}]]"
 sources:
