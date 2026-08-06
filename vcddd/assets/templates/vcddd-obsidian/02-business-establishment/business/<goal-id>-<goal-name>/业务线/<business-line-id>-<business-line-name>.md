@@ -8,7 +8,6 @@ vcddd_type: "business-line"
 vcddd_version: "2.0"
 goal_id: "{{GOAL-NNN}}"
 stage: "business-establishment"
-status: "draft"
 owner_role: "business-leader"
 business_line_id: "BL-{{NNN}}"
 result_note: "[[{{业务确立入口}}]]"
@@ -77,9 +76,9 @@ updated: "{{YYYY-MM-DD}}"
 
 ## 来源、假设与开放问题
 
-| ID | 类型 | 内容 | 来源 | 影响 | 状态 |
-|---|---|---|---|---|---|
-| `OPEN-001` | `fact | assumption | conflict | unknown` |  | [[{{来源}}]] |  | `open` |
+| ID | 类型 | 内容 | 来源 | 影响 |
+|---|---|---|---|---|
+| `OPEN-001` | `fact | assumption | conflict | unknown` |  | [[{{来源}}]] |  |
 
 ## Domain 与组合链接
 
@@ -90,8 +89,9 @@ updated: "{{YYYY-MM-DD}}"
 - 相关 Domain：
 - 对应业务组合：[[{{业务组合笔记}}]]
 
-## 用户确认
+## 用户决定与反馈
 
-- 当前成熟度：`draft`
-- 用户是否明确确认：`false`
-- 确认位置或消息引用：
+- 用户已经决定的内容：
+- 仍需用户决定的内容：
+- 位置或消息引用：
+- 对当前业务线的影响：

@@ -7,7 +7,6 @@ tags:
 vcddd_type: "domain"
 vcddd_version: "2.0"
 stage: "business-establishment"
-status: "draft"
 owner_role: "business-leader"
 domain_id: "DOM-{{NNN}}"
 result_note: "[[{{业务确立入口}}]]"
@@ -103,13 +102,13 @@ stateDiagram-v2
 
 ## 假设、冲突和反馈
 
-| ID | 内容 | 影响 | 应返回的事实拥有者 | 状态 |
-|---|---|---|---|---|
-| `OPEN-001` |  |  | [[{{领域地图或业务线}}]] | `open` |
+| ID | 内容 | 影响 | 应返回的事实拥有者 |
+|---|---|---|---|
+| `OPEN-001` |  |  | [[{{领域地图或业务线}}]] |
 
-## 用户确认
+## 用户决定与反馈
 
-- 当前成熟度：`draft`
-- 用户是否明确确认：`false`
-- 确认的 Domain 定义与范围：
-- 确认位置或消息引用：
+- 用户已经决定的 Domain 定义与范围：
+- 仍需用户决定的内容：
+- 位置或消息引用：
+- 对当前模型的影响：

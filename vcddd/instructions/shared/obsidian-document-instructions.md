@@ -2,7 +2,6 @@
 vcddd_type: "shared-instructions"
 vcddd_version: "2.0"
 topic: "obsidian-documents"
-status: "active"
 ---
 
 # Obsidian 文档说明
@@ -48,7 +47,20 @@ VCDDD 项目文档统一放在项目根目录的 `vcddd-obsidian/`。其中有�
     │       └── <system-id>-<system-name>/
     │           ├── API 与 Domain 编排.md
     │           ├── 数据库设计.md
-    │           └── 语言检查/
+    │           ├── 语言检查/
+    │           └── validation/
+    │               ├── index.md
+    │               └── <validation-id>-<validation-name>/
+    │                   ├── index.md
+    │                   ├── 验证计划.md
+    │                   ├── 验证结论.md
+    │                   ├── src/
+    │                   ├── fixtures/
+    │                   ├── scripts/
+    │                   └── runs/
+    │                       └── <run-id>/
+    │                           ├── 运行记录.md
+    │                           └── artifacts/
     ├── 04-coding/
     │   └── systems/
     │       └── <system-id>-<system-name>/
@@ -67,7 +79,9 @@ VCDDD 项目文档统一放在项目根目录的 `vcddd-obsidian/`。其中有�
             └── 临时投影/
 ```
 
-`VCDDD.md` 是正式知识入口，只导航长期事实。`work/当前工作.md` 是本地工作入口，只恢复当前任务、Agent 和执行记录。`Coding 状态.md` 只在 Coding 工作中创建，用来保存当前集成基线、任务状态、串行集成队列和外部输入请求；其他工作不创建该文件。它不保存队列历史、Agent 推理或敏感值。
+`VCDDD.md` 是正式知识入口，只导航长期事实。`work/当前工作.md`、工作目录中的 `主控状态.md` 与执行记录都是按需恢复工具：仅在工作跨轮持续、需要主控协调或恢复、存在交接/审计需求，或用户明确要求时创建和更新；普通单次任务不创建任何 work 文档。角色切换不等于新 Agent、新工作或新记录。`Coding 状态.md` 只在确有持续 Coding 集成信息需要保存时创建，用来保存当前目标、事实、结果、证据和未决项；其他工作不创建该文件。它不保存队列历史、Agent 推理或敏感值。
+
+系统级原型、技术 POC、最小端到端实现和其他验证性产物放在该系统的 `validation/<validation-id>-<validation-name>/`。验证计划、源码、运行记录、产物和结论必须放在同一验证项中，使结论能够从固定版本与实际运行重现。`src/`、`fixtures/`、`scripts/` 和 `runs/` 不是生产代码路径；生产代码不得依赖其中的实现。业务素材中的既有原型观察证据仍放在业务目标的 `证据/原型观察/`，不与系统验证实现混放。
 
 ## 模板就是目标结构
 
@@ -82,6 +96,8 @@ VCDDD 项目文档统一放在项目根目录的 `vcddd-obsidian/`。其中有�
 3. 同时替换路径中的 ID 和名称占位符，例如 `<domain-id>-<domain-name>`；不得只填写 ID、留下名称占位符或删去名称部分。
 4. 按模板正文填写或更新，不重新组织章节，不另造文件名。
 5. 一个占位分支只在真实对象存在时实例化；不要把 `<goal-id>`、`<goal-name>` 或示例内容原样复制进项目。
+
+`work/` 下的模板只在确有恢复或交接需要时取用，且其中各节均为可选；开始工作前不需要创建或填完这些模板。
 
 `<goal-id>`、`<domain-id>` 和 `<system-id>` 是跨工作持续使用的事实 ID。`<work-id>` 只属于本地工作过程。名称用于人类浏览，不能代替 Properties 中的稳定 ID。语言检查模板同时出现在阶段级和系统级真实位置，按被检查文档所在位置选择，不在运行时重新推导目录。
 
@@ -106,6 +122,8 @@ WORK-20260804-001-管理后台任务拆分/
 | `<domain-id>-<domain-name>` | `DOM-NNN` 与 `{{Domain名称}}` |
 | `<system-id>-<system-name>` | `SYS-NNN` 与 `{{系统名称}}` |
 | `<task-id>-<task-name>` | `TASK-SYS-NNN-NNN` 与 `{{任务名称}}` |
+| `<validation-id>-<validation-name>` | `VAL-NNN` 与 `{{验证名称}}` |
+| `<run-id>` | `RUN-VAL-NNN-NNN` |
 | `<work-id>-<work-name>` | `WORK-YYYYMMDD-NNN` 与 `{{工作名称}}` |
 
 证据和语言检查文件同样把问题或对象写在 ID 后，例如 `<fact-id>-<research-question>.md` 和 `<language-check-id>-<document-name>.md`。
@@ -115,7 +133,7 @@ WORK-20260804-001-管理后台任务拆分/
 稳定 ID 与名称分别处理：
 
 - Properties 中的 `goal_id`、`domain_id`、`system_id`、`task_id` 和 `work_id` 只保存稳定 ID；
-- 对象名称变化不改变稳定 ID；名称已经明显错误或用户确认了新的正式名称时，重命名目录并同步更新所有 Wiki Links；
+- 对象名称变化不改变稳定 ID；名称已经明显错误或新的正式名称已经明确时，重命名目录并同步更新所有 Wiki Links；
 - 普通措辞润色不频繁重命名目录，路径名称保持简短、可辨认；
 - 名称不得包含 `/`、`\\`、`:`、`*`、`?`、`"`、`<`、`>`、`|`、`#`、`^`、`[` 或 `]`；
 - 阶段目录 `01-business-discovery` 等已经包含编号和含义，不再追加项目名称；`business`、`domains`、`systems`、`tasks` 等分类目录也不追加对象名称。
@@ -127,7 +145,7 @@ WORK-20260804-001-管理后台任务拆分/
 提交前检查：
 
 1. `vcddd-obsidian/work/` 中没有文件进入 Git 暂存区；
-2. 正式事实没有 `work_id`、`execution_record`、Agent 对话 ID 或指向 `work/` 的链接；
+2. 正式事实没有工作 ID、执行记录引用、Agent 对话 ID 或指向 `work/` 的链接；
 3. 新增正式事实已经从 `VCDDD.md` 或对应阶段入口可达。
 
 ## 文档规则
@@ -138,9 +156,11 @@ WORK-20260804-001-管理后台任务拆分/
 4. 同一事实只在一个权威笔记中定义。其他笔记只链接并说明使用原因。
 5. 专业结果、证据、候选项和执行记录是不同文档类型。
 6. 链接表达实际关系，不为了构造全连接图而增加链接。
-7. 临时章节投影必须放在 `work/<work-id>-<work-name>/临时投影/`，记录固定来源、版本、章节和哈希；它不是事实源。
+7. 临时章节投影放在 `work/<work-id>-<work-name>/临时投影/`；需要区分变化内容时记录来源、相关版本、章节或哈希。它不是事实源。
 
-项目经理负责 `VCDDD.md` 和 `work/当前工作.md` 的整体结构、跨人物状态与自己的执行记录。用户直接调用的专业 Agent 可以创建或更新 `work/当前工作.md` 中属于本次工作的内容，并在 `VCDDD.md` 中增加或更新自己正式结果对应的入口行；不得改写其他人物的状态或专业结果。当前能力的事实拥有者拥有对应正式结果。辅助人物拥有自己的执行记录；需要被多个后续人物长期引用的证据，按模板写入正式证据目录。
+项目经理按需负责 `VCDDD.md` 的整体结构，以及存在时的 `work/当前工作.md`、跨人物恢复信息和自己的执行记录。用户直接调用的专业 Agent 只在本次工作需要恢复、交接或审计时创建或更新 `work/当前工作.md` 中属于本次工作的内容，并在 `VCDDD.md` 中增加或更新自己正式结果对应的入口行；不得改写其他人物拥有的事实或专业结果。当前能力的事实拥有者拥有对应正式结果。辅助人物仅在自身工作确有记录需要时拥有自己的执行记录；需要被多个后续人物长期引用的证据，按模板写入正式证据目录。
+
+正式文档只在它本身是用户要求的交付物，或其中的事实需要作为长期、可复用的权威来源保存时创建或更新。不要为了记录一次普通任务、角色切换、临时讨论或工具执行而创建正式笔记。正式事实仍不得引用 `work/`、`work_id`、Agent 对话或执行记录；只有当前能力的事实拥有者可以写入或修改对应权威事实。
 
 ## Properties
 
@@ -150,18 +170,15 @@ WORK-20260804-001-管理后台任务拆分/
 |---|---|---|
 | `vcddd_type` | 所有笔记 | 文档类型 |
 | `vcddd_version` | 所有笔记 | VCDDD 版本 |
-| `stage` | 阶段事实与过程记录 | 能力分类，不表示准入顺序 |
-| `status` | 所有笔记 | 当前成熟度或工作状态 |
+| `stage` | 阶段事实与过程记录 | 能力分类 |
 | `owner_role` | 所有笔记 | 唯一主写角色 |
 | `goal_id` | 业务挖掘与某项业务确立事实 | 宏观业务目标 ID |
 | `domain_id` | Domain 事实 | Domain ID |
-| `system_id` | 单一系统的 Pre-Coding/Coding 事实 | 系统 ID |
+| `system_id` | 单一系统的 Pre-Coding、验证与 Coding 事实 | 系统 ID |
+| `validation_id` | 系统验证或语言验证 | 系统验证使用 `VAL-NNN`，语言验证使用 `LNG-NNN` |
+| `run_id` | 单次验证运行记录 | 验证运行 ID |
 | `task_id` | 单项开发任务 | Coding 任务 ID |
-| `task_graph`、`coding_style` | Coding 任务与本地 Coding 状态 | 当前系统的任务图和编码规范链接 |
-| `integration_branch`、`integrated_commit` | 仅本地 `Coding 状态.md` | 当前集成分支和最新集成 Commit |
-| `result_note` | 本地过程记录 | 该过程形成或更新的正式事实链接 |
 | `work_id` | 仅 `work/` | 本轮工作 ID |
-| `execution_record` | 仅 `work/` | 相关本地执行记录链接 |
 | `created`、`updated` | 所有笔记 | 创建和最近更新日期 |
 
 ## ID 约定
@@ -190,28 +207,13 @@ WORK-20260804-001-管理后台任务拆分/
 - 开发任务：`TASK-SYS-NNN-NNN`
 - Coding Style 规则：`STYLE-SYS-NNN-NNN`
 - 关键业务路径：`PATH-NNN`
+- 系统验证项：`VAL-NNN`
+- 验证运行：`RUN-VAL-NNN-NNN`
 - 语言验证：`LNG-NNN`
 - 事实证据：`FACT-NNN`
 - 决定：`DEC-NNN`
 
-事实 ID 在项目内唯一。删除内容时保留 ID 和状态，避免链接失效。工作 ID 只标识一次本地工作，不参与正式事实归属。
-
-## 文档状态
-
-状态描述单份文档或单项工作的成熟度，不构成全局状态机，也不解锁其他能力：
-
-- `not-started`
-- `draft`
-- `active`
-- `waiting`
-- `awaiting-user-confirmation`
-- `confirmed`
-- `completed`
-- `design-pending`
-- `superseded`
-- `limited`
-
-只有用户明确确认后，专业结果才能标记为 `confirmed`。未确认结果仍可被其他能力引用，但链接附近必须说明其状态、假设和可能返工范围。
+事实 ID 在项目内唯一。内容移动、替换或删除时保持现有 ID 的引用可追溯，避免链接失效。工作 ID 只标识一次本地工作，不参与正式事实归属。
 
 ## 正文语言
 

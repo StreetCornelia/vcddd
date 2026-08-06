@@ -22,6 +22,8 @@ status: "active"
 
 架构、模块、API、逐 API 内部编排、数据库和开发基线不属于本能力。它们是业务与 Domain 面向 Coding 的投影，由 [Pre-Coding 能力](../03-pre-coding/stage.md) 负责。
 
+用户已明确当前目标、业务线或 Domain 时，业务 Leader 直接完成对应事实产出；不要求先补齐业务挖掘、其他业务确立能力或固定版本。缺少的上游事实如实标为假设、缺口和可能返工范围，并只在当前问题需要时回补。
+
 ## 专业人物与能力
 
 业务确立只有一个结果负责人：[业务 Leader](../../roles/business-leader/role.md)。人物说明定义稳定的责任、工作重心、原则和性格；具体工作方法放在人物目录下的能力文件中。
@@ -41,7 +43,6 @@ status: "active"
 
 - [业务素材分析人员](../../roles/business-materials-analyst/role.md)的[文档证据提取能力](../../roles/business-materials-analyst/capabilities/document-evidence-extraction.md)：从大量、分散或需要交叉比对的文档中提取指定证据；
 - 同一人物的[原型观察能力](../../roles/business-materials-analyst/capabilities/prototype-observation.md)：通过实际运行或可靠视觉材料观察动作、状态变化和结果；
-- [使用体验检查人员](../../roles/experience-reviewer/role.md)的[表达盲测能力](../../roles/experience-reviewer/capabilities/blind-expression-validation.md)：无答案污染地验证新表达在实际场景中的理解效果；
 - [可行性验证人员](../../roles/feasibility-verifier/role.md)的[事实与 POC 验证能力](../../roles/feasibility-verifier/capabilities/fact-and-poc-verification.md)：回答会影响当前判断的可命名问题。
 
 素材证据角色不拥有业务定义。它们只返回固定来源、实际读取或观察范围和证据边界；使用业务定义能力的业务 Leader 决定是否把证据采纳为 `BL-*` 业务事实。
@@ -53,11 +54,10 @@ status: "active"
 | 围绕一条候选业务线，从大量或分散文档中还原相关叙事 | 业务素材分析人员的文档证据提取 | 不按每个文件、章节或关键词机械创建任务 |
 | 围绕一条候选业务线，观察原型中的动作、状态变化和结果 | 业务素材分析人员的原型观察 | 不按每个页面、控件或点击机械创建任务 |
 | 回答一个会改变当前判断的精确事实或可行性问题 | 可行性验证人员 | 不让它替代成片素材分析或完整业务设计 |
-| 验证一段名称或文案在实际场景中的理解效果 | 使用体验检查人员的表达盲测 | 不让它验证业务事实是否正确，也不无限增加名称说明 |
 
 一项任务应覆盖一个能够独立交付和验收的连贯问题；不要为了并行而过度碎片化。同一来源与问题的补读、修正和复验优先续用原 Agent。
 
-本能力不设置业务或 Domain 审核 Agent。AI 负责形成完整推荐、寻找反例和暴露未知；用户确认现实业务含义、事实所有权以及 Domain 是否正确表达业务世界。
+本能力不设置业务、Domain 或体验审核 Agent。AI 负责形成完整推荐、寻找反例和暴露未知；现实业务含义、事实所有权以及 Domain 是否正确表达业务世界可随新信息迭代。
 
 ## 推荐协作关系
 
@@ -68,7 +68,7 @@ status: "active"
 - 业务组合可以从已形成的部分 Domain 行为开始，并持续暴露缺口；
 - 任一能力负责人发现问题，都把问题返回拥有相应事实的能力负责人，只修改受影响范围。
 
-业务 Leader 对整体结果负责，但不能因此一次加载全部能力和全部 Domain 内部文档，也不能重新完成各能力已经形成的专业分析。它只根据正式文档核对事实所有权、链接、冲突和成熟度。
+业务 Leader 对整体结果负责，但不能因此一次加载全部能力和全部 Domain 内部文档，也不能重新完成各能力已经形成的专业分析。它只根据正式文档核对事实所有权、链接和冲突。
 
 用户可以在当前对话直接指定业务 Leader 和一种能力，也可以进入主控连接的专业对话。同一职责、同一业务目标或同一 Domain 的修正优先续用原对话。
 
@@ -96,7 +96,7 @@ vcddd-obsidian/02-business-establishment/
         └── Domain.md
 ```
 
-`业务确立.md` 只导航、登记成熟度和链接，不复制专业事实。使用以下模板：
+`业务确立.md` 只导航和链接，不复制专业事实。使用以下模板：
 
 - [业务确立.md](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>-<goal-name>/业务确立.md)
 - [业务定义.md](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>-<goal-name>/业务定义.md)
@@ -109,18 +109,15 @@ vcddd-obsidian/02-business-establishment/
 - [语言验证记录](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>-<goal-name>/证据/语言验证/<language-validation-id>-<validated-item>.md)
 - [事实证据](../../../assets/templates/vcddd-obsidian/02-business-establishment/business/<goal-id>-<goal-name>/证据/事实调研/<fact-id>-<research-question>.md)
 
-每个实际参与角色还使用统一执行记录模板，在 `vcddd-obsidian/work/<work-id>-<work-name>/执行记录/` 维护自己的行为与上下文记录。正式事实不记录 `work_id`，也不反向链接本地执行记录。
+需要保留行为与上下文、支持交接或用户明确要求时，实际参与角色使用统一执行记录模板，在 `vcddd-obsidian/work/<work-id>-<work-name>/执行记录/` 维护记录。正式事实不记录 `work_id`，也不反向链接本地执行记录；不建记录不阻止正式事实产出。
 
-## 结果成熟度
+## 产出迭代与事实边界
 
-每份业务线、领域地图、Domain 和业务组合分别记录成熟度。`confirmed` 只表示用户确认当前版本的含义，不解锁 Pre-Coding 或 Coding。
+每份业务线、领域地图、Domain 和业务组合都可随理解迭代。主控登记 `业务确立.md` 时，按当前产出范围核对：
 
-主控登记 `业务确立.md` 时核对：
-
-- 各权威事实有唯一拥有者；本地执行记录能够链接到本轮更新的正式事实；
+- 各权威事实有唯一拥有者；如有本地执行记录，能够链接到本轮更新的正式事实；
 - Wiki Links 能从业务线追溯到相关 Domain 行为和组合关系；
-- 用户确认能够定位到确切文档或对象；
 - 草稿、假设、冲突和可能返工范围没有被隐藏；
 - 业务组合没有在自己的文档中重新定义 Domain 内部规则。
 
-存在缺项时保持真实成熟度。其他能力仍可按当前事实开始，但必须声明使用了哪些草稿、假设和受影响范围。
+存在缺项时，将未知显式写为假设、缺口和可能返工范围；其他能力继续不受影响的工作，并声明使用的当前事实和受影响范围。业务事实只能由其拥有者或用户明确更新，Coding 不得静默改写。

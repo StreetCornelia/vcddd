@@ -7,7 +7,6 @@ tags:
 vcddd_type: "language-check"
 vcddd_version: "2.0"
 stage: "pre-coding"
-status: "active"
 owner_role: "experience-reviewer"
 checked_document: "[[{{被检查文档}}]]"
 checked_version: "{{Commit 或内容哈希}}"
@@ -28,9 +27,9 @@ updated: "{{YYYY-MM-DD}}"
 
 ## 问题与建议
 
-| 编号 | 位置 | 当前表达 | 理解问题 | 建议选项与适用含义 | 推荐及理由 | 用户决定 |
+| 编号 | 位置 | 当前表达 | 理解问题 | 建议选项与适用含义 | 推荐及理由 | 用户反馈 |
 |---|---|---|---|---|---|---|
-| `LNG-001` |  |  |  |  |  | `awaiting-user-confirmation` |
+| `LNG-001` |  |  |  |  |  |  |
 
 ## 设计问题
 

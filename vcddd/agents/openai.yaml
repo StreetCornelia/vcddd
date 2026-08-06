@@ -1,4 +1,4 @@
 interface:
   display_name: "VCDDD"
-  short_description: "项目经理编排或直接使用一个 VCDDD 人物能力"
-  default_prompt: "请使用 $vcddd；如果我指定了人物或能力，就在当前对话直接工作，否则由项目经理恢复项目并推荐、连接下一项专业工作。"
+  short_description: "直接完成 VCDDD 当前目标，仅在真正需要多人协作时编排"
+  default_prompt: "面向当前目标直接产出可用结果；仅在存在跨角色依赖或需要选择后续工作时按需编排，其他情况在当前对话完成。"
